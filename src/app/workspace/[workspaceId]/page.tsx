@@ -4,7 +4,6 @@ import React, { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import { api } from '@/lib/api';
-import Header from '@/components/Header';
 import Sidebar from '@/components/Sidebar';
 import { ArrowLeft, Plus, Folder, Users, Trash, PlusCircle } from 'lucide-react';
 
@@ -126,8 +125,6 @@ export default function WorkspaceDetailPage() {
       <Sidebar />
 
       <div className="flex-1 flex flex-col min-w-0 min-h-screen relative z-10 overflow-y-auto">
-        <Header />
-
         <div className="max-w-6xl w-full mx-auto px-6 mt-6">
           <Link href="/" className="flex items-center gap-2 text-secondary hover:text-foreground transition-colors text-xs font-semibold">
             <ArrowLeft className="h-4.5 w-4.5" />

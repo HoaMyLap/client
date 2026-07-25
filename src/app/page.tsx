@@ -4,7 +4,6 @@ import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { api } from '@/lib/api';
-import Header from '@/components/Header';
 import ThemeToggle from '@/components/ThemeToggle';
 import Sidebar from '@/components/Sidebar';
 import { 
@@ -337,8 +336,6 @@ export default function WorkspacesPage() {
       <Sidebar />
 
       <div className="flex-1 flex flex-col min-w-0 min-h-screen relative z-10 overflow-y-auto">
-        <Header />
-
         <main className="max-w-6xl w-full mx-auto px-6 mt-12">
         <div className="flex items-center justify-between mb-8">
           <div>

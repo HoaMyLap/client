@@ -5,7 +5,6 @@ import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import { api } from '@/lib/api';
 import { createStompClient } from '@/lib/socket';
-import Header from '@/components/Header';
 import Sidebar from '@/components/Sidebar';
 import { jsonrepair } from 'jsonrepair';
 import { 
@@ -448,8 +447,6 @@ export default function ProjectKanbanPage() {
       <Sidebar />
 
       <div className="flex-1 flex flex-col min-w-0 min-h-screen relative z-10 overflow-y-auto">
-        <Header />
-
         <div className="max-w-7xl w-full mx-auto px-6 mt-6 flex items-center justify-between no-print">
           <button onClick={() => router.back()} className="flex items-center gap-2 text-secondary hover:text-foreground transition-colors text-xs font-semibold">
           <ArrowLeft className="h-4.5 w-4.5" />
