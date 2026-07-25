@@ -111,16 +111,7 @@ export default function Header() {
   const unreadCount = notifications.filter(n => !n.isRead).length;
 
   return (
-    <header className="app-header sticky top-0 z-40 px-6 py-4 flex items-center justify-between text-foreground font-sans">
-      <Link href="/" className="flex items-center gap-3">
-        <div className="h-9 w-9 rounded-xl bg-gradient-to-tr from-primary to-accent flex items-center justify-center font-display font-bold text-lg text-primary-foreground">
-          S
-        </div>
-        <span className="font-bold text-lg tracking-tight text-gradient-brand font-display">
-          Smart Manager
-        </span>
-      </Link>
-
+    <header className="app-header sticky top-0 z-40 px-6 py-4 flex items-center justify-end text-foreground font-sans">
       <div className="flex items-center gap-4 relative">
         <ThemeToggle />
 

@@ -88,11 +88,11 @@ export default function Sidebar() {
       {/* Top Section */}
       <div className="flex-1 flex flex-col overflow-y-auto">
         {/* Brand Header */}
-        <div className="p-6 border-b border-border flex items-center gap-3">
-          <div className="h-8 w-8 rounded-lg bg-gradient-to-tr from-primary to-accent flex items-center justify-center font-display font-bold text-base text-primary-foreground">
+        <div className="p-6 border-b border-border flex items-center gap-3.5">
+          <div className="h-10 w-10 rounded-xl bg-gradient-to-tr from-primary to-accent flex items-center justify-center font-display font-black text-xl text-primary-foreground shadow-md shadow-primary/10">
             S
           </div>
-          <span className="font-bold text-sm tracking-tight text-gradient-brand font-display">
+          <span className="font-black text-base tracking-tight text-gradient-brand font-display">
             Smart Manager
           </span>
         </div>
