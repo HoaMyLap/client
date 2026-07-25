@@ -107,7 +107,16 @@ export default function WorkspacesPage() {
               </span>
             </div>
 
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-6">
+              <Link href="/features" className="text-sm font-semibold text-secondary hover:text-primary transition-all">
+                Tính năng
+              </Link>
+              <Link href="/pricing" className="text-sm font-semibold text-secondary hover:text-primary transition-all">
+                Bảng giá
+              </Link>
+              <Link href="/contact" className="text-sm font-semibold text-secondary hover:text-primary transition-all">
+                Liên hệ
+              </Link>
               <ThemeToggle />
               <Link href="/login" className="text-sm font-semibold text-secondary hover:text-primary transition-all">
                 Đăng nhập
@@ -301,7 +310,16 @@ export default function WorkspacesPage() {
               Đăng ký tài khoản ngay <ChevronRight className="h-4 w-4" />
             </Link>
           </div>
-          <div className="text-center text-xs text-muted mt-12">
+          
+          {/* Sitemap Footer Links */}
+          <div className="flex flex-wrap justify-center gap-x-8 gap-y-3 text-xs text-secondary mt-12 mb-6">
+            <Link href="/features" className="hover:text-primary transition-all font-medium">Tính năng chi tiết</Link>
+            <Link href="/pricing" className="hover:text-primary transition-all font-medium">Gói dịch vụ & Bảng giá</Link>
+            <Link href="/contact" className="hover:text-primary transition-all font-medium">Liên hệ hỗ trợ</Link>
+            <Link href="/terms" className="hover:text-primary transition-all font-medium font-sans">Điều khoản & Bảo mật</Link>
+          </div>
+
+          <div className="text-center text-[10px] text-muted">
             © 2026 SmartManager. Thiết kế tối giản cho các đội ngũ hiệu suất cao.
           </div>
         </section>
