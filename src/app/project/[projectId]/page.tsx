@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { api } from '@/lib/api';
 import { createStompClient } from '@/lib/socket';
 import Header from '@/components/Header';
+import Sidebar from '@/components/Sidebar';
 import { jsonrepair } from 'jsonrepair';
 import { 
   ArrowLeft, Plus, MessageSquare, Calendar, 
@@ -441,14 +442,16 @@ export default function ProjectKanbanPage() {
   ];
 
   return (
-    <div className="min-h-screen w-full bg-background text-foreground relative pb-12 font-sans overflow-hidden">
+    <div className="flex min-h-screen w-full bg-background text-foreground relative font-sans overflow-x-hidden">
       <div className="absolute top-0 right-0 w-[50%] h-[50%] rounded-full glow-orb-primary blur-[140px] pointer-events-none" />
 
-      {/* Header */}
-      <Header />
+      <Sidebar />
 
-      <div className="max-w-7xl mx-auto px-6 mt-6 flex items-center justify-between no-print">
-        <button onClick={() => router.back()} className="flex items-center gap-2 text-secondary hover:text-foreground transition-colors text-xs font-semibold">
+      <div className="flex-1 flex flex-col min-w-0 min-h-screen relative z-10 overflow-y-auto">
+        <Header />
+
+        <div className="max-w-7xl w-full mx-auto px-6 mt-6 flex items-center justify-between no-print">
+          <button onClick={() => router.back()} className="flex items-center gap-2 text-secondary hover:text-foreground transition-colors text-xs font-semibold">
           <ArrowLeft className="h-4.5 w-4.5" />
           QUAY LẠI DỰ ÁN
         </button>
@@ -1065,6 +1068,7 @@ export default function ProjectKanbanPage() {
             )}
           </div>
         </div>
+      </div>
       </div>
     </div>
   );

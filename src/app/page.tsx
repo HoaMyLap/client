@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { api } from '@/lib/api';
 import Header from '@/components/Header';
 import ThemeToggle from '@/components/ThemeToggle';
+import Sidebar from '@/components/Sidebar';
 import { 
   Plus, Folder, Users, Briefcase, Sparkles, Zap, 
   TrendingUp, MessageSquare, Calendar, ArrowRight, 
@@ -329,13 +330,16 @@ export default function WorkspacesPage() {
 
   // --- RENDERING WORKSPACES PAGE FOR LOGGED IN USERS ---
   return (
-    <div className="min-h-screen w-full bg-background text-foreground relative pb-12 font-sans">
+    <div className="flex min-h-screen w-full bg-background text-foreground relative font-sans overflow-x-hidden">
       <div className="absolute top-0 right-0 w-[40%] h-[40%] rounded-full glow-orb-primary blur-[140px] pointer-events-none" />
       <div className="absolute bottom-0 left-0 w-[40%] h-[40%] rounded-full glow-orb-accent blur-[140px] pointer-events-none" />
 
-      <Header />
+      <Sidebar />
 
-      <main className="max-w-6xl mx-auto px-6 mt-12 relative z-10">
+      <div className="flex-1 flex flex-col min-w-0 min-h-screen relative z-10 overflow-y-auto">
+        <Header />
+
+        <main className="max-w-6xl w-full mx-auto px-6 mt-12">
         <div className="flex items-center justify-between mb-8">
           <div>
             <h2 className="text-2xl font-bold tracking-tight font-display text-heading">Không gian làm việc</h2>
@@ -438,6 +442,7 @@ export default function WorkspacesPage() {
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 }

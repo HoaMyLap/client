@@ -5,6 +5,7 @@ import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import { api } from '@/lib/api';
 import Header from '@/components/Header';
+import Sidebar from '@/components/Sidebar';
 import { ArrowLeft, Plus, Folder, Users, Trash, PlusCircle } from 'lucide-react';
 
 interface Project {
@@ -119,17 +120,20 @@ export default function WorkspaceDetailPage() {
   }
 
   return (
-    <div className="min-h-screen w-full bg-background text-foreground relative pb-12 font-sans">
+    <div className="flex min-h-screen w-full bg-background text-foreground relative font-sans overflow-x-hidden">
       <div className="absolute top-0 left-0 w-[50%] h-[40%] rounded-full glow-orb-primary blur-[140px] pointer-events-none" />
 
-      <Header />
+      <Sidebar />
 
-      <div className="max-w-6xl mx-auto px-6 mt-6">
-        <Link href="/" className="flex items-center gap-2 text-secondary hover:text-foreground transition-colors text-xs font-semibold">
-          <ArrowLeft className="h-4.5 w-4.5" />
-          QUAY LẠI DANH SÁCH WORKSPACE
-        </Link>
-      </div>
+      <div className="flex-1 flex flex-col min-w-0 min-h-screen relative z-10 overflow-y-auto">
+        <Header />
+
+        <div className="max-w-6xl w-full mx-auto px-6 mt-6">
+          <Link href="/" className="flex items-center gap-2 text-secondary hover:text-foreground transition-colors text-xs font-semibold">
+            <ArrowLeft className="h-4.5 w-4.5" />
+            QUAY LẠI DANH SÁCH WORKSPACE
+          </Link>
+        </div>
 
       <main className="max-w-6xl mx-auto px-6 mt-12 grid grid-cols-1 lg:grid-cols-3 gap-8 relative z-10">
         <div className="lg:col-span-2 space-y-6">
@@ -284,6 +288,7 @@ export default function WorkspaceDetailPage() {
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 }
