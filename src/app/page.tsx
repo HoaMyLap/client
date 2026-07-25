@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { api } from '@/lib/api';
 import Header from '@/components/Header';
+import ThemeToggle from '@/components/ThemeToggle';
 import { 
   Plus, Folder, Users, Briefcase, Sparkles, Zap, 
   TrendingUp, MessageSquare, Calendar, ArrowRight, 
@@ -107,6 +108,7 @@ export default function WorkspacesPage() {
             </div>
 
             <div className="flex items-center gap-4">
+              <ThemeToggle />
               <Link href="/login" className="text-sm font-semibold text-secondary hover:text-primary transition-all">
                 Đăng nhập
               </Link>
