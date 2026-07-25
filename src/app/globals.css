@@ -1,26 +1,548 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap');
 @import "tailwindcss";
 
+/* ==========================================================================
+   DESIGN TOKENS — Dark Mode (default)
+   Modern slate/zinc palette — no pure black or white
+   ========================================================================== */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Background layers */
+  --background: #0f1117;
+  --bg-gradient: linear-gradient(145deg, #0f1117 0%, #141820 45%, #111419 100%);
+  --surface: #161b22;
+  --surface-elevated: #1c2128;
+  --card: #21262d;
+  --card-hover: #292e36;
+  --input-bg: #0d1117;
+  --header-bg: rgba(15, 17, 23, 0.88);
+  --overlay: rgba(0, 0, 0, 0.65);
+
+  /* Borders */
+  --border: #30363d;
+  --border-subtle: #21262d;
+
+  /* Interactive states */
+  --hover: rgba(177, 186, 196, 0.08);
+  --active: rgba(177, 186, 196, 0.12);
+
+  /* Brand & accent */
+  --primary: #8b7cf7;
+  --primary-hover: #a094f9;
+  --primary-muted: rgba(139, 124, 247, 0.14);
+  --primary-foreground: #f0f0ff;
+  --secondary: #30363d;
+  --accent: #58a6ff;
+
+  /* Semantic colors */
+  --success: #3fb950;
+  --success-muted: rgba(63, 185, 80, 0.14);
+  --warning: #d29922;
+  --warning-muted: rgba(210, 153, 34, 0.14);
+  --error: #f85149;
+  --error-muted: rgba(248, 81, 73, 0.14);
+  --info: #58a6ff;
+  --info-muted: rgba(88, 166, 255, 0.14);
+
+  /* Text hierarchy */
+  --foreground: #f0f3f6;
+  --text-heading: #ffffff;
+  --text-title: #ffffff;
+  --text-subtitle: #e6edf3;
+  --text-body: #d9e2ec;
+  --text-secondary: #b1bac4;
+  --text-muted: #8b949e;
+  --text-disabled: #586069;
+  --text-placeholder: #586069;
+  --text-link: #a094f9;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.25);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.35);
+  --shadow-glow: 0 0 40px rgba(139, 124, 247, 0.08);
+
+  /* Chart tokens */
+  --chart-1: #8b7cf7;
+  --chart-2: #58a6ff;
+  --chart-3: #3fb950;
+  --chart-4: #d29922;
+  --chart-5: #f85149;
+  --chart-6: #db61a2;
+  --chart-7: #79c0ff;
+  --chart-8: #56d4dd;
+  --chart-grid: #30363d;
+  --chart-text: #8b949e;
+  --chart-line: var(--primary);
+  --chart-point: #a094f9;
+  --chart-bg: #0d1117;
+  --chart-empty: #484f58;
+
+  /* Zinc scale remapping (backward compat) */
+  --zinc-50: #fafafa;
+  --zinc-100: var(--text-title);
+  --zinc-200: var(--text-subtitle);
+  --zinc-300: var(--text-body);
+  --zinc-400: var(--text-secondary);
+  --zinc-500: var(--text-muted);
+  --zinc-600: var(--text-disabled);
+  --zinc-800: var(--border);
+  --zinc-850: #1a1f26;
+  --zinc-900: var(--surface);
+  --zinc-950: var(--card);
+
+  /* Transition */
+  --theme-transition: background-color 0.35s ease, color 0.35s ease,
+    border-color 0.35s ease, box-shadow 0.35s ease, fill 0.35s ease,
+    stroke 0.35s ease;
 }
 
+/* ==========================================================================
+   DESIGN TOKENS — Light Mode
+   Off-white / warm-cool gray — SaaS professional feel
+   ========================================================================== */
+html[data-theme="light"] {
+  --background: #eef1f6;
+  --bg-gradient: linear-gradient(160deg, #e8ecf2 0%, #f2f4f8 40%, #eef2f7 100%);
+  --surface: #e4e8ef;
+  --surface-elevated: #eef1f5;
+  --card: #f8f9fb;
+  --card-hover: #f2f4f7;
+  --input-bg: #ffffff;
+  --header-bg: rgba(248, 249, 251, 0.92);
+  --overlay: rgba(15, 23, 42, 0.45);
+
+  --border: #d8dee8;
+  --border-subtle: #e4e8ef;
+
+  --hover: rgba(15, 23, 42, 0.04);
+  --active: rgba(15, 23, 42, 0.07);
+
+  --primary: #5b6cf0;
+  --primary-hover: #4a5ae0;
+  --primary-muted: rgba(91, 108, 240, 0.1);
+  --primary-foreground: #ffffff;
+  --secondary: #e4e8ef;
+  --accent: #388bfd;
+
+  --success: #1a7f4b;
+  --success-muted: rgba(26, 127, 75, 0.1);
+  --warning: #9a6700;
+  --warning-muted: rgba(154, 103, 0, 0.1);
+  --error: #cf222e;
+  --error-muted: rgba(207, 34, 46, 0.1);
+  --info: #0969da;
+  --info-muted: rgba(9, 105, 218, 0.1);
+
+  --foreground: #0f172a;
+  --text-heading: #0f172a;
+  --text-title: #0f172a;
+  --text-subtitle: #1e293b;
+  --text-body: #334155;
+  --text-secondary: #475569;
+  --text-muted: #64748b;
+  --text-disabled: #94a3b8;
+  --text-placeholder: #64748b;
+  --text-link: #5b6cf0;
+
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.04);
+  --shadow-md: 0 4px 12px rgba(15, 23, 42, 0.06);
+  --shadow-lg: 0 8px 24px rgba(15, 23, 42, 0.08);
+  --shadow-glow: 0 0 40px rgba(91, 108, 240, 0.06);
+
+  --chart-1: #5b6cf0;
+  --chart-2: #388bfd;
+  --chart-3: #1a7f4b;
+  --chart-4: #bf8700;
+  --chart-5: #cf222e;
+  --chart-6: #a475f9;
+  --chart-7: #54aeff;
+  --chart-8: #3fb9b0;
+  --chart-grid: #d8dee8;
+  --chart-text: #6b7280;
+  --chart-line: var(--primary);
+  --chart-point: #5b6cf0;
+  --chart-bg: #f8f9fb;
+  --chart-empty: #c4c9d2;
+
+  --zinc-50: #f9fafb;
+  --zinc-100: var(--text-title);
+  --zinc-200: var(--text-title);
+  --zinc-300: var(--text-subtitle);
+  --zinc-400: var(--text-secondary);
+  --zinc-500: var(--text-muted);
+  --zinc-600: var(--text-disabled);
+  --zinc-800: var(--border);
+  --zinc-850: #dce1e9;
+  --zinc-900: var(--surface);
+  --zinc-950: var(--card);
+}
+
+/* ==========================================================================
+   Tailwind v4 theme bridge
+   ========================================================================== */
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-surface: var(--surface);
+  --color-surface-elevated: var(--surface-elevated);
+  --color-card: var(--card);
+  --color-card-hover: var(--card-hover);
+  --color-input: var(--input-bg);
+  --color-header: var(--header-bg);
+  --color-overlay: var(--overlay);
+  --color-border: var(--border);
+  --color-border-subtle: var(--border-subtle);
+  --color-hover: var(--hover);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-muted: var(--primary-muted);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--text-secondary);
+  --color-accent: var(--accent);
+  --color-success: var(--success);
+  --color-success-muted: var(--success-muted);
+  --color-warning: var(--warning);
+  --color-warning-muted: var(--warning-muted);
+  --color-error: var(--error);
+  --color-error-muted: var(--error-muted);
+  --color-info: var(--info);
+  --color-info-muted: var(--info-muted);
+  /* Typography token colors — used directly as text-title, text-body, etc. */
+  --color-heading: var(--text-heading);
+  --color-title: var(--text-title);
+  --color-subtitle: var(--text-subtitle);
+  --color-body: var(--text-body);
+  --color-muted: var(--text-muted);
+  --color-disabled: var(--text-disabled);
+  --color-link: var(--text-link);
+  /* Zinc scale remapping for utility classes (bg-zinc-950, etc.) */
+  --color-zinc-50: var(--zinc-50);
+  --color-zinc-100: var(--zinc-100);
+  --color-zinc-200: var(--zinc-200);
+  --color-zinc-300: var(--zinc-300);
+  --color-zinc-400: var(--zinc-400);
+  --color-zinc-500: var(--zinc-500);
+  --color-zinc-600: var(--zinc-600);
+  --color-zinc-700: var(--zinc-700);
+  --color-zinc-800: var(--zinc-800);
+  --color-zinc-850: var(--zinc-850);
+  --color-zinc-900: var(--zinc-900);
+  --color-zinc-950: var(--zinc-950);
+  /* violet remapped to primary */
+  --color-violet-500: var(--primary);
+  --color-violet-600: var(--primary-hover);
+  --color-violet-400: var(--primary);
+  --font-sans: 'Plus Jakarta Sans', sans-serif;
+  --font-display: 'Plus Jakarta Sans', sans-serif;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* ==========================================================================
+   Base styles
+   ========================================================================== */
+*,
+*::before,
+*::after {
+  transition: var(--theme-transition);
 }
 
 body {
-  background: var(--background);
+  background: var(--bg-gradient);
+  background-attachment: fixed;
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  overflow-x: hidden;
+}
+
+.min-h-screen.bg-background,
+main.bg-background {
+  background: transparent !important;
+}
+
+/* ==========================================================================
+   Typography Runtime Overrides — force zinc-XXX to use CSS token values
+   These override Tailwind's compile-time color values with runtime vars.
+   ========================================================================== */
+
+/* Dark mode zinc text classes (default theme) */
+.text-zinc-100 { color: var(--text-title) !important; }
+.text-zinc-200 { color: var(--text-subtitle) !important; }
+.text-zinc-300 { color: var(--text-body) !important; }
+.text-zinc-400 { color: var(--text-secondary) !important; }
+.text-zinc-500 { color: var(--text-muted) !important; }
+.text-zinc-600 { color: var(--text-disabled) !important; }
+
+/* Light mode zinc text classes */
+html[data-theme="light"] .text-zinc-100 { color: var(--text-title) !important; }
+html[data-theme="light"] .text-zinc-200 { color: var(--text-subtitle) !important; }
+html[data-theme="light"] .text-zinc-300 { color: var(--text-body) !important; }
+html[data-theme="light"] .text-zinc-400 { color: var(--text-secondary) !important; }
+html[data-theme="light"] .text-zinc-500 { color: var(--text-muted) !important; }
+html[data-theme="light"] .text-zinc-600 { color: var(--text-secondary) !important; }
+html[data-theme="light"] .text-zinc-700 { color: var(--text-subtitle) !important; }
+
+/* Light mode: force dark text for inputs/textareas to prevent invisible text */
+html[data-theme="light"] input,
+html[data-theme="light"] textarea,
+html[data-theme="light"] select {
+  color: var(--foreground) !important;
+  background-color: var(--input-bg) !important;
+}
+html[data-theme="light"] input::placeholder,
+html[data-theme="light"] textarea::placeholder {
+  color: var(--text-placeholder) !important;
+}
+
+
+
+/* ==========================================================================
+   Glass & surface utilities
+   ========================================================================== */
+.glass {
+  background: color-mix(in srgb, var(--card) 72%, transparent);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
+  box-shadow: var(--shadow-sm);
+}
+
+.glass-glow {
+  box-shadow: var(--shadow-glow);
+}
+
+/* Kanban column (outer) vs task card (inner) depth */
+main .glass {
+  background: color-mix(in srgb, var(--surface) 85%, transparent);
+  border-color: var(--border-subtle);
+  box-shadow: none;
+}
+
+main .glass .glass {
+  background: var(--card);
+  border-color: var(--border);
+  box-shadow: var(--shadow-sm);
+}
+
+main .glass .glass:hover {
+  background: var(--card-hover);
+  border-color: color-mix(in srgb, var(--primary) 30%, var(--border));
+}
+
+/* ==========================================================================
+   Reusable UI component classes
+   ========================================================================== */
+.ui-input {
+  width: 100%;
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  color: var(--foreground);
+  transition: var(--theme-transition);
+}
+
+.ui-input::placeholder {
+  color: var(--text-placeholder);
+}
+
+.ui-input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-muted);
+}
+
+.ui-label {
+  display: block;
+  color: var(--text-subtitle);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.5rem;
+}
+
+.ui-btn-primary {
+  background: linear-gradient(135deg, var(--primary) 0%, color-mix(in srgb, var(--primary) 80%, var(--accent)) 100%);
+  color: var(--primary-foreground);
+  border-radius: 0.75rem;
+  font-weight: 500;
+  transition: var(--theme-transition);
+  box-shadow: var(--shadow-sm);
+}
+
+.ui-btn-primary:hover:not(:disabled) {
+  filter: brightness(1.08);
+  box-shadow: var(--shadow-md);
+}
+
+.ui-btn-primary:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.ui-btn-primary:disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.ui-btn-secondary {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--foreground);
+  border-radius: 0.75rem;
+  font-weight: 500;
+  transition: var(--theme-transition);
+}
+
+.ui-btn-secondary:hover:not(:disabled) {
+  background: var(--card-hover);
+  border-color: color-mix(in srgb, var(--border) 70%, var(--primary));
+}
+
+.ui-btn-ghost {
+  background: transparent;
+  color: var(--text-secondary);
+  border-radius: 0.75rem;
+  transition: var(--theme-transition);
+}
+
+.ui-btn-ghost:hover:not(:disabled) {
+  background: var(--hover);
+  color: var(--foreground);
+}
+
+.ui-alert-error {
+  padding: 0.75rem 1rem;
+  border-radius: 0.75rem;
+  background: var(--error-muted);
+  border: 1px solid color-mix(in srgb, var(--error) 25%, transparent);
+  color: var(--error);
+  font-size: 0.875rem;
+}
+
+.ui-alert-success {
+  padding: 0.75rem 1rem;
+  border-radius: 0.75rem;
+  background: var(--success-muted);
+  border: 1px solid color-mix(in srgb, var(--success) 25%, transparent);
+  color: var(--success);
+  font-size: 0.875rem;
+}
+
+.ui-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--overlay);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.ui-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.625rem;
+  font-weight: 700;
+  padding: 0.125rem 0.5rem;
+  border-radius: 9999px;
+  border: 1px solid;
+}
+
+.ui-badge-urgent {
+  background: var(--error-muted);
+  color: var(--error);
+  border-color: color-mix(in srgb, var(--error) 25%, transparent);
+}
+
+.ui-badge-high {
+  background: var(--warning-muted);
+  color: var(--warning);
+  border-color: color-mix(in srgb, var(--warning) 25%, transparent);
+}
+
+.ui-badge-medium {
+  background: var(--primary-muted);
+  color: var(--primary);
+  border-color: color-mix(in srgb, var(--primary) 25%, transparent);
+}
+
+.ui-badge-low {
+  background: color-mix(in srgb, var(--text-muted) 10%, transparent);
+  color: var(--text-secondary);
+  border-color: color-mix(in srgb, var(--text-muted) 20%, transparent);
+}
+
+/* Header */
+header.app-header {
+  background: var(--header-bg);
+  border-bottom: 1px solid var(--border-subtle);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+/* Drawer / panel */
+.ui-drawer {
+  background: var(--card);
+  border-left: 1px solid var(--border);
+  box-shadow: var(--shadow-lg);
+}
+
+/* Decorative glow orbs */
+.glow-orb-primary {
+  background: color-mix(in srgb, var(--primary) 5%, transparent);
+}
+
+.glow-orb-accent {
+  background: color-mix(in srgb, var(--accent) 5%, transparent);
+}
+
+/* Progress track */
+.ui-progress-track {
+  background: var(--zinc-850);
+  border-radius: 9999px;
+  overflow: hidden;
+}
+
+/* Gradient text brand */
+.text-gradient-brand {
+  background: linear-gradient(135deg, var(--primary) 0%, color-mix(in srgb, var(--primary) 60%, var(--accent)) 50%, var(--accent) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* AI report panel */
+.ai-report-panel {
+  background: var(--background);
+}
+
+.ai-report-header {
+  border-bottom: 1px solid var(--border-subtle);
+  background: color-mix(in srgb, var(--card) 80%, transparent);
+  backdrop-filter: blur(12px);
+}
+
+.ai-dashboard-hero {
+  background: linear-gradient(135deg, var(--card) 0%, var(--surface) 50%, var(--card) 100%);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-md);
+}
+
+.ai-stat-card {
+  background: color-mix(in srgb, var(--surface) 60%, transparent);
+  border: 1px solid var(--border);
+}
+
+/* Notification unread state */
+.notif-unread {
+  background: var(--primary-muted);
+  border-color: color-mix(in srgb, var(--primary) 15%, transparent);
+  color: var(--text-body);
+}
+
+.notif-read {
+  background: transparent;
+  border-color: transparent;
+  color: var(--text-secondary);
 }
