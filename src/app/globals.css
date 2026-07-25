@@ -101,8 +101,8 @@
    Off-white / warm-cool gray — SaaS professional feel
    ========================================================================== */
 html[data-theme="light"] {
-  --background: #eef1f6;
-  --bg-gradient: linear-gradient(160deg, #e8ecf2 0%, #f2f4f8 40%, #eef2f7 100%);
+  --background: #F2F3F5;
+  --bg-gradient: linear-gradient(135deg, #F2F3F5 0%, #EFF3F8 50%, #F4F2F8 100%);
   --surface: #e4e8ef;
   --surface-elevated: #eef1f5;
   --card: #f8f9fb;
