@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import ThemeToggle from '@/components/ThemeToggle';
+import Sidebar from '@/components/Sidebar';
 import { 
   ArrowLeft, MessageSquare, Mail, Phone, MapPin, 
   Send, CheckCircle2 
@@ -15,6 +16,22 @@ export default function ContactPage() {
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [appLoading, setAppLoading] = useState(true);
+
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    setIsLoggedIn(!!token);
+    setAppLoading(false);
+  }, []);
+
+  if (appLoading) {
+    return (
+      <div className="min-h-screen w-full flex items-center justify-center bg-background">
+        <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,58 +47,26 @@ export default function ContactPage() {
     }, 1000);
   };
 
-  return (
-    <div className="min-h-screen w-full bg-background text-foreground relative overflow-x-hidden font-sans pb-20">
-      {/* Background glow orbs */}
-      <div className="absolute top-0 right-0 w-[50%] h-[50%] rounded-full glow-orb-primary blur-[140px] pointer-events-none opacity-30" />
-      <div className="absolute bottom-0 left-0 w-[50%] h-[50%] rounded-full glow-orb-accent blur-[140px] pointer-events-none opacity-20" />
-
-      {/* Navigation bar */}
-      <header className="sticky top-0 z-50 border-b border-border bg-header/80 backdrop-blur-md px-6 py-4">
-        <div className="max-w-6xl mx-auto flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2 group">
-            <div className="h-9 w-9 rounded-xl bg-gradient-to-tr from-primary to-accent flex items-center justify-center text-white font-bold shadow-md shadow-primary/20 group-hover:scale-105 transition-transform">
-              S
-            </div>
-            <span className="font-bold text-lg font-display tracking-tight text-heading">SmartManager</span>
-          </Link>
-
-          <div className="flex items-center gap-6">
-            <Link href="/features" className="text-sm font-semibold text-secondary hover:text-primary transition-all">
-              Tính năng
-            </Link>
-            <Link href="/pricing" className="text-sm font-semibold text-secondary hover:text-primary transition-all">
-              Bảng giá
-            </Link>
-            <Link href="/contact" className="text-sm font-bold text-primary transition-all">
-              Liên hệ
-            </Link>
-            <ThemeToggle />
-            <Link href="/login" className="text-sm font-semibold text-secondary hover:text-primary transition-all">
-              Đăng nhập
-            </Link>
-          </div>
-        </div>
-      </header>
-
+  const renderContactContent = () => (
+    <>
       {/* Hero Section */}
-      <section className="max-w-4xl mx-auto px-6 pt-20 pb-12 text-center relative z-10">
+      <section className="max-w-4xl mx-auto text-center relative z-10 pb-12">
         <span className="text-xs font-bold text-primary uppercase tracking-widest bg-primary/10 px-3.5 py-1.5 rounded-full border border-primary/20">
           Kết nối & Hợp tác
         </span>
-        <h1 className="text-4xl font-black tracking-tight font-display text-heading mt-6 leading-tight">
+        <h1 className="text-3xl md:text-4xl font-black tracking-tight font-display text-heading mt-6 leading-tight">
           Chúng tôi luôn sẵn sàng <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">lắng nghe bạn</span>
         </h1>
-        <p className="text-secondary text-sm mt-4 max-w-xl mx-auto leading-relaxed">
+        <p className="text-secondary text-xs mt-4 max-w-xl mx-auto leading-relaxed">
           Gửi yêu cầu demo doanh nghiệp, phản hồi tính năng hoặc yêu cầu hỗ trợ kỹ thuật bất cứ lúc nào.
         </p>
       </section>
 
       {/* Contact Main Content */}
-      <main className="max-w-5xl mx-auto px-6 grid grid-cols-1 md:grid-cols-2 gap-12 relative z-10 mt-10">
+      <div className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-12 relative z-10 mt-6">
         {/* Left Side: Contact Form Card */}
-        <div className="glass p-8 rounded-3xl border border-border shadow-xl bg-gradient-to-b from-surface/40 to-transparent">
-          <h2 className="text-xl font-bold font-display text-heading mb-6">Gửi tin nhắn phản hồi</h2>
+        <div className="glass p-6 md:p-8 rounded-3xl border border-border shadow-xl bg-gradient-to-b from-surface/40 to-transparent">
+          <h2 className="text-lg font-bold font-display text-heading mb-6">Gửi tin nhắn phản hồi</h2>
           
           {success && (
             <div className="ui-alert-success mb-6 flex items-center gap-2 text-xs font-semibold">
@@ -158,8 +143,8 @@ export default function ContactPage() {
         {/* Right Side: Contact info details */}
         <div className="flex flex-col justify-center space-y-8">
           <div className="space-y-6">
-            <h2 className="text-xl font-bold font-display text-heading">Thông tin liên lạc trực tiếp</h2>
-            <p className="text-secondary text-sm leading-relaxed">
+            <h2 className="text-lg font-bold font-display text-heading">Thông tin liên lạc trực tiếp</h2>
+            <p className="text-secondary text-xs leading-relaxed">
               Nếu bạn cần hỗ trợ khẩn cấp hoặc muốn thảo luận chuyên sâu về giải pháp tùy biến Private AI cho tổ chức,
               hãy liên hệ với chúng tôi qua các kênh trực tiếp dưới đây:
             </p>
@@ -200,7 +185,65 @@ export default function ContactPage() {
             </div>
           </div>
         </div>
-      </main>
+      </div>
+    </>
+  );
+
+  // --- RENDERING FOR LOGGED-IN USERS (WITH SIDEBAR) ---
+  if (isLoggedIn) {
+    return (
+      <div className="flex min-h-screen w-full bg-background text-foreground relative font-sans overflow-x-hidden">
+        <div className="absolute top-0 right-0 w-[50%] h-[50%] rounded-full glow-orb-primary blur-[140px] pointer-events-none opacity-20" />
+        <div className="absolute bottom-0 left-0 w-[50%] h-[50%] rounded-full glow-orb-accent blur-[140px] pointer-events-none opacity-15" />
+        
+        <Sidebar />
+
+        <div className="flex-1 flex flex-col min-w-0 min-h-screen relative z-10 overflow-y-auto px-6 py-8 md:px-12">
+          {renderContactContent()}
+        </div>
+      </div>
+    );
+  }
+
+  // --- RENDERING FOR GUEST USERS (WITH TOP HEADER) ---
+  return (
+    <div className="min-h-screen w-full bg-background text-foreground relative overflow-x-hidden font-sans pb-20">
+      {/* Background glow orbs */}
+      <div className="absolute top-0 right-0 w-[50%] h-[50%] rounded-full glow-orb-primary blur-[140px] pointer-events-none opacity-35" />
+      <div className="absolute bottom-0 left-0 w-[50%] h-[50%] rounded-full glow-orb-accent blur-[140px] pointer-events-none opacity-25" />
+
+      {/* Navigation bar */}
+      <header className="sticky top-0 z-50 border-b border-border bg-header/80 backdrop-blur-md px-6 py-4">
+        <div className="max-w-6xl mx-auto flex items-center justify-between">
+          <Link href="/" className="flex items-center gap-2 group">
+            <div className="h-9 w-9 rounded-xl bg-gradient-to-tr from-primary to-accent flex items-center justify-center text-white font-bold shadow-md shadow-primary/20 group-hover:scale-105 transition-transform">
+              S
+            </div>
+            <span className="font-bold text-lg font-display tracking-tight text-heading">SmartManager</span>
+          </Link>
+
+          <div className="flex items-center gap-6">
+            <Link href="/features" className="text-sm font-semibold text-secondary hover:text-primary transition-all">
+              Tính năng
+            </Link>
+            <Link href="/pricing" className="text-sm font-semibold text-secondary hover:text-primary transition-all">
+              Bảng giá
+            </Link>
+            <Link href="/terms" className="text-sm font-semibold text-secondary hover:text-primary transition-all">
+              Điều khoản
+            </Link>
+            <Link href="/contact" className="text-sm font-bold text-primary transition-all">
+              Liên hệ
+            </Link>
+            <ThemeToggle />
+            <Link href="/login" className="text-sm font-semibold text-secondary hover:text-primary transition-all">
+              Đăng nhập
+            </Link>
+          </div>
+        </div>
+      </header>
+
+      {renderContactContent()}
     </div>
   );
 }

@@ -114,6 +114,9 @@ export default function WorkspacesPage() {
               <Link href="/pricing" className="text-sm font-semibold text-secondary hover:text-primary transition-all">
                 Bảng giá
               </Link>
+              <Link href="/terms" className="text-sm font-semibold text-secondary hover:text-primary transition-all font-sans">
+                Điều khoản
+              </Link>
               <Link href="/contact" className="text-sm font-semibold text-secondary hover:text-primary transition-all">
                 Liên hệ
               </Link>
