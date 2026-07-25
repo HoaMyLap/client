@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { api } from '@/lib/api';
 import ThemeToggle from '@/components/ThemeToggle';
+import { ArrowLeft } from 'lucide-react';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -34,6 +35,13 @@ export default function LoginPage() {
 
   return (
     <main className="min-h-screen w-full flex items-center justify-center relative bg-background text-foreground overflow-hidden px-4">
+      <div className="absolute top-6 left-6 z-20">
+        <Link href="/" className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-border bg-card/60 text-secondary hover:text-primary transition-all text-xs font-semibold shadow-sm">
+          <ArrowLeft className="w-4 h-4" />
+          Quay lại trang chủ
+        </Link>
+      </div>
+
       <div className="absolute top-6 right-6 z-20">
         <ThemeToggle />
       </div>
