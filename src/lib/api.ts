@@ -17,6 +17,15 @@ async function request(path: string, options: RequestInit = {}) {
   });
 
   if (!response.ok) {
+    if (response.status === 401 || response.status === 403) {
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('token');
+        const currentPath = window.location.pathname;
+        if (!['/login', '/register', '/', '/features', '/pricing', '/terms', '/contact'].includes(currentPath)) {
+          window.location.href = '/login';
+        }
+      }
+    }
     const errorData = await response.json().catch(() => ({}));
     console.error(`API Error: [${response.status}] ${options.method || 'GET'} ${path}`, errorData);
     throw new Error(errorData.error || response.statusText || `Lỗi ${response.status}: Có lỗi xảy ra`);
