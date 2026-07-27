@@ -101,18 +101,18 @@
    Off-white / warm-cool gray — SaaS professional feel
    ========================================================================== */
 html[data-theme="light"] {
-  --background: #C4D9F5;
-  --bg-gradient: linear-gradient(135deg, #C4D9F5 0%, #E3ECF7 50%, #F3F7FC 100%);
-  --surface: #e4e8ef;
-  --surface-elevated: #eef1f5;
-  --card: #f8f9fb;
-  --card-hover: #f2f4f7;
-  --input-bg: #ffffff;
-  --header-bg: rgba(248, 249, 251, 0.92);
-  --overlay: rgba(15, 23, 42, 0.45);
+  --background: #E2E4E9;
+  --bg-gradient: linear-gradient(135deg, #E2E4E9 0%, #B0CFFF 50%, #D2C2FC 100%);
+  --surface: rgba(255, 255, 255, 0.3);
+  --surface-elevated: rgba(255, 255, 255, 0.45);
+  --card: rgba(240, 246, 255, 0.65);
+  --card-hover: rgba(225, 238, 255, 0.8);
+  --input-bg: rgba(255, 255, 255, 0.7);
+  --header-bg: rgba(240, 246, 255, 0.4);
+  --overlay: rgba(15, 23, 42, 0.3);
 
-  --border: #d8dee8;
-  --border-subtle: #e4e8ef;
+  --border: rgba(255, 255, 255, 0.5);
+  --border-subtle: rgba(255, 255, 255, 0.35);
 
   --hover: rgba(15, 23, 42, 0.04);
   --active: rgba(15, 23, 42, 0.07);
@@ -121,7 +121,7 @@ html[data-theme="light"] {
   --primary-hover: #4a5ae0;
   --primary-muted: rgba(91, 108, 240, 0.1);
   --primary-foreground: #ffffff;
-  --secondary: #e4e8ef;
+  --secondary: rgba(255, 255, 255, 0.4);
   --accent: #388bfd;
 
   --success: #1a7f4b;
@@ -133,15 +133,15 @@ html[data-theme="light"] {
   --info: #0969da;
   --info-muted: rgba(9, 105, 218, 0.1);
 
-  --foreground: #0f172a;
-  --text-heading: #0f172a;
-  --text-title: #0f172a;
-  --text-subtitle: #1e293b;
-  --text-body: #334155;
-  --text-secondary: #475569;
-  --text-muted: #64748b;
-  --text-disabled: #94a3b8;
-  --text-placeholder: #64748b;
+  --foreground: #061224;
+  --text-heading: #020713;
+  --text-title: #020713;
+  --text-subtitle: #08162A;
+  --text-body: #0C1D33;
+  --text-secondary: #1C2D4A;
+  --text-muted: #3D5273;
+  --text-disabled: #6E84A6;
+  --text-placeholder: #5A6D8F;
   --text-link: #5b6cf0;
 
   --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.04);
@@ -234,6 +234,13 @@ html[data-theme="light"] {
   --color-violet-400: var(--primary);
   --font-sans: 'Plus Jakarta Sans', sans-serif;
   --font-display: 'Plus Jakarta Sans', sans-serif;
+  --font-size-xs: 0.8125rem;
+  --font-size-sm: 0.9375rem;
+  --font-size-base: 1.0625rem;
+  --font-size-lg: 1.1875rem;
+  --font-size-xl: 1.3125rem;
+  --font-size-2xl: 1.625rem;
+  --font-size-3xl: 2rem;
 }
 
 /* ==========================================================================
@@ -251,6 +258,10 @@ body {
   color: var(--foreground);
   font-family: 'Plus Jakarta Sans', sans-serif;
   overflow-x: hidden;
+}
+
+html[data-theme="light"] body {
+  font-weight: 500;
 }
 
 .min-h-screen.bg-background,

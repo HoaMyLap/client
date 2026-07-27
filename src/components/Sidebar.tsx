@@ -197,16 +197,16 @@ export default function Sidebar() {
 
   // Informational Guest pages to add to sidebar
   const infoPages = [
-    { name: 'Trang chủ', path: '/', icon: <Home className="w-4 h-4" /> },
-    { name: 'Tính năng', path: '/features', icon: <Zap className="w-4 h-4" /> },
-    { name: 'Bảng giá', path: '/pricing', icon: <TrendingUp className="w-4 h-4" /> },
-    { name: 'Điều khoản', path: '/terms', icon: <Shield className="w-4 h-4" /> },
-    { name: 'Liên hệ', path: '/contact', icon: <MessageSquare className="w-4 h-4" /> },
+    { name: 'Trang chủ', path: '/', icon: <Home className="w-5 h-5" /> },
+    { name: 'Tính năng', path: '/features', icon: <Zap className="w-5 h-5" /> },
+    { name: 'Bảng giá', path: '/pricing', icon: <TrendingUp className="w-5 h-5" /> },
+    { name: 'Điều khoản', path: '/terms', icon: <Shield className="w-5 h-5" /> },
+    { name: 'Liên hệ', path: '/contact', icon: <MessageSquare className="w-5 h-5" /> },
   ];
 
   return (
     <aside 
-      className={`h-screen sticky top-0 bg-header border-r border-border flex flex-col justify-between shrink-0 font-sans z-30 select-none transition-all duration-300 ease-in-out relative ${
+      className={`h-screen sticky top-0 bg-header backdrop-blur-md border-r border-border flex flex-col justify-between shrink-0 font-sans z-30 select-none transition-all duration-300 ease-in-out relative ${
         isCollapsed ? 'w-16' : 'w-64'
       }`}
     >
@@ -246,7 +246,7 @@ export default function Sidebar() {
               <Link 
                 key={idx}
                 href={page.path}
-                className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold transition-all ${
+                className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-semibold transition-all ${
                   isCollapsed ? 'justify-center' : ''
                 } ${
                   isActive 
@@ -275,7 +275,7 @@ export default function Sidebar() {
               <Link 
                 key={ws.id} 
                 href={`/workspace/${ws.id}`}
-                className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-all ${
+                className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-sm transition-all ${
                   isCollapsed ? 'justify-center' : ''
                 } ${
                   ws.id === workspaceId || (currentWorkspace && currentWorkspace.id === ws.id)
@@ -285,10 +285,10 @@ export default function Sidebar() {
                 title={isCollapsed ? ws.name : undefined}
               >
                 <div className="flex items-center gap-2.5 truncate">
-                  <Briefcase className="w-3.5 h-3.5 shrink-0" />
+                  <Briefcase className="w-4.5 h-4.5 shrink-0" />
                   {!isCollapsed && <span className="truncate">{ws.name}</span>}
                 </div>
-                {!isCollapsed && <ChevronRight className="w-3 h-3 opacity-60" />}
+                {!isCollapsed && <ChevronRight className="w-4 h-4 opacity-60" />}
               </Link>
             ))}
             {workspaces.length === 0 && !loading && !isCollapsed && (
@@ -307,13 +307,13 @@ export default function Sidebar() {
                   <Link
                     key={proj.id}
                     href={`/project/${proj.id}`}
-                    className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs transition-all ${
+                    className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm transition-all ${
                       proj.id === projectId
                         ? 'bg-violet-500/10 text-violet-400 font-bold border border-violet-500/20'
                         : 'text-secondary hover:bg-hover hover:text-primary'
                     }`}
                   >
-                    <Folder className="w-3.5 h-3.5 shrink-0" />
+                    <Folder className="w-4.5 h-4.5 shrink-0" />
                     <span className="truncate">{proj.name}</span>
                   </Link>
                 ))}
@@ -343,7 +343,7 @@ export default function Sidebar() {
               className="ui-btn-ghost p-2 relative flex items-center justify-center shrink-0"
               title="Thông báo hệ thống"
             >
-              <Bell className="h-4.5 w-4.5 text-secondary hover:text-primary transition-colors" />
+              <Bell className="h-5.5 w-5.5 text-secondary hover:text-primary transition-colors" />
               {unreadCount > 0 && (
                 <span className="absolute top-1.5 right-1.5 h-3.5 w-3.5 bg-error rounded-full text-[8px] font-bold flex items-center justify-center text-primary-foreground">
                   {unreadCount}
@@ -407,17 +407,17 @@ export default function Sidebar() {
               }`}
             >
               <div className="flex items-center gap-2.5 truncate">
-                <div className="h-8 w-8 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center font-bold text-xs text-primary shrink-0">
+                <div className="h-9 w-9 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center font-bold text-sm text-primary shrink-0">
                   {fullname ? fullname.charAt(0).toUpperCase() : 'U'}
                 </div>
                 {!isCollapsed && (
                   <div className="text-left truncate">
-                    <div className="text-[11px] font-bold text-title truncate">{fullname}</div>
-                    <div className="text-[9px] text-muted truncate">{email}</div>
+                    <div className="text-xs font-bold text-title truncate">{fullname}</div>
+                    <div className="text-[10px] text-muted truncate">{email}</div>
                   </div>
                 )}
               </div>
-              {!isCollapsed && <ChevronDown className="w-3.5 h-3.5 text-secondary shrink-0" />}
+              {!isCollapsed && <ChevronDown className="w-4 h-4 text-secondary shrink-0" />}
             </button>
 
             {/* Profile/Logout Dropdown */}
@@ -430,16 +430,16 @@ export default function Sidebar() {
                     setShowProfileModal(true);
                     setShowUserDropdown(false);
                   }}
-                  className="w-full flex items-center gap-2 px-3 py-2 text-xs hover:bg-hover rounded-lg text-left text-body"
+                  className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-hover rounded-lg text-left text-body"
                 >
-                  <User className="h-4 w-4 text-secondary" />
+                  <User className="h-4.5 w-4.5 text-secondary" />
                   Hồ sơ cá nhân
                 </button>
                 <button
                   onClick={handleLogout}
-                  className="w-full flex items-center gap-2 px-3 py-2 text-xs hover:bg-error-muted text-error rounded-lg text-left mt-1 font-semibold"
+                  className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-error-muted text-error rounded-lg text-left mt-1 font-semibold"
                 >
-                  <LogOut className="h-4 w-4" />
+                  <LogOut className="h-4.5 w-4.5" />
                   Đăng xuất
                 </button>
               </div>
