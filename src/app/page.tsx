@@ -95,17 +95,11 @@ export default function WorkspacesPage() {
         <div className="absolute bottom-0 left-0 w-[50%] h-[50%] rounded-full glow-orb-accent blur-[140px] pointer-events-none opacity-30" />
 
         {/* Navigation bar */}
-        <header className="sticky top-0 z-50 border-b border-border bg-header/80 backdrop-blur-md px-6 py-4">
-          <div className="max-w-6xl mx-auto flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="h-9 w-9 rounded-xl bg-gradient-to-tr from-primary to-accent flex items-center justify-center text-white font-bold shadow-md shadow-primary/20">
-                S
-              </div>
-              <span className="font-bold text-lg font-display tracking-tight text-heading">SmartManager</span>
-              <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
-                v2.0
-              </span>
-            </div>
+        <header className="sticky top-0 z-50 border-b border-border bg-header/80 backdrop-blur-md px-6 py-1 h-20 flex items-center">
+          <div className="max-w-6xl w-full mx-auto flex items-center justify-between">
+            <Link href="/" className="flex items-center">
+              <img src="/logo2.png" alt="Logo" style={{ transform: 'scale(1.3)', transformOrigin: 'left center' }} className="h-18 w-auto object-contain" />
+            </Link>
 
             <div className="flex items-center gap-6">
               <Link href="/features" className="text-sm font-semibold text-secondary hover:text-primary transition-all">

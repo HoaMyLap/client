@@ -213,7 +213,7 @@ export default function Sidebar() {
       {/* Collapse/Expand Toggle Button */}
       <button
         onClick={toggleCollapse}
-        className="absolute top-5 -right-3 h-6 w-6 rounded-full border border-border bg-header text-secondary hover:text-primary hover:border-primary/40 flex items-center justify-center shadow-md cursor-pointer z-40 transition-transform active:scale-95"
+        className="absolute top-5 -right-3 h-6 w-6 rounded-full border border-border bg-header text-secondary hover:text-primary hover:border-primary/40 flex items-center justify-center shadow-md cursor-pointer z-50 transition-transform active:scale-95"
         title={isCollapsed ? 'Mở rộng thanh menu' : 'Thu gọn thanh menu'}
       >
         {isCollapsed ? <ChevronRightIcon className="w-3.5 h-3.5" /> : <ChevronLeft className="w-3.5 h-3.5" />}
@@ -222,15 +222,15 @@ export default function Sidebar() {
       {/* Top Section */}
       <div className="flex-1 flex flex-col overflow-y-auto">
         {/* Brand Header */}
-        <div className={`p-4 border-b border-border flex items-center gap-3 ${isCollapsed ? 'justify-center' : 'p-6'}`}>
-          <div className="h-9 w-9 rounded-xl bg-gradient-to-tr from-primary to-accent flex items-center justify-center font-display font-black text-lg text-primary-foreground shadow-md shadow-primary/10 shrink-0">
-            S
-          </div>
-          {!isCollapsed && (
-            <span className="font-black text-sm tracking-tight text-gradient-brand font-display truncate">
-              Smart Manager
-            </span>
-          )}
+        <div className={`border-b border-border flex items-center justify-center overflow-hidden ${isCollapsed ? 'p-3 h-16' : 'p-2 h-24'}`}>
+          <img 
+            src={isCollapsed ? "/minilogo.png" : "/logo2.png"} 
+            alt="Logo" 
+            style={{ transform: 'scale(1.3)' }}
+            className={`object-contain transition-all duration-300 ${
+              isCollapsed ? 'h-10 w-10' : 'w-[75%] h-full max-h-20'
+            }`} 
+          />
         </div>
 
         {/* Informational Pages Navigation Menu */}

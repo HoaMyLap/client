@@ -206,13 +206,10 @@ export default function PricingPage() {
       <div className="absolute bottom-0 left-0 w-[50%] h-[50%] rounded-full glow-orb-accent blur-[140px] pointer-events-none opacity-25" />
 
       {/* Navigation bar */}
-      <header className="sticky top-0 z-50 border-b border-border bg-header/80 backdrop-blur-md px-6 py-4">
-        <div className="max-w-6xl mx-auto flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2 group">
-            <div className="h-9 w-9 rounded-xl bg-gradient-to-tr from-primary to-accent flex items-center justify-center text-white font-bold shadow-md shadow-primary/20 group-hover:scale-105 transition-transform">
-              S
-            </div>
-            <span className="font-bold text-lg font-display tracking-tight text-heading">SmartManager</span>
+      <header className="sticky top-0 z-50 border-b border-border bg-header/80 backdrop-blur-md px-6 py-1 h-20 flex items-center">
+        <div className="max-w-6xl w-full mx-auto flex items-center justify-between">
+          <Link href="/" className="flex items-center group">
+            <img src="/logo2.png" alt="Logo" style={{ transform: 'scale(1.3)', transformOrigin: 'left center' }} className="h-18 w-auto object-contain group-hover:scale-[1.02] transition-transform" />
           </Link>
 
           <div className="flex items-center gap-6">
