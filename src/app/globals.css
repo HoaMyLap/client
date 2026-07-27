@@ -254,6 +254,8 @@ body {
 }
 
 .min-h-screen.bg-background,
+.h-screen.bg-background,
+.flex.h-screen.bg-background,
 main.bg-background {
   background: transparent !important;
 }
