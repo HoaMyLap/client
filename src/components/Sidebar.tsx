@@ -206,11 +206,11 @@ export default function Sidebar() {
 
   // Informational Guest pages to add to sidebar
   const infoPages = [
-    { name: 'Trang chủ', path: '/', icon: <Home className="w-5 h-5" /> },
-    { name: 'Tính năng', path: '/features', icon: <Zap className="w-5 h-5" /> },
-    { name: 'Bảng giá', path: '/pricing', icon: <TrendingUp className="w-5 h-5" /> },
-    { name: 'Điều khoản', path: '/terms', icon: <Shield className="w-5 h-5" /> },
-    { name: 'Liên hệ', path: '/contact', icon: <MessageSquare className="w-5 h-5" /> },
+    { name: 'Trang chủ', path: '/', icon: <Home className="w-5 h-5 shrink-0" /> },
+    { name: 'Tính năng', path: '/features', icon: <Zap className="w-5 h-5 shrink-0" /> },
+    { name: 'Bảng giá', path: '/pricing', icon: <TrendingUp className="w-5 h-5 shrink-0" /> },
+    { name: 'Điều khoản', path: '/terms', icon: <Shield className="w-5 h-5 shrink-0" /> },
+    { name: 'Liên hệ', path: '/contact', icon: <MessageSquare className="w-5 h-5 shrink-0" /> },
   ];
 
   return (
@@ -256,7 +256,7 @@ export default function Sidebar() {
                 key={idx}
                 href={page.path}
                 className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-semibold transition-all ${
-                  isCollapsed ? 'justify-center' : ''
+                  isCollapsed ? 'justify-center px-0' : ''
                 } ${
                   isActive 
                     ? 'bg-primary/10 text-primary' 
@@ -285,7 +285,7 @@ export default function Sidebar() {
                 key={ws.id} 
                 href={`/workspace/${ws.id}`}
                 className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-sm transition-all ${
-                  isCollapsed ? 'justify-center' : ''
+                  isCollapsed ? 'justify-center px-0' : ''
                 } ${
                   ws.id === workspaceId || (currentWorkspace && currentWorkspace.id === ws.id)
                     ? 'bg-primary/5 text-primary font-bold border border-primary/20'
@@ -293,8 +293,8 @@ export default function Sidebar() {
                 }`}
                 title={isCollapsed ? ws.name : undefined}
               >
-                <div className="flex items-center gap-2.5 truncate">
-                  <Briefcase className="w-4.5 h-4.5 shrink-0" />
+                <div className={`flex items-center gap-2.5 ${isCollapsed ? 'justify-center' : 'truncate'}`}>
+                  <Briefcase className="w-5 h-5 shrink-0" />
                   {!isCollapsed && <span className="truncate">{ws.name}</span>}
                 </div>
                 {!isCollapsed && <ChevronRight className="w-4 h-4 opacity-60" />}
@@ -322,7 +322,7 @@ export default function Sidebar() {
                         : 'text-secondary hover:bg-hover hover:text-primary'
                     }`}
                   >
-                    <Folder className="w-4.5 h-4.5 shrink-0" />
+                    <Folder className="w-5 h-5 shrink-0" />
                     <span className="truncate">{proj.name}</span>
                   </Link>
                 ))}
@@ -352,7 +352,7 @@ export default function Sidebar() {
               className="ui-btn-ghost p-2 relative flex items-center justify-center shrink-0"
               title="Thông báo hệ thống"
             >
-              <Bell className="h-5.5 w-5.5 text-secondary hover:text-primary transition-colors" />
+              <Bell className="w-5 h-5 shrink-0 text-secondary hover:text-primary transition-colors" />
               {unreadCount > 0 && (
                 <span className="absolute top-1.5 right-1.5 h-3.5 w-3.5 bg-error rounded-full text-[8px] font-bold flex items-center justify-center text-primary-foreground">
                   {unreadCount}
