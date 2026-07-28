@@ -70,6 +70,8 @@ export const api = {
       request(`/tasks/${taskId}/move`, { method: 'PATCH', body: JSON.stringify(data) }),
     getSubtasks: (taskId: string) => request(`/tasks/${taskId}/subtasks`),
     generateAiSubtasks: (taskId: string) => request(`/tasks/${taskId}/ai-subtasks`, { method: 'POST' }),
+    getLogs: (taskId: string) => request(`/tasks/${taskId}/logs`),
+    toggleDone: (taskId: string) => request(`/tasks/${taskId}/toggle-done`, { method: 'PATCH' }),
   },
   comments: {
     list: (taskId: string) => request(`/comments/task/${taskId}`),

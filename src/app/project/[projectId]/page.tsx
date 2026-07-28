@@ -10,7 +10,8 @@ import { jsonrepair } from 'jsonrepair';
 import { 
   ArrowLeft, Plus, MessageSquare, Calendar, 
   Trash, Send, CheckSquare, X, Clock, AlertCircle, User, Sparkles, FileText,
-  Printer, TrendingUp, Activity, CheckCircle2, Users, AlertTriangle, Briefcase, Lightbulb
+  Printer, TrendingUp, Activity, CheckCircle2, Users, AlertTriangle, Briefcase, Lightbulb,
+  History, ListChecks, ChevronRight, Check
 } from 'lucide-react';
 import { Client } from '@stomp/stompjs';
 
@@ -43,6 +44,16 @@ interface Member {
   fullname: string;
   avatarUrl: string;
   role: string;
+}
+
+interface TaskLog {
+  id: string;
+  taskId: string;
+  userId: string | null;
+  actionType: string;
+  oldValue: string | null;
+  newValue: string | null;
+  createdAt: string;
 }
 
 export default function ProjectKanbanPage() {
@@ -84,6 +95,10 @@ export default function ProjectKanbanPage() {
   const [editAssigneeId, setEditAssigneeId] = useState<string | null>(null);
   const [editDueDate, setEditDueDate] = useState<string | null>(null);
 
+  // Drawer Tab
+  const [drawerTab, setDrawerTab] = useState<'detail' | 'subtasks' | 'logs' | 'comments'>('detail');
+  const [taskLogs, setTaskLogs] = useState<TaskLog[]>([]);
+
   // AI Loading & Modal States
   const [aiSubtaskLoading, setAiSubtaskLoading] = useState(false);
   const [showAiSummaryModal, setShowAiSummaryModal] = useState(false);
@@ -124,6 +139,7 @@ export default function ProjectKanbanPage() {
       setEditDesc(selectedTask.description || '');
       setEditPriority(selectedTask.priority);
       setEditAssigneeId(selectedTask.assigneeId);
+      setDrawerTab('detail');
       
       // Định dạng ngày giờ cho input datetime-local (yyyy-MM-ddThh:mm)
       if (selectedTask.dueDate) {
@@ -176,10 +192,14 @@ export default function ProjectKanbanPage() {
 
   const loadTaskDetails = async (taskId: string) => {
     try {
-      const commentData = await api.comments.list(taskId);
+      const [commentData, subtaskData, logData] = await Promise.all([
+        api.comments.list(taskId),
+        api.tasks.getSubtasks(taskId),
+        api.tasks.getLogs(taskId),
+      ]);
       setComments(commentData || []);
-      const subtaskData = await api.tasks.getSubtasks(taskId);
       setSubtasks(subtaskData || []);
+      setTaskLogs(logData || []);
     } catch (err) {
       console.error(err);
     }
@@ -319,6 +339,19 @@ export default function ProjectKanbanPage() {
       loadTaskDetails(selectedTask.id);
     } catch (err: any) {
       alert(err.message || 'Lỗi khi thêm công việc con.');
+    }
+  };
+
+  const handleToggleSubtask = async (subtaskId: string) => {
+    try {
+      const updated = await api.tasks.toggleDone(subtaskId);
+      setSubtasks((prev) => prev.map((s) => (s.id === subtaskId ? updated : s)));
+      // Refresh logs
+      if (selectedTask) {
+        api.tasks.getLogs(selectedTask.id).then((data) => setTaskLogs(data || []));
+      }
+    } catch (err: any) {
+      alert(err.message || 'Không thể cập nhật trạng thái.');
     }
   };
 
@@ -558,10 +591,16 @@ export default function ProjectKanbanPage() {
 
       {/* Task Detail Drawer */}
       {selectedTask && (
-        <div className="fixed inset-y-0 right-0 w-full max-w-lg ui-drawer z-50 flex flex-col p-6 overflow-y-auto">
-          <div className="flex items-center justify-between border-b border-border pb-4 mb-6">
-            <h3 className="text-lg font-bold font-display text-heading">Chi tiết công việc</h3>
-            <div className="flex items-center gap-3">
+        <div className="fixed inset-y-0 right-0 w-full max-w-lg ui-drawer z-50 flex flex-col overflow-hidden">
+          {/* Drawer Header */}
+          <div className="flex items-center justify-between border-b border-border px-6 py-4 shrink-0">
+            <div className="flex-1 min-w-0 pr-4">
+              <h3 className="text-base font-bold font-display text-heading truncate">{selectedTask.title}</h3>
+              <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border mt-1 inline-block ${getPriorityBadgeColor(selectedTask.priority)}`}>
+                {selectedTask.priority} · {selectedTask.status.replace('_', ' ')}
+              </span>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
               <button
                 onClick={() => handleDeleteTask(selectedTask.id)}
                 className="p-2 text-secondary hover:text-error hover:bg-error-muted rounded-lg transition-colors"
@@ -569,189 +608,317 @@ export default function ProjectKanbanPage() {
               >
                 <Trash className="h-4 w-4" />
               </button>
-              <button
-                onClick={() => setSelectedTask(null)}
-                className="ui-btn-ghost p-2"
-              >
+              <button onClick={() => setSelectedTask(null)} className="ui-btn-ghost p-2">
                 <X className="h-4 w-4" />
               </button>
             </div>
           </div>
 
-          <div className="space-y-6 flex-1">
-            <div>
-              <label className="ui-label">Tiêu đề</label>
-              <input
-                type="text"
-                value={editTitle}
-                onChange={(e) => setEditTitle(e.target.value)}
-                onBlur={() => handleUpdateTaskDetails()}
-                className="ui-input px-4 py-2 text-sm"
-              />
-            </div>
+          {/* Tab Navigation */}
+          <div className="flex border-b border-border shrink-0 px-2">
+            {([
+              { id: 'detail', label: 'Chi tiết', icon: <FileText className="h-3.5 w-3.5" /> },
+              { id: 'subtasks', label: `Subtasks (${subtasks.length})`, icon: <ListChecks className="h-3.5 w-3.5" /> },
+              { id: 'logs', label: 'Lịch sử', icon: <History className="h-3.5 w-3.5" /> },
+              { id: 'comments', label: `Thảo luận (${comments.length})`, icon: <MessageSquare className="h-3.5 w-3.5" /> },
+            ] as const).map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setDrawerTab(tab.id)}
+                className={`flex items-center gap-1.5 px-3 py-3 text-[11px] font-semibold border-b-2 transition-colors whitespace-nowrap ${
+                  drawerTab === tab.id
+                    ? 'border-primary text-primary'
+                    : 'border-transparent text-secondary hover:text-foreground'
+                }`}
+              >
+                {tab.icon}{tab.label}
+              </button>
+            ))}
+          </div>
 
-            <div>
-              <label className="ui-label">Mô tả công việc</label>
-              <textarea
-                value={editDesc}
-                onChange={(e) => setEditDesc(e.target.value)}
-                onBlur={() => handleUpdateTaskDetails()}
-                rows={3}
-                className="ui-input px-4 py-2.5 text-sm resize-none"
-              />
-            </div>
+          {/* Drawer Body — scrollable */}
+          <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="ui-label">Độ ưu tiên</label>
-                <select
-                  value={editPriority}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    setEditPriority(val);
-                    handleUpdateTaskDetails({ priority: val });
-                  }}
-                  className="ui-input px-3 py-2 text-xs"
-                >
-                  <option value="LOW">LOW (Thấp)</option>
-                  <option value="MEDIUM">MEDIUM (Trung bình)</option>
-                  <option value="HIGH">HIGH (Cao)</option>
-                  <option value="URGENT">URGENT (Khẩn cấp)</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="ui-label">Trạng thái hiện tại</label>
-                <div className="bg-surface border border-border rounded-xl px-3 py-2 text-xs text-body capitalize">
-                  {selectedTask.status.replace('_', ' ').toLowerCase()}
+            {/* ===== TAB: Chi tiết ===== */}
+            {drawerTab === 'detail' && (
+              <>
+                <div>
+                  <label className="ui-label">Tiêu đề</label>
+                  <input
+                    type="text"
+                    value={editTitle}
+                    onChange={(e) => setEditTitle(e.target.value)}
+                    onBlur={() => handleUpdateTaskDetails()}
+                    className="ui-input px-4 py-2 text-sm"
+                  />
                 </div>
-              </div>
-            </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-zinc-300 text-xs font-semibold uppercase mb-2">Người thực hiện</label>
-                <select
-                  value={editAssigneeId || ''}
-                  onChange={(e) => {
-                    const val = e.target.value || null;
-                    setEditAssigneeId(val);
-                    handleUpdateTaskDetails({ assigneeId: val });
-                  }}
-                  className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-violet-500"
-                >
-                  <option value="">Chưa phân công</option>
-                  {members.map((m) => (
-                    <option key={m.userId} value={m.userId}>
-                      {m.fullname}
-                    </option>
-                  ))}
-                </select>
-              </div>
+                <div>
+                  <label className="ui-label">Mô tả công việc</label>
+                  <textarea
+                    value={editDesc}
+                    onChange={(e) => setEditDesc(e.target.value)}
+                    onBlur={() => handleUpdateTaskDetails()}
+                    rows={3}
+                    className="ui-input px-4 py-2.5 text-sm resize-none"
+                  />
+                </div>
 
-              <div>
-                <label className="block text-zinc-300 text-xs font-semibold uppercase mb-2">Hạn chót (Due date)</label>
-                <input
-                  type="datetime-local"
-                  value={editDueDate || ''}
-                  onChange={(e) => {
-                    const val = e.target.value || null;
-                    setEditDueDate(val);
-                    if (val) {
-                      handleUpdateTaskDetails({ dueDate: new Date(val).toISOString() });
-                    } else {
-                      handleUpdateTaskDetails({ dueDate: null });
-                    }
-                  }}
-                  className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-violet-500"
-                />
-              </div>
-            </div>
-
-            {/* Subtasks section */}
-            <div className="border-t border-zinc-800/80 pt-6">
-              <div className="flex items-center justify-between mb-3">
-                <h4 className="text-sm font-bold font-display flex items-center gap-2">
-                  <CheckSquare className="h-4.5 w-4.5 text-violet-400" />
-                  Công việc con (Subtasks)
-                </h4>
-                
-                <button
-                  type="button"
-                  disabled={aiSubtaskLoading}
-                  onClick={handleGenerateAiSubtasks}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-violet-600/20 hover:bg-violet-600/40 text-violet-300 border border-violet-500/20 rounded-lg text-[10px] font-bold transition-all disabled:opacity-50"
-                >
-                  <Sparkles className="h-3.5 w-3.5" />
-                  {aiSubtaskLoading ? 'Đang tạo...' : 'Gợi ý việc con bằng AI ✨'}
-                </button>
-              </div>
-
-              <div className="space-y-2 mb-3">
-                {subtasks.map((sub) => (
-                  <div key={sub.id} className="flex items-center justify-between p-3 bg-zinc-900/40 border border-zinc-800/40 rounded-xl text-xs">
-                    <span className="text-zinc-300">{sub.title}</span>
-                    <button 
-                      onClick={() => handleDeleteTask(sub.id)}
-                      className="text-zinc-500 hover:text-red-400 transition-colors"
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="ui-label">Độ ưu tiên</label>
+                    <select
+                      value={editPriority}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setEditPriority(val);
+                        handleUpdateTaskDetails({ priority: val });
+                      }}
+                      className="ui-input px-3 py-2 text-xs"
                     >
-                      Xóa
-                    </button>
+                      <option value="LOW">LOW (Thấp)</option>
+                      <option value="MEDIUM">MEDIUM (Trung bình)</option>
+                      <option value="HIGH">HIGH (Cao)</option>
+                      <option value="URGENT">URGENT (Khẩn cấp)</option>
+                    </select>
                   </div>
-                ))}
-              </div>
-
-              <form onSubmit={handleAddSubtask} className="flex gap-2">
-                <input
-                  type="text"
-                  required
-                  value={newSubtaskTitle}
-                  onChange={(e) => setNewSubtaskTitle(e.target.value)}
-                  placeholder="Thêm công việc con mới..."
-                  className="flex-1 bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-violet-500"
-                />
-                <button type="submit" className="px-3 bg-violet-600 hover:bg-violet-500 rounded-xl text-xs font-medium">
-                  Thêm
-                </button>
-              </form>
-            </div>
-
-            {/* Discussion / Comments section */}
-            <div className="border-t border-zinc-800/80 pt-6 pb-6">
-              <h4 className="text-sm font-bold font-display flex items-center gap-2 mb-3">
-                <MessageSquare className="h-4.5 w-4.5 text-violet-400" />
-                Thảo luận (Comments)
-              </h4>
-
-              <div className="space-y-3 max-h-60 overflow-y-auto mb-4 pr-1">
-                {comments.map((comment) => (
-                  <div key={comment.id} className="p-3 bg-zinc-900/60 border border-zinc-800/40 rounded-xl">
-                    <p className="text-zinc-300 text-xs">{comment.content}</p>
-                    <span className="text-[10px] text-zinc-500 block mt-2 flex items-center gap-1">
-                      <Clock className="h-3 w-3" />
-                      {new Date(comment.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </span>
+                  <div>
+                    <label className="ui-label">Trạng thái</label>
+                    <div className="bg-surface border border-border rounded-xl px-3 py-2 text-xs text-body capitalize">
+                      {selectedTask.status.replace('_', ' ').toLowerCase()}
+                    </div>
                   </div>
-                ))}
-                {comments.length === 0 && (
-                  <p className="text-zinc-500 text-xs text-center py-4">Chưa có bình luận nào cho công việc này.</p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="ui-label">Người thực hiện</label>
+                    <select
+                      value={editAssigneeId || ''}
+                      onChange={(e) => {
+                        const val = e.target.value || null;
+                        setEditAssigneeId(val);
+                        handleUpdateTaskDetails({ assigneeId: val });
+                      }}
+                      className="ui-input px-3 py-2 text-xs"
+                    >
+                      <option value="">Chưa phân công</option>
+                      {members.map((m) => (
+                        <option key={m.userId} value={m.userId}>{m.fullname}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="ui-label">Hạn chót</label>
+                    <input
+                      type="datetime-local"
+                      value={editDueDate || ''}
+                      onChange={(e) => {
+                        const val = e.target.value || null;
+                        setEditDueDate(val);
+                        handleUpdateTaskDetails({ dueDate: val ? new Date(val).toISOString() : null });
+                      }}
+                      className="ui-input px-3 py-2 text-xs"
+                    />
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* ===== TAB: Subtasks ===== */}
+            {drawerTab === 'subtasks' && (
+              <>
+                {/* Progress bar */}
+                {subtasks.length > 0 && (() => {
+                  const doneCount = subtasks.filter((s) => s.status === 'DONE').length;
+                  const pct = Math.round((doneCount / subtasks.length) * 100);
+                  return (
+                    <div className="bg-surface border border-border rounded-xl p-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs font-semibold text-heading">Tiến độ subtasks</span>
+                        <span className="text-xs font-bold text-primary">{doneCount}/{subtasks.length} ({pct}%)</span>
+                      </div>
+                      <div className="w-full bg-border rounded-full h-2 overflow-hidden">
+                        <div
+                          className="h-full rounded-full bg-gradient-to-r from-violet-500 to-emerald-400 transition-all duration-500"
+                          style={{ width: `${pct}%` }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* AI Generate button */}
+                <div className="flex justify-end">
+                  <button
+                    type="button"
+                    disabled={aiSubtaskLoading}
+                    onClick={handleGenerateAiSubtasks}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 rounded-lg text-[10px] font-bold transition-all disabled:opacity-50"
+                  >
+                    <Sparkles className="h-3.5 w-3.5" />
+                    {aiSubtaskLoading ? 'Đang tạo...' : 'Gợi ý bằng AI ✨'}
+                  </button>
+                </div>
+
+                {/* Subtask list with checkboxes */}
+                <div className="space-y-2">
+                  {subtasks.length === 0 && (
+                    <div className="text-center py-8 text-secondary text-xs">
+                      <CheckSquare className="h-8 w-8 mx-auto mb-2 text-muted" />
+                      Chưa có công việc con nào. Thêm thủ công hoặc dùng AI.
+                    </div>
+                  )}
+                  {subtasks.map((sub) => (
+                    <div
+                      key={sub.id}
+                      className={`flex items-center gap-3 p-3 rounded-xl border transition-all ${
+                        sub.status === 'DONE'
+                          ? 'bg-emerald-500/5 border-emerald-500/20'
+                          : 'bg-surface border-border hover:border-border-focus'
+                      }`}
+                    >
+                      <button
+                        onClick={() => handleToggleSubtask(sub.id)}
+                        className={`w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 transition-all ${
+                          sub.status === 'DONE'
+                            ? 'bg-emerald-500 border-emerald-500 text-white'
+                            : 'border-border hover:border-primary'
+                        }`}
+                      >
+                        {sub.status === 'DONE' && <Check className="h-3 w-3" />}
+                      </button>
+                      <span className={`text-xs flex-1 ${
+                        sub.status === 'DONE' ? 'line-through text-muted' : 'text-body'
+                      }`}>
+                        {sub.title}
+                      </span>
+                      <button
+                        onClick={() => handleDeleteTask(sub.id)}
+                        className="text-muted hover:text-error transition-colors p-1 rounded"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Add subtask form */}
+                <form onSubmit={handleAddSubtask} className="flex gap-2 pt-2">
+                  <input
+                    type="text"
+                    required
+                    value={newSubtaskTitle}
+                    onChange={(e) => setNewSubtaskTitle(e.target.value)}
+                    placeholder="Thêm công việc con mới..."
+                    className="ui-input flex-1 px-3 py-2 text-xs"
+                  />
+                  <button type="submit" className="ui-btn-primary px-3 py-2 text-xs">
+                    Thêm
+                  </button>
+                </form>
+              </>
+            )}
+
+            {/* ===== TAB: Lịch sử hoạt động ===== */}
+            {drawerTab === 'logs' && (
+              <>
+                {taskLogs.length === 0 ? (
+                  <div className="text-center py-10 text-secondary text-xs">
+                    <History className="h-8 w-8 mx-auto mb-2 text-muted" />
+                    Chưa có hoạt động nào được ghi nhận.
+                  </div>
+                ) : (
+                  <div className="relative">
+                    {/* Timeline line */}
+                    <div className="absolute left-4 top-0 bottom-0 w-px bg-border" />
+                    <div className="space-y-4">
+                      {taskLogs.map((log, idx) => (
+                        <div key={log.id} className="flex gap-4 items-start relative">
+                          {/* Icon dot */}
+                          <div className={`w-8 h-8 rounded-full shrink-0 flex items-center justify-center z-10 ${
+                            log.actionType === 'CREATE' ? 'bg-emerald-500/20 text-emerald-400' :
+                            log.actionType === 'DELETE' ? 'bg-red-500/20 text-red-400' :
+                            log.actionType === 'UPDATE_STATUS' ? 'bg-violet-500/20 text-violet-400' :
+                            log.actionType.includes('AI') ? 'bg-amber-500/20 text-amber-400' :
+                            'bg-blue-500/20 text-blue-400'
+                          }`}>
+                            {log.actionType === 'CREATE' && <CheckCircle2 className="h-4 w-4" />}
+                            {log.actionType === 'DELETE' && <Trash className="h-4 w-4" />}
+                            {log.actionType === 'UPDATE_STATUS' && <ChevronRight className="h-4 w-4" />}
+                            {log.actionType === 'UPDATE' && <AlertCircle className="h-4 w-4" />}
+                            {log.actionType.includes('AI') && <Sparkles className="h-4 w-4" />}
+                          </div>
+                          {/* Content */}
+                          <div className="flex-1 bg-surface border border-border rounded-xl p-3 text-xs">
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="font-semibold text-heading">
+                                {log.actionType === 'CREATE' && 'Tạo công việc'}
+                                {log.actionType === 'DELETE' && 'Xóa công việc'}
+                                {log.actionType === 'UPDATE_STATUS' && 'Cập nhật trạng thái'}
+                                {log.actionType === 'UPDATE' && 'Chỉnh sửa nội dung'}
+                                {log.actionType === 'AI_SUBTASKS_GEN' && 'AI tạo subtask'}
+                                {!['CREATE','DELETE','UPDATE_STATUS','UPDATE','AI_SUBTASKS_GEN'].includes(log.actionType) && log.actionType}
+                              </span>
+                              <span className="text-[10px] text-muted">
+                                {new Date(log.createdAt).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' })}
+                              </span>
+                            </div>
+                            {log.actionType === 'UPDATE_STATUS' && log.oldValue && log.newValue && (
+                              <div className="flex items-center gap-1.5 mt-1 text-secondary">
+                                <span className="px-1.5 py-0.5 rounded bg-zinc-800 text-[10px]">{log.oldValue}</span>
+                                <ChevronRight className="h-3 w-3" />
+                                <span className="px-1.5 py-0.5 rounded bg-primary/20 text-primary text-[10px] font-semibold">{log.newValue}</span>
+                              </div>
+                            )}
+                            {log.newValue && log.actionType !== 'UPDATE_STATUS' && (
+                              <p className="text-secondary mt-1">{log.newValue}</p>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 )}
-              </div>
+              </>
+            )}
 
-              <form onSubmit={handleAddComment} className="flex gap-2">
-                <input
-                  type="text"
-                  required
-                  value={newCommentContent}
-                  onChange={(e) => setNewCommentContent(e.target.value)}
-                  placeholder="Viết bình luận của bạn..."
-                  className="flex-1 bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-violet-500"
-                />
-                <button type="submit" className="p-2.5 bg-violet-600 hover:bg-violet-500 rounded-xl">
-                  <Send className="h-4 w-4" />
-                </button>
-              </form>
-            </div>
+            {/* ===== TAB: Thảo luận ===== */}
+            {drawerTab === 'comments' && (
+              <>
+                <div className="space-y-3">
+                  {comments.map((comment) => (
+                    <div key={comment.id} className="p-3 bg-surface border border-border rounded-xl">
+                      <p className="text-body text-xs">{comment.content}</p>
+                      <span className="text-[10px] text-muted flex items-center gap-1 mt-2">
+                        <Clock className="h-3 w-3" />
+                        {new Date(comment.createdAt).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' })}
+                      </span>
+                    </div>
+                  ))}
+                  {comments.length === 0 && (
+                    <div className="text-center py-8 text-secondary text-xs">
+                      <MessageSquare className="h-8 w-8 mx-auto mb-2 text-muted" />
+                      Chưa có bình luận nào.
+                    </div>
+                  )}
+                </div>
+
+                <form onSubmit={handleAddComment} className="flex gap-2 pt-2">
+                  <input
+                    type="text"
+                    required
+                    value={newCommentContent}
+                    onChange={(e) => setNewCommentContent(e.target.value)}
+                    placeholder="Viết bình luận của bạn..."
+                    className="ui-input flex-1 px-4 py-2.5 text-xs"
+                  />
+                  <button type="submit" className="ui-btn-primary p-2.5">
+                    <Send className="h-4 w-4" />
+                  </button>
+                </form>
+              </>
+            )}
           </div>
         </div>
       )}
