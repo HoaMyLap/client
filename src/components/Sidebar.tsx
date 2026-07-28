@@ -429,8 +429,12 @@ export default function Sidebar() {
               }`}
             >
               <div className="flex items-center gap-2.5 truncate">
-                <div className="h-9 w-9 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center font-bold text-sm text-primary shrink-0">
-                  {fullname ? fullname.charAt(0).toUpperCase() : 'U'}
+                <div className="h-9 w-9 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center font-bold text-sm text-primary shrink-0 overflow-hidden">
+                  {editAvatarUrl ? (
+                    <img src={editAvatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+                  ) : (
+                    <span>{fullname ? fullname.charAt(0).toUpperCase() : 'U'}</span>
+                  )}
                 </div>
                 {!isCollapsed && (
                   <div className="text-left truncate">
@@ -447,16 +451,14 @@ export default function Sidebar() {
               <div className={`absolute bottom-12 w-48 glass border border-border rounded-xl p-1.5 shadow-2xl z-50 ${
                 isCollapsed ? 'left-6' : 'right-0'
               }`}>
-                <button
-                  onClick={() => {
-                    setShowProfileModal(true);
-                    setShowUserDropdown(false);
-                  }}
+                <Link
+                  href="/profile"
+                  onClick={() => setShowUserDropdown(false)}
                   className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-hover rounded-lg text-left text-body"
                 >
                   <User className="h-4.5 w-4.5 text-secondary" />
                   Hồ sơ cá nhân
-                </button>
+                </Link>
                 <button
                   onClick={handleLogout}
                   className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-error-muted text-error rounded-lg text-left mt-1 font-semibold"
