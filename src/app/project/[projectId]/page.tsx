@@ -186,6 +186,11 @@ export default function ProjectKanbanPage() {
       setShowAiSearchModal(true);
     } catch (err: any) {
       setAiSearchError(err.message || 'Lỗi khi kết nối tới trợ lý AI.');
+    } finally {
+      setAiSearchLoading(false);
+    }
+  };
+
   // Excel Task Import Modal state
   const [showExcelTaskModal, setShowExcelTaskModal] = useState(false);
   const [excelTasks, setExcelTasks] = useState<any[]>([]);
