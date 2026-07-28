@@ -52,6 +52,8 @@ export default function WorkspaceDetailPage() {
   const [editProjError, setEditProjError] = useState('');
 
   // Add Member State
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [centerToast, setCenterToast] = useState<{ title: string; message: string } | null>(null);
   const [memberEmail, setMemberEmail] = useState('');
   const [memberRole, setMemberRole] = useState('MEMBER');
   const [inviteTargetType, setInviteTargetType] = useState<'WORKSPACE' | 'PROJECT'>('WORKSPACE');
@@ -157,7 +159,6 @@ export default function WorkspaceDetailPage() {
   const handleAddMember = async (e: React.FormEvent) => {
     e.preventDefault();
     setMemberError('');
-    setMemberMessage('');
     setMemberLoading(true);
 
     try {
@@ -173,8 +174,16 @@ export default function WorkspaceDetailPage() {
         role: memberRole,
       });
 
-      setMemberMessage('Đã gửi lời mời tới ' + memberEmail + '. Người dùng sẽ nhận được thông báo để xác nhận.');
+      const invitedEmail = memberEmail;
       setMemberEmail('');
+      setShowInviteModal(false);
+
+      // Hiển thị thẻ thông báo ra giữa màn hình trong 4 giây
+      setCenterToast({
+        title: 'Đã gửi lời mời thành công! 🎉',
+        message: `Hệ thống đã gửi lời mời xác nhận tới email "${invitedEmail}". Người dùng sẽ nhận được thông báo để chấp nhận.`,
+      });
+      setTimeout(() => setCenterToast(null), 4000);
     } catch (err: any) {
       setMemberError(err.message || 'Gửi lời mời thất bại. Chỉ Admin mới có quyền thực hiện.');
     } finally {
@@ -317,12 +326,11 @@ export default function WorkspaceDetailPage() {
 
           {/* Right Column: Member Management */}
           <div className="space-y-6">
-            {/* Invite Form */}
             <div className="glass p-6 rounded-2xl border border-border">
-              <div className="flex items-center justify-between mb-1">
+              <div className="flex items-center justify-between mb-4">
                 <h3 className="text-base font-bold font-display flex items-center gap-2 text-heading">
                   <Users className="h-5 w-5 text-primary" />
-                  Thành viên Workspace ({members.length})
+                  Thành viên ({members.length})
                 </h3>
                 <button
                   type="button"
@@ -333,107 +341,28 @@ export default function WorkspaceDetailPage() {
                   Yêu cầu rời
                 </button>
               </div>
-              <p className="text-secondary text-xs mb-5">
-                Mời đồng đội tham gia Workspace hoặc Dự án cụ thể
-              </p>
 
-              {memberError && <div className="ui-alert-error mb-4 text-xs">{memberError}</div>}
-              {memberMessage && <div className="ui-alert-success mb-4 text-xs">{memberMessage}</div>}
-
-              {/* Only Admin can invite */}
+              {/* Only Admin can see the Invite Member button */}
               {isAdmin ? (
-                <form onSubmit={handleAddMember} className="space-y-4">
-                  {/* Selection Mode: Invite to Workspace vs Invite to Project */}
-                  <div>
-                    <label className="ui-label">Hình thức mời</label>
-                    <div className="grid grid-cols-2 gap-2 mt-1">
-                      <button
-                        type="button"
-                        onClick={() => setInviteTargetType('WORKSPACE')}
-                        className={`py-2 px-3 rounded-xl border text-xs font-semibold transition-all ${
-                          inviteTargetType === 'WORKSPACE'
-                            ? 'bg-primary/20 border-primary text-primary'
-                            : 'bg-surface border-border text-secondary hover:text-foreground'
-                        }`}
-                      >
-                        Vào Workspace
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setInviteTargetType('PROJECT')}
-                        className={`py-2 px-3 rounded-xl border text-xs font-semibold transition-all ${
-                          inviteTargetType === 'PROJECT'
-                            ? 'bg-primary/20 border-primary text-primary'
-                            : 'bg-surface border-border text-secondary hover:text-foreground'
-                        }`}
-                      >
-                        Vào Dự án
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Project Selector if targetType is PROJECT */}
-                  {inviteTargetType === 'PROJECT' && (
-                    <div>
-                      <label className="ui-label">Chọn dự án cụ thể</label>
-                      <select
-                        required
-                        value={inviteProjectId}
-                        onChange={(e) => setInviteProjectId(e.target.value)}
-                        className="ui-input px-4 py-2.5 text-xs"
-                      >
-                        <option value="">-- Chọn dự án --</option>
-                        {projects.map((p) => (
-                          <option key={p.id} value={p.id}>
-                            {p.name}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  )}
-
-                  <div>
-                    <label className="ui-label">Email thành viên được mời</label>
-                    <input
-                      type="email"
-                      required
-                      value={memberEmail}
-                      onChange={(e) => setMemberEmail(e.target.value)}
-                      placeholder="partner@example.com"
-                      className="ui-input px-4 py-2.5 text-xs"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="ui-label">Vai trò (Role)</label>
-                    <select
-                      value={memberRole}
-                      onChange={(e) => setMemberRole(e.target.value)}
-                      className="ui-input px-4 py-2.5 text-xs"
-                    >
-                      <option value="MEMBER">MEMBER (Tạo & Sửa)</option>
-                      <option value="VIEWER">VIEWER (Chỉ xem)</option>
-                      <option value="ADMIN">ADMIN (Toàn quyền)</option>
-                    </select>
-                  </div>
-
-                  <button
-                    type="submit"
-                    disabled={memberLoading}
-                    className="ui-btn-primary w-full py-2.5 flex items-center justify-center gap-2 text-xs font-semibold tracking-wider"
-                  >
-                    <PlusCircle className="h-4 w-4" />
-                    {memberLoading ? 'Đang gửi lời mời...' : 'Gửi lời mời thành viên'}
-                  </button>
-                </form>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMemberError('');
+                    setShowInviteModal(true);
+                  }}
+                  className="ui-btn-primary w-full py-3 flex items-center justify-center gap-2 text-xs font-bold tracking-wider mb-6 shadow-md hover:scale-[1.01] transition-transform"
+                >
+                  <PlusCircle className="h-4 w-4" />
+                  Mời thành viên mới
+                </button>
               ) : (
-                <div className="p-3.5 rounded-xl bg-surface border border-border text-xs text-secondary text-center">
+                <div className="p-3.5 rounded-xl bg-surface border border-border text-xs text-secondary text-center mb-6">
                   🔒 Chỉ <strong>Admin</strong> mới có quyền mời thành viên mới.
                 </div>
               )}
 
               {/* Members List */}
-              <div className="border-t border-border-subtle pt-5 mt-6 space-y-3">
+              <div className="border-t border-border-subtle pt-4 space-y-3">
                 <h4 className="text-xs font-bold text-heading uppercase tracking-wider mb-3">
                   Danh sách thành viên hiện tại
                 </h4>
@@ -575,6 +504,161 @@ export default function WorkspaceDetailPage() {
                   </button>
                   <button type="submit" disabled={editProjLoading} className="ui-btn-primary px-5 py-2 text-sm">
                     {editProjLoading ? 'Đang lưu...' : 'Lưu lại'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+        {/* Center Screen Floating Toast Notification */}
+        {centerToast && (
+          <div className="fixed top-12 left-1/2 -translate-x-1/2 z-[100] animate-bounce-in max-w-md w-full px-4 pointer-events-auto">
+            <div className="bg-card border-2 border-emerald-500/50 text-foreground p-5 rounded-2xl shadow-2xl flex items-start gap-4 backdrop-blur-md">
+              <div className="p-2.5 rounded-xl bg-emerald-500/20 text-emerald-400 shrink-0">
+                <CheckCircle2 className="h-6 w-6" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h4 className="font-bold text-sm text-heading">{centerToast.title}</h4>
+                <p className="text-xs text-secondary mt-1 leading-relaxed">{centerToast.message}</p>
+              </div>
+              <button
+                onClick={() => setCenterToast(null)}
+                className="text-muted hover:text-foreground p-1 rounded-lg"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Spacious Invite Member Modal */}
+        {showInviteModal && (
+          <div className="ui-modal-overlay bg-black/80 backdrop-blur-md z-[60]">
+            <div className="w-full max-w-lg bg-card border border-border rounded-2xl relative shadow-2xl overflow-hidden text-foreground">
+              {/* Header */}
+              <div className="flex items-center justify-between p-6 border-b border-border bg-surface/50">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 rounded-xl bg-primary/10 border border-primary/20">
+                    <Users className="h-6 w-6 text-primary" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold font-display text-heading">
+                      Mời thành viên mới
+                    </h3>
+                    <p className="text-xs text-secondary mt-0.5">
+                      Gửi lời mời tham gia Workspace hoặc Dự án cụ thể
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowInviteModal(false)}
+                  className="ui-btn-ghost p-2 rounded-xl text-secondary hover:text-foreground"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              {/* Form */}
+              <form onSubmit={handleAddMember} className="p-6 space-y-5">
+                {memberError && <div className="ui-alert-error text-xs">{memberError}</div>}
+
+                {/* Target Type Selector */}
+                <div>
+                  <label className="ui-label text-xs font-semibold mb-1.5 block">Hình thức mời gia nhập</label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setInviteTargetType('WORKSPACE')}
+                      className={`py-3 px-4 rounded-xl border text-xs font-bold transition-all text-center ${
+                        inviteTargetType === 'WORKSPACE'
+                          ? 'bg-primary/20 border-primary text-primary shadow-sm'
+                          : 'bg-surface border-border text-secondary hover:text-foreground'
+                      }`}
+                    >
+                      🏢 Vào Workspace
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setInviteTargetType('PROJECT')}
+                      className={`py-3 px-4 rounded-xl border text-xs font-bold transition-all text-center ${
+                        inviteTargetType === 'PROJECT'
+                          ? 'bg-primary/20 border-primary text-primary shadow-sm'
+                          : 'bg-surface border-border text-secondary hover:text-foreground'
+                      }`}
+                    >
+                      📁 Vào Dự án cụ thể
+                    </button>
+                  </div>
+                </div>
+
+                {/* Project Selector if targetType is PROJECT */}
+                {inviteTargetType === 'PROJECT' && (
+                  <div>
+                    <label className="ui-label text-xs font-semibold mb-1.5 block">Chọn dự án chỉ định</label>
+                    <select
+                      required
+                      value={inviteProjectId}
+                      onChange={(e) => setInviteProjectId(e.target.value)}
+                      className="ui-input px-4 py-3 text-xs w-full rounded-xl"
+                    >
+                      <option value="">-- Chọn dự án --</option>
+                      {projects.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                <div>
+                  <label className="ui-label text-xs font-semibold mb-1.5 block">Email người nhận lời mời</label>
+                  <input
+                    type="email"
+                    required
+                    value={memberEmail}
+                    onChange={(e) => setMemberEmail(e.target.value)}
+                    placeholder="partner@example.com"
+                    className="ui-input px-4 py-3 text-xs w-full rounded-xl"
+                  />
+                </div>
+
+                <div>
+                  <label className="ui-label text-xs font-semibold mb-1.5 block">Vai trò (Permission Role)</label>
+                  <select
+                    value={memberRole}
+                    onChange={(e) => setMemberRole(e.target.value)}
+                    className="ui-input px-4 py-3 text-xs w-full rounded-xl"
+                  >
+                    <option value="MEMBER">MEMBER (Có quyền Tạo & Sửa công việc)</option>
+                    <option value="VIEWER">VIEWER (Chỉ có quyền xem thông tin)</option>
+                    <option value="ADMIN">ADMIN (Toàn quyền quản lý)</option>
+                  </select>
+                </div>
+
+                {/* Modal Actions */}
+                <div className="flex gap-3 justify-end pt-4 border-t border-border mt-6">
+                  <button
+                    type="button"
+                    onClick={() => setShowInviteModal(false)}
+                    className="ui-btn-secondary px-5 py-2.5 text-xs font-semibold"
+                  >
+                    Hủy
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={memberLoading}
+                    className="ui-btn-primary px-6 py-2.5 text-xs font-bold flex items-center gap-2"
+                  >
+                    {memberLoading ? (
+                      <>
+                        <div className="animate-spin rounded-full h-3.5 w-3.5 border-2 border-white/20 border-t-white" />
+                        Đang gửi...
+                      </>
+                    ) : (
+                      '✨ Gửi lời mời ngay'
+                    )}
                   </button>
                 </div>
               </form>
