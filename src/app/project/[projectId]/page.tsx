@@ -9,7 +9,7 @@ import Sidebar from '@/components/Sidebar';
 import { jsonrepair } from 'jsonrepair';
 import { 
   ArrowLeft, Plus, MessageSquare, Calendar, 
-  Trash, Send, CheckSquare, X, Clock, AlertCircle, User, Sparkles, FileText,
+  Trash, Send, CheckSquare, X, Clock, AlertCircle, User, Sparkles, FileText, Search,
   Printer, TrendingUp, Activity, CheckCircle2, Users, AlertTriangle, Briefcase, Lightbulb,
   History, ListChecks, ChevronRight, Check
 } from 'lucide-react';
@@ -105,6 +105,28 @@ export default function ProjectKanbanPage() {
   const [aiSummaryContent, setAiSummaryContent] = useState('');
   const [aiSummaryLoading, setAiSummaryLoading] = useState(false);
   const [isReportStale, setIsReportStale] = useState(true);
+
+  // AI Smart Search States
+  const [aiSearchQuery, setAiSearchQuery] = useState('');
+  const [aiSearchLoading, setAiSearchLoading] = useState(false);
+  const [aiSearchResults, setAiSearchResults] = useState<Array<{ task: Task; relevanceScore: number; reason: string }>>([]);
+  const [showAiSearchModal, setShowAiSearchModal] = useState(false);
+  const [aiSearchError, setAiSearchError] = useState('');
+
+  const handleAiSmartSearch = async () => {
+    if (!aiSearchQuery.trim()) return;
+    setAiSearchLoading(true);
+    setAiSearchError('');
+    try {
+      const results = await api.ai.smartSearch(projectId, aiSearchQuery);
+      setAiSearchResults(results || []);
+      setShowAiSearchModal(true);
+    } catch (err: any) {
+      setAiSearchError(err.message || 'Lỗi khi kết nối tới trợ lý AI.');
+    } finally {
+      setAiSearchLoading(false);
+    }
+  };
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -480,20 +502,49 @@ export default function ProjectKanbanPage() {
       <Sidebar />
 
       <div className="flex-1 flex flex-col min-w-0 h-screen relative z-10 overflow-y-auto pb-12">
-        <div className="max-w-7xl w-full mx-auto px-6 mt-6 flex items-center justify-between no-print">
-          <button onClick={() => router.back()} className="flex items-center gap-2 text-secondary hover:text-foreground transition-colors text-xs font-semibold">
-          <ArrowLeft className="h-4.5 w-4.5" />
-          QUAY LẠI DỰ ÁN
-        </button>
+        <div className="max-w-7xl w-full mx-auto px-6 mt-6 flex flex-col md:flex-row md:items-center justify-between no-print gap-4">
+          <button onClick={() => router.back()} className="flex items-center gap-2 text-secondary hover:text-foreground transition-colors text-xs font-semibold shrink-0">
+            <ArrowLeft className="h-4.5 w-4.5" />
+            QUAY LẠI DỰ ÁN
+          </button>
 
-        <button
-          onClick={handleFetchAiSummary}
-          className="flex items-center gap-2 bg-primary-muted hover:bg-primary/25 border border-primary/30 px-4 py-2 rounded-xl text-xs font-semibold text-primary transition-all active:scale-[0.98]"
-        >
-          <FileText className="h-4 w-4 text-primary animate-pulse" />
-          Báo cáo tiến độ AI 📊
-        </button>
-      </div>
+          {/* AI Smart Search Bar */}
+          <div className="flex-1 max-w-2xl mx-0 md:mx-4">
+            <div className="glass px-3.5 py-1.5 rounded-xl border border-primary/30 flex items-center gap-2.5 shadow-sm focus-within:border-primary transition-all">
+              <Sparkles className="h-4 w-4 text-primary shrink-0 animate-pulse" />
+              <input
+                type="text"
+                value={aiSearchQuery}
+                onChange={(e) => setAiSearchQuery(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleAiSmartSearch()}
+                placeholder="✨ AI Smart Search (VD: task gấp cần làm ngay, việc thuộc thiết kế, công việc chưa phân công...)"
+                className="bg-transparent border-none text-xs text-foreground placeholder:text-muted focus:outline-none flex-1 font-sans"
+              />
+              <button
+                onClick={handleAiSmartSearch}
+                disabled={aiSearchLoading || !aiSearchQuery.trim()}
+                className="ui-btn-primary px-3.5 py-1.5 text-xs font-semibold flex items-center gap-1.5 shrink-0"
+              >
+                {aiSearchLoading ? (
+                  <div className="animate-spin rounded-full h-3.5 w-3.5 border-2 border-white/20 border-t-white" />
+                ) : (
+                  <>
+                    <Search className="h-3.5 w-3.5" />
+                    AI Search
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+
+          <button
+            onClick={handleFetchAiSummary}
+            className="flex items-center gap-2 bg-primary-muted hover:bg-primary/25 border border-primary/30 px-4 py-2 rounded-xl text-xs font-semibold text-primary transition-all active:scale-[0.98] shrink-0"
+          >
+            <FileText className="h-4 w-4 text-primary animate-pulse" />
+            Báo cáo tiến độ AI 📊
+          </button>
+        </div>
 
       {/* Kanban Board Container */}
       <main className="max-w-7xl mx-auto px-6 mt-6 grid grid-cols-1 md:grid-cols-3 gap-6 relative z-10">
@@ -1233,6 +1284,80 @@ export default function ProjectKanbanPage() {
           </div>
         </div>
       </div>
+
+      {/* AI Smart Search Results Modal */}
+      {showAiSearchModal && (
+        <div className="ui-modal-overlay">
+          <div className="w-full max-w-2xl glass p-6 rounded-2xl relative max-h-[85vh] flex flex-col border border-border shadow-2xl">
+            <button
+              onClick={() => setShowAiSearchModal(false)}
+              className="absolute top-4 right-4 ui-btn-ghost p-1"
+            >
+              <X className="h-5 w-5" />
+            </button>
+
+            <div className="flex items-center gap-3 border-b border-border pb-4 mb-4 shrink-0">
+              <div className="p-2.5 rounded-xl bg-primary/10 border border-primary/20">
+                <Sparkles className="h-6 w-6 text-primary" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold font-display text-heading">
+                  Kết quả AI Tìm kiếm Thông minh
+                </h3>
+                <p className="text-xs text-secondary mt-0.5">
+                  Truy vấn: <span className="font-semibold text-primary">"{aiSearchQuery}"</span> · {aiSearchResults.length} công việc trùng khớp
+                </p>
+              </div>
+            </div>
+
+            {aiSearchError && (
+              <div className="ui-alert-error mb-4 text-xs">{aiSearchError}</div>
+            )}
+
+            <div className="flex-1 overflow-y-auto space-y-3 pr-1">
+              {aiSearchResults.length === 0 ? (
+                <div className="text-center py-12 text-muted text-xs">
+                  <Sparkles className="h-10 w-10 text-muted mx-auto mb-3" />
+                  Không tìm thấy công việc nào phù hợp với yêu cầu tìm kiếm của bạn.
+                </div>
+              ) : (
+                aiSearchResults.map((res, idx) => (
+                  <div
+                    key={res.task.id || idx}
+                    onClick={() => {
+                      setSelectedTask(res.task);
+                      setShowAiSearchModal(false);
+                    }}
+                    className="glass hover:border-primary/40 p-4 rounded-xl cursor-pointer transition-all border border-border flex flex-col gap-2 hover:scale-[1.005]"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <h4 className="font-bold text-sm text-title">
+                        {res.task.title}
+                      </h4>
+                      <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shrink-0">
+                        {(res.relevanceScore * 100).toFixed(0)}% Phù hợp
+                      </span>
+                    </div>
+
+                    {/* AI Reasoning pill */}
+                    <div className="text-xs bg-primary/5 border border-primary/20 p-2.5 rounded-lg text-primary flex items-start gap-2">
+                      <Sparkles className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+                      <span className="leading-relaxed">{res.reason}</span>
+                    </div>
+
+                    <div className="flex items-center justify-between text-[10px] text-muted pt-2 border-t border-border-subtle mt-1">
+                      <span>Trạng thái: <strong className="text-foreground">{res.task.status}</strong> · Ưu tiên: <strong className="text-foreground">{res.task.priority}</strong></span>
+                      {res.task.dueDate && (
+                        <span>Hạn: {new Date(res.task.dueDate).toLocaleDateString()}</span>
+                      )}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
       </div>
     </div>
   );

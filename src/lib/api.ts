@@ -93,6 +93,8 @@ export const api = {
   },
   ai: {
     getSummary: (projectId: string) => request(`/ai/project/${projectId}/summary`),
+    smartSearch: (projectId: string, query: string) =>
+      request(`/ai/project/${projectId}/smart-search`, { method: 'POST', body: JSON.stringify({ query }) }),
   },
   uploadImage: (formData: FormData) => request('/upload/image', { method: 'POST', body: formData }),
 };
