@@ -54,11 +54,20 @@ export const api = {
         body: JSON.stringify({ email, role }),
       }),
     getMembers: (workspaceId: string) => request(`/workspaces/${workspaceId}/members`),
+    removeMember: (workspaceId: string, userId: string) =>
+      request(`/workspaces/${workspaceId}/members/${userId}`, { method: 'DELETE' }),
+    updateMemberRole: (workspaceId: string, userId: string, role: string) =>
+      request(`/workspaces/${workspaceId}/members/${userId}/role`, {
+        method: 'PATCH',
+        body: JSON.stringify({ role }),
+      }),
   },
   projects: {
     list: (workspaceId: string) => request(`/projects/workspace/${workspaceId}`),
     get: (projectId: string) => request(`/projects/${projectId}`),
     create: (data: any) => request('/projects', { method: 'POST', body: JSON.stringify(data) }),
+    update: (projectId: string, data: any) =>
+      request(`/projects/${projectId}`, { method: 'PUT', body: JSON.stringify(data) }),
     delete: (projectId: string) => request(`/projects/${projectId}`, { method: 'DELETE' }),
   },
   tasks: {
@@ -80,6 +89,7 @@ export const api = {
   notifications: {
     list: () => request('/notifications'),
     read: (id: string) => request(`/notifications/${id}/read`, { method: 'PATCH' }),
+    readAll: () => request('/notifications/read-all', { method: 'PATCH' }),
   },
   ai: {
     getSummary: (projectId: string) => request(`/ai/project/${projectId}/summary`),

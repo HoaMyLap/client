@@ -157,6 +157,15 @@ export default function Sidebar() {
     }
   };
 
+  const handleMarkAllAsRead = async () => {
+    try {
+      await api.notifications.readAll();
+      setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   const handleMarkAsRead = async (id: string) => {
     try {
       await api.notifications.read(id);
@@ -359,9 +368,12 @@ export default function Sidebar() {
                 <div className="flex items-center justify-between border-b border-border-subtle pb-3.5 mb-3">
                   <span className="font-bold text-xs text-heading">Thông báo</span>
                   {unreadCount > 0 && (
-                    <span className="text-[9px] text-primary font-bold bg-primary/10 px-2 py-0.5 rounded-full border border-primary/20">
-                      {unreadCount} chưa đọc
-                    </span>
+                    <button
+                      onClick={handleMarkAllAsRead}
+                      className="text-[9px] text-primary hover:underline font-bold bg-primary/10 px-2 py-0.5 rounded-full border border-primary/20"
+                    >
+                      Đã đọc tất cả ({unreadCount})
+                    </button>
                   )}
                 </div>
 
@@ -388,6 +400,16 @@ export default function Sidebar() {
                   {notifications.length === 0 && (
                     <p className="text-center text-muted text-[10px] py-8">Bạn không có thông báo nào.</p>
                   )}
+                </div>
+
+                <div className="border-t border-border-subtle pt-2.5 mt-2 text-center">
+                  <Link
+                    href="/notifications"
+                    onClick={() => setShowNotifDropdown(false)}
+                    className="text-xs font-semibold text-primary hover:underline block"
+                  >
+                    Xem tất cả thông báo ➔
+                  </Link>
                 </div>
               </div>
             )}

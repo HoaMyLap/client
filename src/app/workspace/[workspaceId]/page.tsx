@@ -5,7 +5,10 @@ import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import { api } from '@/lib/api';
 import Sidebar from '@/components/Sidebar';
-import { ArrowLeft, Plus, Folder, Users, Trash, PlusCircle } from 'lucide-react';
+import { 
+  ArrowLeft, Plus, Folder, Users, Trash, PlusCircle, 
+  Pencil, Shield, User, X, CheckCircle2 
+} from 'lucide-react';
 
 interface Project {
   id: string;
@@ -16,19 +19,39 @@ interface Project {
   createdAt: string;
 }
 
+interface WorkspaceMember {
+  userId: string;
+  email: string;
+  fullname: string;
+  avatarUrl: string | null;
+  role: string;
+}
+
 export default function WorkspaceDetailPage() {
   const router = useRouter();
   const { workspaceId } = useParams() as { workspaceId: string };
 
   const [projects, setProjects] = useState<Project[]>([]);
+  const [members, setMembers] = useState<WorkspaceMember[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // New Project Modal State
   const [showProjModal, setShowProjModal] = useState(false);
   const [newProjName, setNewProjName] = useState('');
   const [newProjDesc, setNewProjDesc] = useState('');
   const [projLoading, setProjLoading] = useState(false);
   const [projError, setProjError] = useState('');
 
+  // Edit Project Modal State
+  const [showEditProjModal, setShowEditProjModal] = useState(false);
+  const [editingProjId, setEditingProjId] = useState('');
+  const [editProjName, setEditProjName] = useState('');
+  const [editProjDesc, setEditProjDesc] = useState('');
+  const [editProjStatus, setEditProjStatus] = useState('ACTIVE');
+  const [editProjLoading, setEditProjLoading] = useState(false);
+  const [editProjError, setEditProjError] = useState('');
+
+  // Add Member State
   const [memberEmail, setMemberEmail] = useState('');
   const [memberRole, setMemberRole] = useState('MEMBER');
   const [memberLoading, setMemberLoading] = useState(false);
@@ -41,14 +64,18 @@ export default function WorkspaceDetailPage() {
       router.push('/login');
       return;
     }
-    loadProjects();
+    loadData();
   }, [workspaceId]);
 
-  const loadProjects = async () => {
+  const loadData = async () => {
     try {
       setLoading(true);
-      const data = await api.projects.list(workspaceId);
-      setProjects(data || []);
+      const [projData, memberData] = await Promise.all([
+        api.projects.list(workspaceId),
+        api.workspaces.getMembers(workspaceId),
+      ]);
+      setProjects(projData || []);
+      setMembers(memberData || []);
     } catch (err) {
       console.error(err);
     } finally {
@@ -70,11 +97,43 @@ export default function WorkspaceDetailPage() {
       setShowProjModal(false);
       setNewProjName('');
       setNewProjDesc('');
-      loadProjects();
+      loadData();
     } catch (err: any) {
       setProjError(err.message || 'Lỗi khi tạo dự án.');
     } finally {
       setProjLoading(false);
+    }
+  };
+
+  const handleOpenEditProject = (e: React.MouseEvent, proj: Project) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setEditingProjId(proj.id);
+    setEditProjName(proj.name);
+    setEditProjDesc(proj.description || '');
+    setEditProjStatus(proj.status || 'ACTIVE');
+    setEditProjError('');
+    setShowEditProjModal(true);
+  };
+
+  const handleUpdateProject = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setEditProjError('');
+    setEditProjLoading(true);
+
+    try {
+      await api.projects.update(editingProjId, {
+        name: editProjName,
+        description: editProjDesc,
+        status: editProjStatus,
+        workspaceId,
+      });
+      setShowEditProjModal(false);
+      loadData();
+    } catch (err: any) {
+      setEditProjError(err.message || 'Lỗi khi cập nhật dự án.');
+    } finally {
+      setEditProjLoading(false);
     }
   };
 
@@ -87,7 +146,7 @@ export default function WorkspaceDetailPage() {
 
     try {
       await api.projects.delete(projectId);
-      loadProjects();
+      loadData();
     } catch (err: any) {
       alert(err.message || 'Lỗi khi xóa dự án (chỉ Admin của Workspace mới được xóa).');
     }
@@ -103,10 +162,31 @@ export default function WorkspaceDetailPage() {
       await api.workspaces.addMember(workspaceId, memberEmail, memberRole);
       setMemberMessage('Thêm thành viên thành công!');
       setMemberEmail('');
+      loadData();
     } catch (err: any) {
       setMemberError(err.message || 'Thêm thành viên thất bại. Chỉ Admin mới có quyền thực hiện.');
     } finally {
       setMemberLoading(false);
+    }
+  };
+
+  const handleRemoveMember = async (userId: string, fullname: string) => {
+    if (!confirm(`Bạn có chắc muốn xóa "${fullname}" khỏi workspace này?`)) return;
+
+    try {
+      await api.workspaces.removeMember(workspaceId, userId);
+      loadData();
+    } catch (err: any) {
+      alert(err.message || 'Không thể xóa thành viên (chỉ Admin mới có quyền).');
+    }
+  };
+
+  const handleChangeMemberRole = async (userId: string, newRole: string) => {
+    try {
+      await api.workspaces.updateMemberRole(workspaceId, userId, newRole);
+      loadData();
+    } catch (err: any) {
+      alert(err.message || 'Không thể cập nhật vai trò thành viên.');
     }
   };
 
@@ -132,159 +212,283 @@ export default function WorkspaceDetailPage() {
           </Link>
         </div>
 
-      <main className="max-w-6xl mx-auto px-6 mt-12 grid grid-cols-1 lg:grid-cols-3 gap-8 relative z-10">
-        <div className="lg:col-span-2 space-y-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-2xl font-bold tracking-tight font-display text-heading">Các dự án</h2>
-              <p className="text-secondary text-sm mt-1">
-                Lựa chọn dự án để theo dõi Kanban Board
-              </p>
-            </div>
-
-            <button onClick={() => setShowProjModal(true)} className="ui-btn-primary flex items-center gap-2 px-4 py-2.5 text-sm">
-              <Plus className="h-4 w-4" />
-              Tạo Dự án
-            </button>
-          </div>
-
-          {projects.length === 0 ? (
-            <div className="glass rounded-2xl p-12 text-center border border-border">
-              <Folder className="h-12 w-12 text-muted mx-auto mb-4" />
-              <h3 className="text-lg font-semibold mb-2 text-heading">Chưa có dự án nào</h3>
-              <p className="text-secondary text-sm mb-6">
-                Workspace này chưa khởi tạo dự án. Hãy bắt đầu ngay bây giờ!
-              </p>
-              <button onClick={() => setShowProjModal(true)} className="ui-btn-primary px-5 py-2.5 text-sm">
-                Tạo dự án mới
-              </button>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {projects.map((proj) => (
-                <Link key={proj.id} href={`/project/${proj.id}`}>
-                  <div className="glass hover:border-primary/40 p-5 rounded-2xl transition-all cursor-pointer group hover:scale-[1.01] flex flex-col justify-between min-h-[140px] relative">
-                    <div>
-                      <h3 className="font-bold group-hover:text-primary transition-colors text-title">
-                        {proj.name}
-                      </h3>
-                      <p className="text-secondary text-xs mt-2 line-clamp-2">
-                        {proj.description || 'Không có mô tả chi tiết.'}
-                      </p>
-                    </div>
-
-                    <div className="flex items-center justify-between text-xs text-muted mt-4 pt-3 border-t border-border-subtle">
-                      <span>Trạng thái: <strong className="text-success">{proj.status}</strong></span>
-                      <button
-                        onClick={(e) => handleDeleteProject(e, proj.id)}
-                        className="p-1.5 rounded-lg text-muted hover:text-error hover:bg-error-muted transition-colors"
-                        title="Xóa dự án"
-                      >
-                        <Trash className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          )}
-        </div>
-
-        <div className="space-y-6">
-          <div className="glass p-6 rounded-2xl border border-border">
-            <h3 className="text-lg font-bold font-display flex items-center gap-2 mb-2 text-heading">
-              <Users className="h-5 w-5 text-primary" />
-              Thành viên Workspace
-            </h3>
-            <p className="text-secondary text-xs mb-6">
-              Mời thêm đồng đội tham gia để cùng cộng tác làm việc
-            </p>
-
-            {memberError && <div className="ui-alert-error mb-4 text-xs">{memberError}</div>}
-            {memberMessage && <div className="ui-alert-success mb-4 text-xs">{memberMessage}</div>}
-
-            <form onSubmit={handleAddMember} className="space-y-4">
+        <main className="max-w-6xl mx-auto px-6 mt-10 grid grid-cols-1 lg:grid-cols-3 gap-8 relative z-10 w-full">
+          {/* Left Column: Projects list */}
+          <div className="lg:col-span-2 space-y-6">
+            <div className="flex items-center justify-between">
               <div>
-                <label className="ui-label">Email thành viên</label>
-                <input
-                  type="email"
-                  required
-                  value={memberEmail}
-                  onChange={(e) => setMemberEmail(e.target.value)}
-                  placeholder="partner@example.com"
-                  className="ui-input px-4 py-2.5 text-xs"
-                />
+                <h2 className="text-2xl font-bold tracking-tight font-display text-heading">Các dự án</h2>
+                <p className="text-secondary text-sm mt-1">
+                  Lựa chọn dự án để theo dõi Kanban Board
+                </p>
               </div>
 
-              <div>
-                <label className="ui-label">Vai trò (Role)</label>
-                <select
-                  value={memberRole}
-                  onChange={(e) => setMemberRole(e.target.value)}
-                  className="ui-input px-4 py-2.5 text-xs"
+              <button onClick={() => setShowProjModal(true)} className="ui-btn-primary flex items-center gap-2 px-4 py-2.5 text-sm">
+                <Plus className="h-4 w-4" />
+                Tạo Dự án
+              </button>
+            </div>
+
+            {projects.length === 0 ? (
+              <div className="glass rounded-2xl p-12 text-center border border-border">
+                <Folder className="h-12 w-12 text-muted mx-auto mb-4" />
+                <h3 className="text-lg font-semibold mb-2 text-heading">Chưa có dự án nào</h3>
+                <p className="text-secondary text-sm mb-6">
+                  Workspace này chưa khởi tạo dự án. Hãy bắt đầu ngay bây giờ!
+                </p>
+                <button onClick={() => setShowProjModal(true)} className="ui-btn-primary px-5 py-2.5 text-sm">
+                  Tạo dự án mới
+                </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {projects.map((proj) => (
+                  <Link key={proj.id} href={`/project/${proj.id}`}>
+                    <div className="glass hover:border-primary/40 p-5 rounded-2xl transition-all cursor-pointer group hover:scale-[1.01] flex flex-col justify-between min-h-[150px] relative border border-border">
+                      <div>
+                        <div className="flex items-start justify-between gap-2">
+                          <h3 className="font-bold group-hover:text-primary transition-colors text-title">
+                            {proj.name}
+                          </h3>
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                            proj.status === 'COMPLETED' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' :
+                            proj.status === 'ARCHIVED' ? 'bg-zinc-800 text-zinc-400 border-zinc-700' :
+                            'bg-primary/10 text-primary border-primary/20'
+                          }`}>
+                            {proj.status}
+                          </span>
+                        </div>
+                        <p className="text-secondary text-xs mt-2 line-clamp-2">
+                          {proj.description || 'Không có mô tả chi tiết.'}
+                        </p>
+                      </div>
+
+                      <div className="flex items-center justify-between text-xs text-muted mt-4 pt-3 border-t border-border-subtle">
+                        <span>Tạo ngày: {new Date(proj.createdAt).toLocaleDateString()}</span>
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={(e) => handleOpenEditProject(e, proj)}
+                            className="p-1.5 rounded-lg text-secondary hover:text-primary hover:bg-primary/10 transition-colors"
+                            title="Sửa thông tin dự án"
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </button>
+                          <button
+                            onClick={(e) => handleDeleteProject(e, proj.id)}
+                            className="p-1.5 rounded-lg text-muted hover:text-error hover:bg-error-muted transition-colors"
+                            title="Xóa dự án"
+                          >
+                            <Trash className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Right Column: Member Management */}
+          <div className="space-y-6">
+            {/* Invite Form */}
+            <div className="glass p-6 rounded-2xl border border-border">
+              <h3 className="text-base font-bold font-display flex items-center gap-2 mb-1 text-heading">
+                <Users className="h-5 w-5 text-primary" />
+                Thành viên Workspace ({members.length})
+              </h3>
+              <p className="text-secondary text-xs mb-5">
+                Thêm đồng đội tham gia để cùng cộng tác
+              </p>
+
+              {memberError && <div className="ui-alert-error mb-4 text-xs">{memberError}</div>}
+              {memberMessage && <div className="ui-alert-success mb-4 text-xs">{memberMessage}</div>}
+
+              <form onSubmit={handleAddMember} className="space-y-4">
+                <div>
+                  <label className="ui-label">Email thành viên</label>
+                  <input
+                    type="email"
+                    required
+                    value={memberEmail}
+                    onChange={(e) => setMemberEmail(e.target.value)}
+                    placeholder="partner@example.com"
+                    className="ui-input px-4 py-2.5 text-xs"
+                  />
+                </div>
+
+                <div>
+                  <label className="ui-label">Vai trò (Role)</label>
+                  <select
+                    value={memberRole}
+                    onChange={(e) => setMemberRole(e.target.value)}
+                    className="ui-input px-4 py-2.5 text-xs"
+                  >
+                    <option value="MEMBER">MEMBER (Tạo & Sửa)</option>
+                    <option value="VIEWER">VIEWER (Chỉ xem)</option>
+                    <option value="ADMIN">ADMIN (Toàn quyền)</option>
+                  </select>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={memberLoading}
+                  className="ui-btn-secondary w-full py-2.5 flex items-center justify-center gap-2 text-xs font-semibold tracking-wider text-primary hover:text-foreground"
                 >
-                  <option value="MEMBER">MEMBER (Có quyền Tạo/Sửa)</option>
-                  <option value="VIEWER">VIEWER (Chỉ xem)</option>
-                  <option value="ADMIN">ADMIN (Có toàn quyền)</option>
-                </select>
-              </div>
-
-              <button
-                type="submit"
-                disabled={memberLoading}
-                className="ui-btn-secondary w-full py-2.5 flex items-center justify-center gap-2 text-xs font-semibold tracking-wider text-primary hover:text-foreground"
-              >
-                <PlusCircle className="h-4 w-4" />
-                {memberLoading ? 'Đang thêm...' : 'Thêm thành viên'}
-              </button>
-            </form>
-          </div>
-        </div>
-      </main>
-
-      {showProjModal && (
-        <div className="ui-modal-overlay">
-          <div className="w-full max-w-md glass p-8 rounded-2xl relative">
-            <h3 className="text-xl font-bold mb-6 font-display text-heading">Tạo Dự án mới</h3>
-
-            {projError && <div className="ui-alert-error mb-4 text-sm">{projError}</div>}
-
-            <form onSubmit={handleCreateProject} className="space-y-4">
-              <div>
-                <label className="ui-label tracking-wider">Tên Dự án</label>
-                <input
-                  type="text"
-                  required
-                  value={newProjName}
-                  onChange={(e) => setNewProjName(e.target.value)}
-                  placeholder="Ví dụ: App Redesign, Marketing Q3..."
-                  className="ui-input px-4 py-2.5 text-sm"
-                />
-              </div>
-
-              <div>
-                <label className="ui-label tracking-wider">Mô tả chi tiết</label>
-                <textarea
-                  value={newProjDesc}
-                  onChange={(e) => setNewProjDesc(e.target.value)}
-                  placeholder="Mô tả sơ qua mục tiêu và phạm vi của dự án này..."
-                  rows={3}
-                  className="ui-input px-4 py-2.5 text-sm resize-none"
-                />
-              </div>
-
-              <div className="flex gap-3 justify-end mt-6">
-                <button type="button" onClick={() => setShowProjModal(false)} className="ui-btn-secondary px-4 py-2 text-sm">
-                  Hủy
+                  <PlusCircle className="h-4 w-4" />
+                  {memberLoading ? 'Đang thêm...' : 'Mời thành viên'}
                 </button>
-                <button type="submit" disabled={projLoading} className="ui-btn-primary px-5 py-2 text-sm">
-                  {projLoading ? 'Đang tạo...' : 'Tạo'}
-                </button>
+              </form>
+
+              {/* Members List */}
+              <div className="border-t border-border-subtle pt-5 mt-6 space-y-3">
+                <h4 className="text-xs font-bold text-heading uppercase tracking-wider mb-3">
+                  Danh sách thành viên hiện tại
+                </h4>
+
+                <div className="space-y-2.5 max-h-72 overflow-y-auto pr-1">
+                  {members.map((m) => (
+                    <div
+                      key={m.userId}
+                      className="flex items-center justify-between p-3 rounded-xl bg-surface border border-border text-xs gap-2"
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                        <div className="w-8 h-8 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center font-bold text-primary text-xs shrink-0">
+                          {m.fullname ? m.fullname.charAt(0).toUpperCase() : 'U'}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="font-bold text-heading truncate">{m.fullname}</div>
+                          <div className="text-[10px] text-muted truncate">{m.email}</div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <select
+                          value={m.role}
+                          onChange={(e) => handleChangeMemberRole(m.userId, e.target.value)}
+                          className="bg-zinc-900 border border-zinc-800 text-[10px] font-bold text-primary rounded-lg px-2 py-1 focus:outline-none"
+                        >
+                          <option value="ADMIN">ADMIN</option>
+                          <option value="MEMBER">MEMBER</option>
+                          <option value="VIEWER">VIEWER</option>
+                        </select>
+                        
+                        <button
+                          onClick={() => handleRemoveMember(m.userId, m.fullname)}
+                          className="p-1 rounded text-muted hover:text-error hover:bg-error-muted transition-colors"
+                          title="Xóa thành viên khỏi workspace"
+                        >
+                          <Trash className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
-            </form>
+            </div>
           </div>
-        </div>
-      )}
+        </main>
+
+        {/* Create Project Modal */}
+        {showProjModal && (
+          <div className="ui-modal-overlay">
+            <div className="w-full max-w-md glass p-8 rounded-2xl relative">
+              <h3 className="text-xl font-bold mb-6 font-display text-heading">Tạo Dự án mới</h3>
+
+              {projError && <div className="ui-alert-error mb-4 text-sm">{projError}</div>}
+
+              <form onSubmit={handleCreateProject} className="space-y-4">
+                <div>
+                  <label className="ui-label tracking-wider">Tên Dự án</label>
+                  <input
+                    type="text"
+                    required
+                    value={newProjName}
+                    onChange={(e) => setNewProjName(e.target.value)}
+                    placeholder="Ví dụ: App Redesign, Marketing Q3..."
+                    className="ui-input px-4 py-2.5 text-sm"
+                  />
+                </div>
+
+                <div>
+                  <label className="ui-label tracking-wider">Mô tả chi tiết</label>
+                  <textarea
+                    value={newProjDesc}
+                    onChange={(e) => setNewProjDesc(e.target.value)}
+                    placeholder="Mô tả sơ qua mục tiêu và phạm vi của dự án này..."
+                    rows={3}
+                    className="ui-input px-4 py-2.5 text-sm resize-none"
+                  />
+                </div>
+
+                <div className="flex gap-3 justify-end mt-6">
+                  <button type="button" onClick={() => setShowProjModal(false)} className="ui-btn-secondary px-4 py-2 text-sm">
+                    Hủy
+                  </button>
+                  <button type="submit" disabled={projLoading} className="ui-btn-primary px-5 py-2 text-sm">
+                    {projLoading ? 'Đang tạo...' : 'Tạo'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Edit Project Modal */}
+        {showEditProjModal && (
+          <div className="ui-modal-overlay">
+            <div className="w-full max-w-md glass p-8 rounded-2xl relative">
+              <h3 className="text-xl font-bold mb-6 font-display text-heading">Chỉnh sửa Dự án</h3>
+
+              {editProjError && <div className="ui-alert-error mb-4 text-sm">{editProjError}</div>}
+
+              <form onSubmit={handleUpdateProject} className="space-y-4">
+                <div>
+                  <label className="ui-label tracking-wider">Tên Dự án</label>
+                  <input
+                    type="text"
+                    required
+                    value={editProjName}
+                    onChange={(e) => setEditProjName(e.target.value)}
+                    className="ui-input px-4 py-2.5 text-sm"
+                  />
+                </div>
+
+                <div>
+                  <label className="ui-label tracking-wider">Mô tả chi tiết</label>
+                  <textarea
+                    value={editProjDesc}
+                    onChange={(e) => setEditProjDesc(e.target.value)}
+                    rows={3}
+                    className="ui-input px-4 py-2.5 text-sm resize-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="ui-label tracking-wider">Trạng thái</label>
+                  <select
+                    value={editProjStatus}
+                    onChange={(e) => setEditProjStatus(e.target.value)}
+                    className="ui-input px-4 py-2.5 text-sm"
+                  >
+                    <option value="ACTIVE font-bold">ACTIVE (Đang hoạt động)</option>
+                    <option value="COMPLETED">COMPLETED (Hoàn thành)</option>
+                    <option value="ARCHIVED">ARCHIVED (Lưu trữ)</option>
+                  </select>
+                </div>
+
+                <div className="flex gap-3 justify-end mt-6">
+                  <button type="button" onClick={() => setShowEditProjModal(false)} className="ui-btn-secondary px-4 py-2 text-sm">
+                    Hủy
+                  </button>
+                  <button type="submit" disabled={editProjLoading} className="ui-btn-primary px-5 py-2 text-sm">
+                    {editProjLoading ? 'Đang lưu...' : 'Lưu lại'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
