@@ -212,6 +212,10 @@ export default function WorkspaceDetailPage() {
     }
   };
 
+  const currentUserId = typeof window !== 'undefined' ? localStorage.getItem('userId') : null;
+  const currentUserMember = members.find((m) => m.userId === currentUserId);
+  const isAdmin = currentUserMember?.role === 'ADMIN';
+
   if (loading) {
     return (
       <div className="min-h-screen w-full flex items-center justify-center bg-background">
