@@ -77,6 +77,8 @@ export const api = {
     delete: (taskId: string) => request(`/tasks/${taskId}`, { method: 'DELETE' }),
     move: (taskId: string, data: { newStatus: string; prevPosition: number | null; nextPosition: number | null }) =>
       request(`/tasks/${taskId}/move`, { method: 'PATCH', body: JSON.stringify(data) }),
+    createBatch: (data: { projectId: string; tasks: any[] }) =>
+      request('/tasks/batch', { method: 'POST', body: JSON.stringify(data) }),
     getSubtasks: (taskId: string) => request(`/tasks/${taskId}/subtasks`),
     generateAiSubtasks: (taskId: string) => request(`/tasks/${taskId}/ai-subtasks`, { method: 'POST' }),
     suggestSubtasks: (taskId: string) => request(`/tasks/${taskId}/suggest-subtasks`, { method: 'POST' }),
@@ -100,6 +102,8 @@ export const api = {
     readAll: () => request('/notifications/read-all', { method: 'PATCH' }),
     invite: (data: { email: string; targetType: 'WORKSPACE' | 'PROJECT'; targetId: string; role?: string }) =>
       request('/notifications/invite', { method: 'POST', body: JSON.stringify(data) }),
+    inviteBatch: (data: { emails: string[]; targetType: 'WORKSPACE' | 'PROJECT'; targetId: string; role?: string }) =>
+      request('/notifications/invite-batch', { method: 'POST', body: JSON.stringify(data) }),
     respondInvitation: (id: string, action: 'ACCEPT' | 'DECLINE') =>
       request(`/notifications/${id}/respond-invitation`, { method: 'POST', body: JSON.stringify({ action }) }),
     requestLeave: (data: { targetType: 'WORKSPACE' | 'PROJECT'; targetId: string }) =>
@@ -113,4 +117,5 @@ export const api = {
       request(`/ai/project/${projectId}/smart-search`, { method: 'POST', body: JSON.stringify({ query }) }),
   },
   uploadImage: (formData: FormData) => request('/upload/image', { method: 'POST', body: formData }),
+  uploadFile: (formData: FormData) => request('/upload/file', { method: 'POST', body: formData }),
 };

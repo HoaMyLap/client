@@ -7,11 +7,12 @@ import { api } from '@/lib/api';
 import { createStompClient } from '@/lib/socket';
 import Sidebar from '@/components/Sidebar';
 import { jsonrepair } from 'jsonrepair';
+import * as XLSX from 'xlsx';
 import { 
   ArrowLeft, Plus, MessageSquare, Calendar, 
   Trash, Send, CheckSquare, X, Clock, AlertCircle, User, Sparkles, FileText, Search,
   Printer, TrendingUp, Activity, CheckCircle2, Users, AlertTriangle, Briefcase, Lightbulb,
-  History, ListChecks, ChevronRight, Check, Heart, Edit2, CornerDownRight
+  History, ListChecks, ChevronRight, Check, Heart, Edit2, CornerDownRight, FileSpreadsheet, Upload, Download, FolderArchive, File
 } from 'lucide-react';
 import { Client } from '@stomp/stompjs';
 
@@ -71,6 +72,56 @@ export default function ProjectKanbanPage() {
 
   // WebSocket Client Ref
   const stompClientRef = useRef<Client | null>(null);
+
+  // Project Files tab state
+  const [projectTab, setProjectTab] = useState<'KANBAN' | 'FILES'>('KANBAN');
+  const [projectFiles, setProjectFiles] = useState<Array<{ id: string; name: string; url: string; size: number; type: string; uploadedAt: string }>>([
+    {
+      id: '1',
+      name: 'Bản_Mô_Tả_Yêu_Cầu_Dự_Án.pdf',
+      url: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
+      size: 524288,
+      type: 'application/pdf',
+      uploadedAt: new Date().toISOString(),
+    },
+    {
+      id: '2',
+      name: 'Bảng_Phân_Bổ_Tiến_Độ.xlsx',
+      url: '#',
+      size: 1048576,
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      uploadedAt: new Date().toISOString(),
+    }
+  ]);
+  const [fileUploading, setFileUploading] = useState(false);
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setFileUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await api.uploadFile(formData);
+
+      const newFile = {
+        id: Date.now().toString(),
+        name: res.name || file.name,
+        url: res.url,
+        size: res.size || file.size,
+        type: res.type || file.type,
+        uploadedAt: new Date().toISOString(),
+      };
+
+      setProjectFiles((prev) => [newFile, ...prev]);
+      alert('Tải tệp tin lên dự án thành công!');
+    } catch (err: any) {
+      alert(err.message || 'Lỗi tải tệp tin lên dự án.');
+    } finally {
+      setFileUploading(false);
+    }
+  };
 
   // Drag state
   const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null);
@@ -135,9 +186,120 @@ export default function ProjectKanbanPage() {
       setShowAiSearchModal(true);
     } catch (err: any) {
       setAiSearchError(err.message || 'Lỗi khi kết nối tới trợ lý AI.');
-    } finally {
-      setAiSearchLoading(false);
+  // Excel Task Import Modal state
+  const [showExcelTaskModal, setShowExcelTaskModal] = useState(false);
+  const [excelTasks, setExcelTasks] = useState<any[]>([]);
+  const [excelTaskLoading, setExcelTaskLoading] = useState(false);
+  const [excelTaskError, setExcelTaskError] = useState('');
+
+  const handleExcelTaskUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      try {
+        const data = new Uint8Array(evt.target?.result as ArrayBuffer);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        const json: any[] = XLSX.utils.sheet_to_json(worksheet);
+
+        const tasks: any[] = [];
+        json.forEach((row) => {
+          const title = row['Tiêu đề'] || row.Title || row['Tên công việc'] || row.title;
+          if (title && typeof title === 'string' && title.trim().length > 0) {
+            const desc = row['Mô tả'] || row.Description || row.description || '';
+            const statusRaw = (row['Trạng thái'] || row.Status || row.status || 'TODO').toString().toUpperCase();
+            const priorityRaw = (row['Mức độ ưu tiên'] || row.Priority || row.priority || 'MEDIUM').toString().toUpperCase();
+
+            let status = 'TODO';
+            if (statusRaw.includes('PROGRESS') || statusRaw.includes('TIẾN HÀNH') || statusRaw.includes('ĐANG')) {
+              status = 'IN_PROGRESS';
+            } else if (statusRaw.includes('DONE') || statusRaw.includes('HOÀN THÀNH') || statusRaw.includes('XONG')) {
+              status = 'DONE';
+            }
+
+            let priority = 'MEDIUM';
+            if (priorityRaw.includes('HIGH') || priorityRaw.includes('CAO')) priority = 'HIGH';
+            else if (priorityRaw.includes('URGENT') || priorityRaw.includes('KHẨN')) priority = 'URGENT';
+            else if (priorityRaw.includes('LOW') || priorityRaw.includes('THẤP')) priority = 'LOW';
+
+            tasks.push({
+              title: title.trim(),
+              description: desc ? desc.toString().trim() : '',
+              status,
+              priority,
+              projectId,
+            });
+          }
+        });
+
+        if (tasks.length === 0) {
+          setExcelTaskError('Không tìm thấy danh sách công việc hợp lệ nào trong file Excel.');
+        } else {
+          setExcelTasks(tasks);
+          setExcelTaskError('');
+        }
+      } catch (err: any) {
+        setExcelTaskError('Lỗi khi đọc file Excel: ' + err.message);
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  };
+
+  const handleImportExcelTasks = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (excelTasks.length === 0) {
+      setExcelTaskError('Vui lòng chọn file Excel chứa danh sách công việc.');
+      return;
     }
+
+    setExcelTaskLoading(true);
+    setExcelTaskError('');
+
+    try {
+      await api.tasks.createBatch({
+        projectId,
+        tasks: excelTasks,
+      });
+
+      setShowExcelTaskModal(false);
+      setExcelTasks([]);
+      loadProjectData();
+      alert(`Đã thêm thành công ${excelTasks.length} công việc từ file Excel vào bảng Kanban!`);
+    } catch (err: any) {
+      setExcelTaskError(err.message || 'Lỗi khi nhập danh sách công việc từ Excel.');
+    } finally {
+      setExcelTaskLoading(false);
+    }
+  };
+
+  const downloadSampleTaskTemplate = () => {
+    const sampleData = [
+      {
+        'Tiêu đề': 'Thiết kế giao diện người dùng v2',
+        'Mô tả': 'Vẽ mockup Figma cho trang Dashboard và trang cài đặt',
+        'Trạng thái': 'TODO',
+        'Mức độ ưu tiên': 'HIGH',
+      },
+      {
+        'Tiêu đề': 'Xây dựng API xác thực hai yếu tố (2FA)',
+        'Mô tả': 'Viết endpoint gửi OTP về mail và xác thực mã',
+        'Trạng thái': 'IN_PROGRESS',
+        'Mức độ ưu tiên': 'URGENT',
+      },
+      {
+        'Tiêu đề': 'Viết tài liệu hướng dẫn sử dụng',
+        'Mô tả': 'Lập file markdown hướng dẫn deploy hệ thống lên Docker',
+        'Trạng thái': 'DONE',
+        'Mức độ ưu tiên': 'LOW',
+      },
+    ];
+
+    const worksheet = XLSX.utils.json_to_sheet(sampleData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'CongViecMau');
+    XLSX.writeFile(workbook, 'Mau_File_Cong_Viec_Homix.xlsx');
   };
 
   useEffect(() => {
@@ -784,6 +946,14 @@ export default function ProjectKanbanPage() {
 
           <div className="flex items-center gap-2 shrink-0">
             <button
+              onClick={() => setShowExcelTaskModal(true)}
+              className="flex items-center gap-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 px-3.5 py-2 rounded-xl text-xs font-bold text-emerald-400 transition-all active:scale-[0.98]"
+              title="Nhập hàng loạt công việc từ file Excel (.xlsx)"
+            >
+              <FileSpreadsheet className="h-4 w-4 text-emerald-400" />
+              Thêm từ Excel
+            </button>
+            <button
               onClick={handleFetchAiSummary}
               className="flex items-center gap-2 bg-primary-muted hover:bg-primary/25 border border-primary/30 px-4 py-2 rounded-xl text-xs font-semibold text-primary transition-all active:scale-[0.98]"
             >
@@ -800,8 +970,94 @@ export default function ProjectKanbanPage() {
           </div>
         </div>
 
-      {/* Kanban Board Container */}
-      <main className="max-w-7xl mx-auto px-6 mt-6 grid grid-cols-1 md:grid-cols-3 gap-6 relative z-10">
+        {/* Project View Tabs (Kanban vs Files) */}
+        <div className="max-w-7xl mx-auto px-6 mt-6 flex items-center justify-between no-print border-b border-border-subtle pb-3">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setProjectTab('KANBAN')}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+                projectTab === 'KANBAN'
+                  ? 'bg-primary text-white shadow-md shadow-primary/20'
+                  : 'bg-surface border border-border text-secondary hover:text-foreground'
+              }`}
+            >
+              <CheckSquare className="h-4 w-4" /> Bảng Kanban
+            </button>
+
+            <button
+              onClick={() => setProjectTab('FILES')}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+                projectTab === 'FILES'
+                  ? 'bg-primary text-white shadow-md shadow-primary/20'
+                  : 'bg-surface border border-border text-secondary hover:text-foreground'
+              }`}
+            >
+              <FolderArchive className="h-4 w-4" /> Tài liệu & Tệp tin ({projectFiles.length})
+            </button>
+          </div>
+        </div>
+
+      {projectTab === 'FILES' ? (
+        <main className="max-w-7xl mx-auto px-6 mt-6 relative z-10">
+          <div className="glass p-8 rounded-3xl border border-border shadow-xl">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-border-subtle mb-6">
+              <div>
+                <h3 className="text-xl font-bold font-display text-heading flex items-center gap-2">
+                  <FolderArchive className="h-5 w-5 text-primary" />
+                  Kho Lưu Trữ Tài Liệu Dự Án
+                </h3>
+                <p className="text-xs text-secondary mt-1">
+                  Quản lý và tải lên tệp tin, tài liệu đính kèm phục vụ dự án (PDF, Word, Excel, Hình ảnh)
+                </p>
+              </div>
+
+              <label className="ui-btn-primary px-5 py-2.5 text-xs font-bold flex items-center gap-2 cursor-pointer shadow-md hover:scale-[1.02] transition-transform shrink-0">
+                <Upload className="h-4 w-4" />
+                {fileUploading ? 'Đang tải lên...' : 'Tải tệp tin mới lên'}
+                <input type="file" onChange={handleFileUpload} disabled={fileUploading} className="hidden" />
+              </label>
+            </div>
+
+            {projectFiles.length === 0 ? (
+              <div className="p-12 text-center border-2 border-dashed border-border rounded-2xl">
+                <File className="h-10 w-10 text-muted mx-auto mb-3" />
+                <h4 className="text-sm font-bold text-heading">Chưa có tệp tin nào trong dự án</h4>
+                <p className="text-xs text-secondary mt-1 mb-4">Hãy tải lên tệp tin đầu tiên để chia sẻ với các thành viên!</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {projectFiles.map((file) => (
+                  <div key={file.id} className="bg-surface/50 border border-border p-4 rounded-2xl flex items-center justify-between gap-3 shadow-sm hover:border-primary/40 transition-all">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="p-2.5 rounded-xl bg-primary/10 text-primary shrink-0">
+                        <File className="h-5 w-5" />
+                      </div>
+                      <div className="min-w-0">
+                        <h4 className="text-xs font-bold text-heading truncate" title={file.name}>{file.name}</h4>
+                        <p className="text-[10px] text-muted mt-0.5">
+                          {(file.size / 1024).toFixed(1)} KB · {new Date(file.uploadedAt).toLocaleDateString('vi-VN')}
+                        </p>
+                      </div>
+                    </div>
+
+                    <a
+                      href={file.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="p-2 rounded-xl bg-surface border border-border text-secondary hover:text-primary transition-colors shrink-0"
+                      title="Tải về / Xem"
+                    >
+                      <Download className="h-4 w-4" />
+                    </a>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </main>
+      ) : (
+        /* Kanban Board Container */
+        <main className="max-w-7xl mx-auto px-6 mt-6 grid grid-cols-1 md:grid-cols-3 gap-6 relative z-10">
         {columns.map((col) => {
           const colTasks = getTasksByStatus(col.id);
           return (
@@ -926,6 +1182,7 @@ export default function ProjectKanbanPage() {
           );
         })}
       </main>
+      )}
 
       {/* Task Detail Drawer */}
       {selectedTask && (
@@ -1826,6 +2083,118 @@ export default function ProjectKanbanPage() {
                 )}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Excel Task Import Modal */}
+      {showExcelTaskModal && (
+        <div className="ui-modal-overlay bg-black/80 backdrop-blur-md z-[60]">
+          <div className="w-full max-w-lg bg-card border border-border rounded-2xl relative shadow-2xl overflow-hidden text-foreground">
+            {/* Header */}
+            <div className="flex items-center justify-between p-6 border-b border-border bg-surface/50">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
+                  <FileSpreadsheet className="h-6 w-6 text-emerald-400" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold font-display text-heading">
+                    Nhập danh sách công việc từ Excel
+                  </h3>
+                  <p className="text-xs text-secondary mt-0.5">
+                    Thêm hàng loạt công việc vào bảng Kanban từ file .xlsx
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowExcelTaskModal(false)}
+                className="ui-btn-ghost p-2 rounded-xl text-secondary hover:text-foreground"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Form */}
+            <form onSubmit={handleImportExcelTasks} className="p-6 space-y-5">
+              {excelTaskError && <div className="ui-alert-error text-xs">{excelTaskError}</div>}
+
+              {/* File Upload Box */}
+              <div className="border-2 border-dashed border-border hover:border-emerald-500/50 bg-surface/50 p-6 rounded-2xl text-center transition-all">
+                <FileSpreadsheet className="h-10 w-10 text-emerald-400 mx-auto mb-2" />
+                <p className="text-sm font-bold text-heading">Chọn file Excel (.xlsx / .xls)</p>
+                <p className="text-xs text-muted mt-1">Yêu cầu có các cột: "Tiêu đề", "Mô tả", "Trạng thái", "Mức độ ưu tiên"</p>
+                <input
+                  type="file"
+                  accept=".xlsx, .xls"
+                  onChange={handleExcelTaskUpload}
+                  className="mt-4 text-xs file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-emerald-500/20 file:text-emerald-400 hover:file:bg-emerald-500/30 cursor-pointer"
+                />
+              </div>
+
+              {/* Sample Template Download Button */}
+              <div className="flex items-center justify-between p-3.5 rounded-xl bg-surface border border-border">
+                <div className="flex items-center gap-2 text-xs font-semibold text-secondary">
+                  <Download className="h-4 w-4 text-primary" />
+                  <span>Chưa có file mẫu? Tải ngay template chuẩn:</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={downloadSampleTaskTemplate}
+                  className="text-xs font-bold text-primary hover:underline px-2.5 py-1 rounded-lg bg-primary/10 border border-primary/20"
+                >
+                  Tải file mẫu (.xlsx)
+                </button>
+              </div>
+
+              {/* Parsed Tasks Preview */}
+              {excelTasks.length > 0 && (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-xs font-bold text-emerald-400">
+                    <span>✓ Đã trích xuất {excelTasks.length} công việc:</span>
+                  </div>
+                  <div className="max-h-40 overflow-y-auto space-y-1.5 p-2 rounded-xl bg-surface border border-border text-xs">
+                    {excelTasks.map((t, idx) => (
+                      <div key={idx} className="flex items-center justify-between p-2 rounded-lg bg-background/60 border border-border-subtle">
+                        <span className="font-semibold text-heading truncate max-w-[200px]">{idx + 1}. {t.title}</span>
+                        <div className="flex items-center gap-2 text-[10px]">
+                          <span className="px-2 py-0.5 rounded bg-primary/10 text-primary font-bold">{t.status}</span>
+                          <span className="px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 font-bold">{t.priority}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Actions */}
+              <div className="flex gap-3 justify-end pt-4 border-t border-border mt-6">
+                <button
+                  type="button"
+                  onClick={() => setShowExcelTaskModal(false)}
+                  className="ui-btn-secondary px-5 py-2.5 text-xs font-semibold"
+                >
+                  Hủy
+                </button>
+                <button
+                  type="submit"
+                  disabled={excelTaskLoading || excelTasks.length === 0}
+                  className="ui-btn-primary px-6 py-2.5 text-xs font-bold flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 border-emerald-500"
+                >
+                  {excelTaskLoading ? (
+                    <>
+                      <div className="animate-spin rounded-full h-3.5 w-3.5 border-2 border-white/20 border-t-white" />
+                      Đang nhập...
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="h-4 w-4" />
+                      Nhập {excelTasks.length} công việc
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

@@ -5,9 +5,11 @@ import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import { api } from '@/lib/api';
 import Sidebar from '@/components/Sidebar';
+import * as XLSX from 'xlsx';
 import { 
   ArrowLeft, Plus, Folder, Users, Trash, PlusCircle, 
-  Pencil, Shield, User, X, CheckCircle2, Activity, BarChart3, Sparkles, Layers 
+  Pencil, Shield, User, X, CheckCircle2, Activity, BarChart3, Sparkles, Layers,
+  FileSpreadsheet, Upload, Download
 } from 'lucide-react';
 
 interface Project {
@@ -160,6 +162,39 @@ export default function WorkspaceDetailPage() {
     }
   };
 
+  const handleExcelUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      try {
+        const data = new Uint8Array(evt.target?.result as ArrayBuffer);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        const json: any[] = XLSX.utils.sheet_to_json(worksheet);
+
+        const emails: string[] = [];
+        json.forEach((row) => {
+          const val = row.Email || row.email || row.Mail || row['Địa chỉ Email'] || Object.values(row).find((v: any) => typeof v === 'string' && v.includes('@'));
+          if (val && typeof val === 'string' && val.includes('@')) {
+            emails.push(val.trim());
+          }
+        });
+
+        if (emails.length === 0) {
+          setMemberError('Không tìm thấy địa chỉ email hợp lệ trong file Excel.');
+        } else {
+          setExcelEmails(emails);
+          setMemberError('');
+        }
+      } catch (err: any) {
+        setMemberError('Lỗi đọc file Excel: ' + err.message);
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  };
+
   const handleAddMember = async (e: React.FormEvent) => {
     e.preventDefault();
     setMemberError('');
@@ -171,23 +206,45 @@ export default function WorkspaceDetailPage() {
         throw new Error('Vui lòng chọn dự án để mời');
       }
 
-      await api.notifications.invite({
-        email: memberEmail,
-        targetType: inviteTargetType,
-        targetId: targetId,
-        role: memberRole,
-      });
+      if (inviteMode === 'EXCEL') {
+        if (excelEmails.length === 0) {
+          throw new Error('Vui lòng tải lên file Excel có chứa email hợp lệ');
+        }
 
-      const invitedEmail = memberEmail;
-      setMemberEmail('');
-      setShowInviteModal(false);
+        await api.notifications.inviteBatch({
+          emails: excelEmails,
+          targetType: inviteTargetType,
+          targetId: targetId,
+          role: memberRole,
+        });
 
-      // Hiển thị thẻ thông báo ra giữa màn hình trong 4 giây
-      setCenterToast({
-        title: 'Đã gửi lời mời thành công! 🎉',
-        message: `Hệ thống đã gửi lời mời xác nhận tới email "${invitedEmail}". Người dùng sẽ nhận được thông báo để chấp nhận.`,
-      });
-      setTimeout(() => setCenterToast(null), 4000);
+        const count = excelEmails.length;
+        setExcelEmails([]);
+        setShowInviteModal(false);
+
+        setCenterToast({
+          title: 'Đã gửi lời mời hàng loạt thành công! 🎉',
+          message: `Hệ thống đã gửi lời mời xác nhận tới ${count} địa chỉ email từ file Excel.`,
+        });
+        setTimeout(() => setCenterToast(null), 4000);
+      } else {
+        await api.notifications.invite({
+          email: memberEmail,
+          targetType: inviteTargetType,
+          targetId: targetId,
+          role: memberRole,
+        });
+
+        const invitedEmail = memberEmail;
+        setMemberEmail('');
+        setShowInviteModal(false);
+
+        setCenterToast({
+          title: 'Đã gửi lời mời thành công! 🎉',
+          message: `Hệ thống đã gửi lời mời xác nhận tới email "${invitedEmail}". Người dùng sẽ nhận được thông báo để chấp nhận.`,
+        });
+        setTimeout(() => setCenterToast(null), 4000);
+      }
     } catch (err: any) {
       setMemberError(err.message || 'Gửi lời mời thất bại. Chỉ Admin mới có quyền thực hiện.');
     } finally {
@@ -679,6 +736,32 @@ export default function WorkspaceDetailPage() {
               <form onSubmit={handleAddMember} className="p-6 space-y-5">
                 {memberError && <div className="ui-alert-error text-xs">{memberError}</div>}
 
+                {/* Mode Selector: Single vs Excel Batch */}
+                <div className="flex rounded-xl bg-surface border border-border p-1">
+                  <button
+                    type="button"
+                    onClick={() => setInviteMode('SINGLE')}
+                    className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${
+                      inviteMode === 'SINGLE'
+                        ? 'bg-primary text-white shadow-sm'
+                        : 'text-secondary hover:text-foreground'
+                    }`}
+                  >
+                    📧 Mời đơn lẻ
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setInviteMode('EXCEL')}
+                    className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 ${
+                      inviteMode === 'EXCEL'
+                        ? 'bg-emerald-600 text-white shadow-sm'
+                        : 'text-secondary hover:text-foreground'
+                    }`}
+                  >
+                    <FileSpreadsheet className="h-3.5 w-3.5" /> Mời hàng loạt (.xlsx)
+                  </button>
+                </div>
+
                 {/* Target Type Selector */}
                 <div>
                   <label className="ui-label text-xs font-semibold mb-1.5 block">Hình thức mời gia nhập</label>
@@ -728,17 +811,40 @@ export default function WorkspaceDetailPage() {
                   </div>
                 )}
 
-                <div>
-                  <label className="ui-label text-xs font-semibold mb-1.5 block">Email người nhận lời mời</label>
-                  <input
-                    type="email"
-                    required
-                    value={memberEmail}
-                    onChange={(e) => setMemberEmail(e.target.value)}
-                    placeholder="partner@example.com"
-                    className="ui-input px-4 py-3 text-xs w-full rounded-xl"
-                  />
-                </div>
+                {inviteMode === 'SINGLE' ? (
+                  <div>
+                    <label className="ui-label text-xs font-semibold mb-1.5 block">Email người nhận lời mời</label>
+                    <input
+                      type="email"
+                      required={inviteMode === 'SINGLE'}
+                      value={memberEmail}
+                      onChange={(e) => setMemberEmail(e.target.value)}
+                      placeholder="partner@example.com"
+                      className="ui-input px-4 py-3 text-xs w-full rounded-xl"
+                    />
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <label className="ui-label text-xs font-semibold block">Tải lên danh sách Email từ Excel</label>
+                    <div className="border-2 border-dashed border-border hover:border-emerald-500/50 bg-surface/50 p-5 rounded-2xl text-center transition-all">
+                      <FileSpreadsheet className="h-8 w-8 text-emerald-400 mx-auto mb-2" />
+                      <p className="text-xs font-bold text-heading">Chọn file .xlsx chứa cột "Email"</p>
+                      <p className="text-[10px] text-muted mt-1">Hệ thống sẽ tự động trích xuất các địa chỉ email</p>
+                      <input
+                        type="file"
+                        accept=".xlsx, .xls"
+                        onChange={handleExcelUpload}
+                        className="mt-3 text-xs file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-emerald-500/20 file:text-emerald-400 hover:file:bg-emerald-500/30 cursor-pointer"
+                      />
+                    </div>
+                    {excelEmails.length > 0 && (
+                      <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-bold flex items-center justify-between">
+                        <span>✓ Đã trích xuất {excelEmails.length} email hợp lệ</span>
+                        <span className="text-[10px] font-normal text-muted truncate max-w-[150px]">{excelEmails.slice(0, 2).join(', ')}...</span>
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 <div>
                   <label className="ui-label text-xs font-semibold mb-1.5 block">Vai trò (Permission Role)</label>
