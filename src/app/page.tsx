@@ -9,7 +9,7 @@ import Sidebar from '@/components/Sidebar';
 import { 
   Plus, Folder, Users, Briefcase, Sparkles, Zap, 
   TrendingUp, MessageSquare, Calendar, ArrowRight, 
-  ChevronRight, Shield, Activity, CheckSquare 
+  ChevronRight, Shield, Activity, CheckSquare, Search, Building, Clock, ArrowUpRight 
 } from 'lucide-react';
 
 interface Workspace {
@@ -20,11 +20,29 @@ interface Workspace {
   createdAt: string;
 }
 
+const getWorkspaceGradient = (name: string) => {
+  const gradients = [
+    'from-violet-600 to-indigo-600 shadow-indigo-500/20',
+    'from-blue-600 to-cyan-600 shadow-cyan-500/20',
+    'from-emerald-600 to-teal-600 shadow-teal-500/20',
+    'from-amber-500 to-orange-600 shadow-orange-500/20',
+    'from-rose-600 to-pink-600 shadow-pink-500/20',
+    'from-purple-600 to-rose-600 shadow-purple-500/20',
+  ];
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const index = Math.abs(hash) % gradients.length;
+  return gradients[index];
+};
+
 export default function WorkspacesPage() {
   const router = useRouter();
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [loading, setLoading] = useState(true);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
 
   const [showModal, setShowModal] = useState(false);
   const [newWorkspaceName, setNewWorkspaceName] = useState('');
@@ -325,6 +343,12 @@ export default function WorkspacesPage() {
   }
 
   // --- RENDERING WORKSPACES PAGE FOR LOGGED IN USERS ---
+  const filteredWorkspaces = workspaces.filter(
+    (ws) =>
+      ws.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (ws.description && ws.description.toLowerCase().includes(searchTerm.toLowerCase()))
+  );
+
   return (
     <div className="flex h-screen w-full bg-background text-foreground relative font-sans overflow-hidden">
       <div className="absolute top-0 right-0 w-[40%] h-[40%] rounded-full glow-orb-primary blur-[140px] pointer-events-none" />
@@ -335,77 +359,135 @@ export default function WorkspacesPage() {
       <div className="flex-1 flex flex-col min-w-0 h-screen relative z-10 overflow-y-auto">
         <main className="max-w-6xl w-full mx-auto px-6 mt-10 pb-12">
           {/* Header Banner */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8 pb-6 border-b border-border-subtle">
-            <div>
-              <div className="flex items-center gap-2 mb-1">
-                <span className="text-[10px] font-bold text-primary bg-primary/10 border border-primary/20 px-2.5 py-0.5 rounded-full uppercase tracking-wider">
-                  Homix v2.0
-                </span>
-                <span className="text-xs font-semibold text-secondary">
-                  {workspaces.length} Không gian làm việc
-                </span>
+          <div className="glass p-6 md:p-8 rounded-3xl border border-border shadow-xl mb-8 relative overflow-hidden">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-[10px] font-bold text-primary bg-primary/10 border border-primary/20 px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+                    Homix v2.0 Workspace Hub
+                  </span>
+                  <span className="text-xs font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" /> {workspaces.length} Không gian
+                  </span>
+                </div>
+                <h2 className="text-2xl md:text-3xl font-black tracking-tight font-display text-heading">
+                  Không Gian Làm Việc Của Bạn
+                </h2>
+                <p className="text-secondary text-xs md:text-sm mt-1 max-w-lg leading-relaxed">
+                  Lựa chọn không gian làm việc để truy cập danh sách dự án, bảng Kanban và báo cáo tiến độ AI
+                </p>
               </div>
-              <h2 className="text-2xl md:text-3xl font-black tracking-tight font-display text-heading">
-                Không gian làm việc
-              </h2>
-              <p className="text-secondary text-xs md:text-sm mt-1">
-                Chọn hoặc khởi tạo không gian làm việc mới để bắt đầu dự án
-              </p>
+
+              <button
+                onClick={() => setShowModal(true)}
+                className="ui-btn-primary flex items-center gap-2 px-5 py-3 text-xs font-bold shadow-xl hover:scale-[1.02] transition-transform shrink-0"
+              >
+                <Plus className="h-4 w-4" />
+                Tạo Workspace Mới
+              </button>
             </div>
 
-            <button
-              onClick={() => setShowModal(true)}
-              className="ui-btn-primary flex items-center gap-2 px-4 py-2.5 text-xs font-bold shadow-lg hover:scale-[1.02] transition-transform shrink-0"
-            >
-              <Plus className="h-4 w-4" />
-              Tạo Workspace mới
-            </button>
+            {/* Live Search Bar */}
+            {workspaces.length > 0 && (
+              <div className="mt-6 pt-6 border-t border-border-subtle flex items-center gap-4">
+                <div className="relative flex-1 max-w-md">
+                  <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted" />
+                  <input
+                    type="text"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    placeholder="Tìm kiếm không gian làm việc theo tên hoặc mô tả..."
+                    className="ui-input pl-10 pr-4 py-2 text-xs font-medium w-full"
+                  />
+                  {searchTerm && (
+                    <button
+                      onClick={() => setSearchTerm('')}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted hover:text-foreground"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+                <span className="text-xs text-muted font-medium hidden sm:inline">
+                  Hiển thị {filteredWorkspaces.length}/{workspaces.length} kết quả
+                </span>
+              </div>
+            )}
           </div>
 
           {workspaces.length === 0 ? (
-            <div className="glass rounded-2xl p-12 text-center border border-border max-w-md mx-auto mt-16">
-              <Briefcase className="h-12 w-12 text-muted mx-auto mb-4" />
-              <h3 className="text-lg font-semibold mb-2 text-heading">Chưa có Workspace nào</h3>
-              <p className="text-secondary text-sm mb-6">
-                Bạn cần tạo mới một không gian làm việc đầu tiên để lập dự án quản lý.
+            <div className="glass rounded-3xl p-12 text-center border border-border max-w-md mx-auto mt-12 shadow-xl">
+              <div className="w-16 h-16 rounded-2xl bg-primary/10 text-primary flex items-center justify-center mx-auto mb-4 border border-primary/20">
+                <Briefcase className="h-8 w-8" />
+              </div>
+              <h3 className="text-lg font-bold mb-2 text-heading">Chưa có Workspace nào</h3>
+              <p className="text-secondary text-xs leading-relaxed mb-6">
+                Bạn chưa tham gia không gian làm việc nào. Hãy tạo mới ngay để quản lý dự án!
               </p>
-              <button onClick={() => setShowModal(true)} className="ui-btn-primary px-5 py-2.5 text-sm">
-                Tạo ngay
+              <button onClick={() => setShowModal(true)} className="ui-btn-primary px-6 py-2.5 text-xs font-bold">
+                + Tạo Workspace đầu tiên
+              </button>
+            </div>
+          ) : filteredWorkspaces.length === 0 ? (
+            <div className="glass rounded-2xl p-8 text-center border border-border max-w-md mx-auto mt-8">
+              <Search className="h-8 w-8 text-muted mx-auto mb-2" />
+              <h4 className="text-sm font-bold text-heading">Không tìm thấy kết quả phù hợp</h4>
+              <p className="text-secondary text-xs mt-1 mb-4">Không tìm thấy Workspace nào khớp với "{searchTerm}"</p>
+              <button onClick={() => setSearchTerm('')} className="ui-btn-secondary px-3.5 py-1.5 text-xs">
+                Xóa từ khóa tìm kiếm
               </button>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {workspaces.map((ws) => (
-                <Link key={ws.id} href={`/workspace/${ws.id}`}>
-                  <div className="glass hover:border-primary/50 p-6 rounded-2xl transition-all cursor-pointer group hover:scale-[1.01] flex flex-col justify-between h-[180px] border border-border shadow-sm hover:shadow-xl relative overflow-hidden">
-                    <div>
-                      <div className="flex items-center justify-between gap-2">
-                        <h3 className="font-bold text-base md:text-lg group-hover:text-primary transition-colors text-title truncate">
-                          {ws.name}
-                        </h3>
-                        <span className="text-[10px] font-bold text-muted bg-surface px-2 py-0.5 rounded-full border border-border shrink-0">
-                          Workspace
+              {filteredWorkspaces.map((ws) => {
+                const gradient = getWorkspaceGradient(ws.name);
+                const firstChar = ws.name.charAt(0).toUpperCase();
+
+                return (
+                  <Link key={ws.id} href={`/workspace/${ws.id}`}>
+                    <div className="glass hover:border-primary/50 p-6 rounded-2xl transition-all cursor-pointer group hover:-translate-y-1 flex flex-col justify-between h-[200px] border border-border shadow-sm hover:shadow-2xl relative overflow-hidden">
+                      {/* Top Accent line on hover */}
+                      <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-primary to-accent opacity-0 group-hover:opacity-100 transition-opacity" />
+
+                      <div>
+                        <div className="flex items-center gap-3">
+                          {/* Gradient Avatar Icon */}
+                          <div className={`w-11 h-11 rounded-xl bg-gradient-to-br ${gradient} flex items-center justify-center font-black text-white text-base shadow-md uppercase shrink-0`}>
+                            {firstChar}
+                          </div>
+
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between gap-1">
+                              <h3 className="font-bold text-base group-hover:text-primary transition-colors text-title truncate font-display">
+                                {ws.name}
+                              </h3>
+                            </div>
+                            <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-secondary bg-surface px-2 py-0.5 rounded-full border border-border mt-0.5">
+                              <Building className="w-3 h-3 text-primary" /> Workspace
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Fixed height description guarantees 100% equal card height */}
+                        <p className="text-secondary text-xs mt-3.5 h-10 leading-relaxed line-clamp-2 overflow-hidden">
+                          {ws.description || 'Chưa có mô tả chi tiết cho không gian làm việc này.'}
+                        </p>
+                      </div>
+
+                      {/* Footer Info & Action */}
+                      <div className="flex items-center justify-between text-xs text-muted pt-3 border-t border-border-subtle mt-auto">
+                        <span className="flex items-center gap-1 text-secondary group-hover:text-primary font-bold text-xs transition-colors">
+                          Vào Workspace <ArrowUpRight className="h-4 w-4 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+                        </span>
+                        <span className="flex items-center gap-1 text-[10px] text-muted">
+                          <Clock className="h-3 w-3" />
+                          {new Date(ws.createdAt).toLocaleDateString('vi-VN')}
                         </span>
                       </div>
-                      
-                      {/* Fixed height description to guarantee equal height for all cards */}
-                      <p className="text-secondary text-xs mt-3 h-10 leading-relaxed line-clamp-2 overflow-hidden">
-                        {ws.description || 'Chưa có mô tả cho không gian làm việc này.'}
-                      </p>
                     </div>
-
-                    <div className="flex items-center justify-between text-xs text-muted pt-3 border-t border-border-subtle mt-auto">
-                      <span className="flex items-center gap-1.5 text-secondary group-hover:text-primary transition-colors font-medium text-[11px]">
-                        <Folder className="h-3.5 w-3.5 text-primary" />
-                        Nhấp để xem dự án
-                      </span>
-                      <span className="text-[10px] font-semibold text-muted">
-                        {new Date(ws.createdAt).toLocaleDateString('vi-VN')}
-                      </span>
-                    </div>
-                  </div>
-                </Link>
-              ))}
+                  </Link>
+                );
+              })}
             </div>
           )}
         </main>
