@@ -317,7 +317,7 @@ export default function WorkspacesPage() {
           </div>
 
           <div className="text-center text-[10px] text-muted">
-            © 2026 SmartManager. Thiết kế tối giản cho các đội ngũ hiệu suất cao.
+            © 2026 Homix v2.0. Hệ thống quản lý công việc và tiến độ dự án thông minh.
           </div>
         </section>
       </div>
@@ -333,65 +333,82 @@ export default function WorkspacesPage() {
       <Sidebar />
 
       <div className="flex-1 flex flex-col min-w-0 h-screen relative z-10 overflow-y-auto">
-        <main className="max-w-6xl w-full mx-auto px-6 mt-12 pb-12">
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h2 className="text-2xl font-bold tracking-tight font-display text-heading">Không gian làm việc</h2>
-            <p className="text-secondary text-sm mt-1">
-              Chọn hoặc khởi tạo không gian làm việc mới để bắt đầu dự án
-            </p>
-          </div>
+        <main className="max-w-6xl w-full mx-auto px-6 mt-10 pb-12">
+          {/* Header Banner */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8 pb-6 border-b border-border-subtle">
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-[10px] font-bold text-primary bg-primary/10 border border-primary/20 px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+                  Homix v2.0
+                </span>
+                <span className="text-xs font-semibold text-secondary">
+                  {workspaces.length} Không gian làm việc
+                </span>
+              </div>
+              <h2 className="text-2xl md:text-3xl font-black tracking-tight font-display text-heading">
+                Không gian làm việc
+              </h2>
+              <p className="text-secondary text-xs md:text-sm mt-1">
+                Chọn hoặc khởi tạo không gian làm việc mới để bắt đầu dự án
+              </p>
+            </div>
 
-          <button
-            onClick={() => setShowModal(true)}
-            className="ui-btn-primary flex items-center gap-2 px-4 py-2.5 text-sm shadow-lg"
-          >
-            <Plus className="h-4 w-4" />
-            Tạo Workspace
-          </button>
-        </div>
-
-        {workspaces.length === 0 ? (
-          <div className="glass rounded-2xl p-12 text-center border border-border max-w-md mx-auto mt-16">
-            <Briefcase className="h-12 w-12 text-muted mx-auto mb-4" />
-            <h3 className="text-lg font-semibold mb-2 text-heading">Chưa có Workspace nào</h3>
-            <p className="text-secondary text-sm mb-6">
-              Bạn cần tạo mới một không gian làm việc đầu tiên để lập dự án quản lý.
-            </p>
-            <button onClick={() => setShowModal(true)} className="ui-btn-primary px-5 py-2.5 text-sm">
-              Tạo ngay
+            <button
+              onClick={() => setShowModal(true)}
+              className="ui-btn-primary flex items-center gap-2 px-4 py-2.5 text-xs font-bold shadow-lg hover:scale-[1.02] transition-transform shrink-0"
+            >
+              <Plus className="h-4 w-4" />
+              Tạo Workspace mới
             </button>
           </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {workspaces.map((ws) => (
-              <Link key={ws.id} href={`/workspace/${ws.id}`}>
-                <div className="glass hover:border-primary/40 p-6 rounded-2xl transition-all cursor-pointer group hover:scale-[1.01] flex flex-col justify-between min-h-[160px]">
-                  <div>
-                    <h3 className="font-bold text-lg group-hover:text-primary transition-colors text-title">
-                      {ws.name}
-                    </h3>
-                    <p className="text-secondary text-sm mt-2 line-clamp-2">
-                      {ws.description || 'Không có mô tả.'}
-                    </p>
-                  </div>
 
-                  <div className="flex items-center justify-between text-xs text-muted mt-6 pt-4 border-t border-border-subtle">
-                    <span className="flex items-center gap-1.5">
-                      <Folder className="h-3.5 w-3.5" />
-                      Nhấp để xem dự án
-                    </span>
-                    <span className="flex items-center gap-1.5">
-                      <Users className="h-3.5 w-3.5" />
-                      Workspace
-                    </span>
+          {workspaces.length === 0 ? (
+            <div className="glass rounded-2xl p-12 text-center border border-border max-w-md mx-auto mt-16">
+              <Briefcase className="h-12 w-12 text-muted mx-auto mb-4" />
+              <h3 className="text-lg font-semibold mb-2 text-heading">Chưa có Workspace nào</h3>
+              <p className="text-secondary text-sm mb-6">
+                Bạn cần tạo mới một không gian làm việc đầu tiên để lập dự án quản lý.
+              </p>
+              <button onClick={() => setShowModal(true)} className="ui-btn-primary px-5 py-2.5 text-sm">
+                Tạo ngay
+              </button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {workspaces.map((ws) => (
+                <Link key={ws.id} href={`/workspace/${ws.id}`}>
+                  <div className="glass hover:border-primary/50 p-6 rounded-2xl transition-all cursor-pointer group hover:scale-[1.01] flex flex-col justify-between h-[180px] border border-border shadow-sm hover:shadow-xl relative overflow-hidden">
+                    <div>
+                      <div className="flex items-center justify-between gap-2">
+                        <h3 className="font-bold text-base md:text-lg group-hover:text-primary transition-colors text-title truncate">
+                          {ws.name}
+                        </h3>
+                        <span className="text-[10px] font-bold text-muted bg-surface px-2 py-0.5 rounded-full border border-border shrink-0">
+                          Workspace
+                        </span>
+                      </div>
+                      
+                      {/* Fixed height description to guarantee equal height for all cards */}
+                      <p className="text-secondary text-xs mt-3 h-10 leading-relaxed line-clamp-2 overflow-hidden">
+                        {ws.description || 'Chưa có mô tả cho không gian làm việc này.'}
+                      </p>
+                    </div>
+
+                    <div className="flex items-center justify-between text-xs text-muted pt-3 border-t border-border-subtle mt-auto">
+                      <span className="flex items-center gap-1.5 text-secondary group-hover:text-primary transition-colors font-medium text-[11px]">
+                        <Folder className="h-3.5 w-3.5 text-primary" />
+                        Nhấp để xem dự án
+                      </span>
+                      <span className="text-[10px] font-semibold text-muted">
+                        {new Date(ws.createdAt).toLocaleDateString('vi-VN')}
+                      </span>
+                    </div>
                   </div>
-                </div>
-              </Link>
-            ))}
-          </div>
-        )}
-      </main>
+                </Link>
+              ))}
+            </div>
+          )}
+        </main>
 
       {showModal && (
         <div className="ui-modal-overlay">
