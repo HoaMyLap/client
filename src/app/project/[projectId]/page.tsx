@@ -642,7 +642,7 @@ export default function ProjectKanbanPage() {
 
       {/* Task Detail Drawer */}
       {selectedTask && (
-        <div className="fixed inset-y-0 right-0 w-full max-w-lg ui-drawer z-50 flex flex-col overflow-hidden">
+        <div className="fixed inset-y-0 right-0 w-full max-w-lg ui-drawer z-50 flex flex-col overflow-hidden bg-card text-foreground shadow-2xl">
           {/* Drawer Header */}
           <div className="flex items-center justify-between border-b border-border px-6 py-4 shrink-0">
             <div className="flex-1 min-w-0 pr-4">

@@ -103,16 +103,16 @@
 html[data-theme="light"] {
   --background: #E2E4E9;
   --bg-gradient: linear-gradient(135deg, #E2E4E9 0%, #B0CFFF 50%, #D2C2FC 100%);
-  --surface: rgba(255, 255, 255, 0.3);
-  --surface-elevated: rgba(255, 255, 255, 0.45);
-  --card: rgba(240, 246, 255, 0.65);
-  --card-hover: rgba(225, 238, 255, 0.8);
-  --input-bg: rgba(255, 255, 255, 0.7);
-  --header-bg: rgba(240, 246, 255, 0.4);
-  --overlay: rgba(15, 23, 42, 0.3);
+  --surface: #FFFFFF;
+  --surface-elevated: #F8FAFC;
+  --card: #FFFFFF;
+  --card-hover: #F1F5F9;
+  --input-bg: #FFFFFF;
+  --header-bg: #F8FAFC;
+  --overlay: rgba(15, 23, 42, 0.4);
 
-  --border: rgba(255, 255, 255, 0.5);
-  --border-subtle: rgba(255, 255, 255, 0.35);
+  --border: #CBD5E1;
+  --border-subtle: #E2E8F0;
 
   --hover: rgba(15, 23, 42, 0.04);
   --active: rgba(15, 23, 42, 0.07);
@@ -496,9 +496,17 @@ header.app-header {
 
 /* Drawer / panel */
 .ui-drawer {
+  background-color: var(--card);
   background: var(--card);
   border-left: 1px solid var(--border);
-  box-shadow: var(--shadow-lg);
+  box-shadow: var(--shadow-lg), -10px 0 30px rgba(0, 0, 0, 0.25);
+}
+
+html[data-theme="light"] .ui-drawer {
+  background-color: #FFFFFF !important;
+  background: #FFFFFF !important;
+  border-left: 1px solid #CBD5E1 !important;
+  box-shadow: -10px 0 40px rgba(15, 23, 42, 0.15) !important;
 }
 
 /* Decorative glow orbs */
