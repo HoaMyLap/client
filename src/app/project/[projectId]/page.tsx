@@ -1287,36 +1287,40 @@ export default function ProjectKanbanPage() {
 
       {/* AI Smart Search Results Modal */}
       {showAiSearchModal && (
-        <div className="ui-modal-overlay">
-          <div className="w-full max-w-2xl glass p-6 rounded-2xl relative max-h-[85vh] flex flex-col border border-border shadow-2xl">
-            <button
-              onClick={() => setShowAiSearchModal(false)}
-              className="absolute top-4 right-4 ui-btn-ghost p-1"
-            >
-              <X className="h-5 w-5" />
-            </button>
-
-            <div className="flex items-center gap-3 border-b border-border pb-4 mb-4 shrink-0">
-              <div className="p-2.5 rounded-xl bg-primary/10 border border-primary/20">
-                <Sparkles className="h-6 w-6 text-primary" />
+        <div className="ui-modal-overlay bg-black/80 backdrop-blur-md">
+          <div className="w-full max-w-2xl bg-card border border-border rounded-2xl relative max-h-[85vh] flex flex-col shadow-2xl overflow-hidden text-foreground">
+            {/* Header */}
+            <div className="flex items-center justify-between p-6 border-b border-border bg-surface/50 shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-xl bg-primary/10 border border-primary/20">
+                  <Sparkles className="h-6 w-6 text-primary" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold font-display text-heading">
+                    Kết quả AI Tìm kiếm Thông minh
+                  </h3>
+                  <p className="text-xs text-secondary mt-0.5">
+                    Truy vấn: <span className="font-semibold text-primary">"{aiSearchQuery}"</span> · {aiSearchResults.length} công việc trùng khớp
+                  </p>
+                </div>
               </div>
-              <div>
-                <h3 className="text-lg font-bold font-display text-heading">
-                  Kết quả AI Tìm kiếm Thông minh
-                </h3>
-                <p className="text-xs text-secondary mt-0.5">
-                  Truy vấn: <span className="font-semibold text-primary">"{aiSearchQuery}"</span> · {aiSearchResults.length} công việc trùng khớp
-                </p>
-              </div>
+              <button
+                onClick={() => setShowAiSearchModal(false)}
+                className="ui-btn-ghost p-2 rounded-xl text-secondary hover:text-foreground"
+              >
+                <X className="h-5 w-5" />
+              </button>
             </div>
 
+            {/* Error message */}
             {aiSearchError && (
-              <div className="ui-alert-error mb-4 text-xs">{aiSearchError}</div>
+              <div className="mx-6 mt-4 ui-alert-error text-xs">{aiSearchError}</div>
             )}
 
-            <div className="flex-1 overflow-y-auto space-y-3 pr-1">
+            {/* Results List */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-3.5">
               {aiSearchResults.length === 0 ? (
-                <div className="text-center py-12 text-muted text-xs">
+                <div className="text-center py-12 text-muted text-xs bg-surface/40 rounded-xl border border-border">
                   <Sparkles className="h-10 w-10 text-muted mx-auto mb-3" />
                   Không tìm thấy công việc nào phù hợp với yêu cầu tìm kiếm của bạn.
                 </div>
@@ -1328,27 +1332,27 @@ export default function ProjectKanbanPage() {
                       setSelectedTask(res.task);
                       setShowAiSearchModal(false);
                     }}
-                    className="glass hover:border-primary/40 p-4 rounded-xl cursor-pointer transition-all border border-border flex flex-col gap-2 hover:scale-[1.005]"
+                    className="bg-surface hover:bg-hover border border-border hover:border-primary/40 p-4.5 rounded-xl cursor-pointer transition-all flex flex-col gap-2.5 shadow-sm hover:shadow-md"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <h4 className="font-bold text-sm text-title">
                         {res.task.title}
                       </h4>
-                      <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shrink-0">
+                      <span className="text-[11px] font-bold px-3 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 shrink-0">
                         {(res.relevanceScore * 100).toFixed(0)}% Phù hợp
                       </span>
                     </div>
 
                     {/* AI Reasoning pill */}
-                    <div className="text-xs bg-primary/5 border border-primary/20 p-2.5 rounded-lg text-primary flex items-start gap-2">
-                      <Sparkles className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+                    <div className="text-xs bg-primary/10 border border-primary/25 p-3 rounded-xl text-primary font-medium flex items-start gap-2.5">
+                      <Sparkles className="h-4 w-4 shrink-0 mt-0.5 text-primary" />
                       <span className="leading-relaxed">{res.reason}</span>
                     </div>
 
-                    <div className="flex items-center justify-between text-[10px] text-muted pt-2 border-t border-border-subtle mt-1">
+                    <div className="flex items-center justify-between text-[11px] text-muted pt-2.5 border-t border-border-subtle mt-0.5">
                       <span>Trạng thái: <strong className="text-foreground">{res.task.status}</strong> · Ưu tiên: <strong className="text-foreground">{res.task.priority}</strong></span>
                       {res.task.dueDate && (
-                        <span>Hạn: {new Date(res.task.dueDate).toLocaleDateString()}</span>
+                        <span>Hạn: {new Date(res.task.dueDate).toLocaleDateString('vi-VN')}</span>
                       )}
                     </div>
                   </div>
