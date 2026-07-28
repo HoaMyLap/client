@@ -101,6 +101,9 @@ export default function ProjectKanbanPage() {
 
   // AI Loading & Modal States
   const [aiSubtaskLoading, setAiSubtaskLoading] = useState(false);
+  const [showAiSubtaskModal, setShowAiSubtaskModal] = useState(false);
+  const [aiSubtaskSuggestions, setAiSubtaskSuggestions] = useState<Array<{ title: string; selected: boolean }>>([]);
+  const [aiSubtaskAdding, setAiSubtaskAdding] = useState(false);
   const [showAiSummaryModal, setShowAiSummaryModal] = useState(false);
   const [aiSummaryContent, setAiSummaryContent] = useState('');
   const [aiSummaryLoading, setAiSummaryLoading] = useState(false);
@@ -400,12 +403,44 @@ export default function ProjectKanbanPage() {
     if (!selectedTask) return;
     setAiSubtaskLoading(true);
     try {
-      await api.tasks.generateAiSubtasks(selectedTask.id);
-      loadTaskDetails(selectedTask.id);
+      const res = await api.tasks.suggestSubtasks(selectedTask.id);
+      const suggestions = (res.suggestions || []).map((t: string) => ({
+        title: t,
+        selected: true,
+      }));
+      if (suggestions.length === 0) {
+        alert('AI không đưa ra gợi ý nào cho công việc này.');
+        return;
+      }
+      setAiSubtaskSuggestions(suggestions);
+      setShowAiSubtaskModal(true);
     } catch (err: any) {
       alert(err.message || 'AI phân rã việc thất bại.');
     } finally {
       setAiSubtaskLoading(false);
+    }
+  };
+
+  const handleConfirmAddAiSubtasks = async () => {
+    if (!selectedTask) return;
+    const selectedTitles = aiSubtaskSuggestions
+      .filter((s) => s.selected && s.title.trim())
+      .map((s) => s.title.trim());
+
+    if (selectedTitles.length === 0) {
+      alert('Vui lòng chọn ít nhất 1 subtask để thêm.');
+      return;
+    }
+
+    setAiSubtaskAdding(true);
+    try {
+      await api.tasks.batchSubtasks(selectedTask.id, selectedTitles);
+      loadTaskDetails(selectedTask.id);
+      setShowAiSubtaskModal(false);
+    } catch (err: any) {
+      alert(err.message || 'Lỗi khi thêm danh sách subtask.');
+    } finally {
+      setAiSubtaskAdding(false);
     }
   };
 
@@ -1443,6 +1478,126 @@ export default function ProjectKanbanPage() {
                   );
                 })
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* AI Subtask Confirmation Modal */}
+      {showAiSubtaskModal && (
+        <div className="ui-modal-overlay bg-black/80 backdrop-blur-md z-[60]">
+          <div className="w-full max-w-lg bg-card border border-border rounded-2xl relative max-h-[85vh] flex flex-col shadow-2xl overflow-hidden text-foreground">
+            {/* Header */}
+            <div className="flex items-center justify-between p-5 border-b border-border bg-surface/50 shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-xl bg-primary/10 border border-primary/20">
+                  <Sparkles className="h-5 w-5 text-primary animate-pulse" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold font-display text-heading">
+                    Xác nhận Subtasks gợi ý từ AI
+                  </h3>
+                  <p className="text-xs text-secondary mt-0.5">
+                    Chọn các bước công việc bạn muốn tự động thêm vào task:
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowAiSubtaskModal(false)}
+                className="ui-btn-ghost p-2 rounded-xl text-secondary hover:text-foreground"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* List Control */}
+            <div className="px-6 py-3 flex items-center justify-between text-xs border-b border-border-subtle shrink-0 bg-surface/30">
+              <span className="font-semibold text-secondary">
+                Đã chọn: <strong className="text-primary">{aiSubtaskSuggestions.filter(s => s.selected).length}/{aiSubtaskSuggestions.length}</strong>
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  const allSelected = aiSubtaskSuggestions.every(s => s.selected);
+                  setAiSubtaskSuggestions(prev => prev.map(s => ({ ...s, selected: !allSelected })));
+                }}
+                className="text-xs text-primary hover:underline font-semibold"
+              >
+                {aiSubtaskSuggestions.every(s => s.selected) ? 'Bỏ chọn tất cả' : 'Chọn tất cả'}
+              </button>
+            </div>
+
+            {/* Subtask Suggestions List */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-2.5">
+              {aiSubtaskSuggestions.map((item, idx) => (
+                <div
+                  key={idx}
+                  className={`flex items-center gap-3 p-3 rounded-xl border transition-all ${
+                    item.selected
+                      ? 'bg-primary/10 border-primary/30 text-foreground'
+                      : 'bg-surface/50 border-border text-muted opacity-60'
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={item.selected}
+                    onChange={(e) => {
+                      const checked = e.target.checked;
+                      setAiSubtaskSuggestions(prev => prev.map((s, i) => i === idx ? { ...s, selected: checked } : s));
+                    }}
+                    className="w-4.5 h-4.5 rounded accent-primary cursor-pointer shrink-0"
+                  />
+                  <input
+                    type="text"
+                    value={item.title}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setAiSubtaskSuggestions(prev => prev.map((s, i) => i === idx ? { ...s, title: val } : s));
+                    }}
+                    className="bg-transparent border-none text-xs font-medium text-foreground focus:outline-none flex-1 font-sans"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAiSubtaskSuggestions(prev => prev.filter((_, i) => i !== idx));
+                    }}
+                    className="text-muted hover:text-error transition-colors p-1 rounded"
+                    title="Xóa gợi ý này"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            {/* Footer buttons */}
+            <div className="p-4 border-t border-border bg-surface/50 flex items-center justify-end gap-3 shrink-0">
+              <button
+                type="button"
+                onClick={() => setShowAiSubtaskModal(false)}
+                className="ui-btn-secondary px-4 py-2 text-xs font-semibold"
+              >
+                Hủy
+              </button>
+              <button
+                type="button"
+                disabled={aiSubtaskAdding || aiSubtaskSuggestions.filter(s => s.selected).length === 0}
+                onClick={handleConfirmAddAiSubtasks}
+                className="ui-btn-primary px-4 py-2 text-xs font-semibold flex items-center gap-2"
+              >
+                {aiSubtaskAdding ? (
+                  <>
+                    <div className="animate-spin rounded-full h-3.5 w-3.5 border-2 border-white/20 border-t-white" />
+                    Đang thêm...
+                  </>
+                ) : (
+                  <>
+                    <Check className="h-4 w-4" />
+                    Xác nhận thêm {aiSubtaskSuggestions.filter(s => s.selected).length} Subtasks
+                  </>
+                )}
+              </button>
             </div>
           </div>
         </div>

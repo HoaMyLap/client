@@ -79,6 +79,9 @@ export const api = {
       request(`/tasks/${taskId}/move`, { method: 'PATCH', body: JSON.stringify(data) }),
     getSubtasks: (taskId: string) => request(`/tasks/${taskId}/subtasks`),
     generateAiSubtasks: (taskId: string) => request(`/tasks/${taskId}/ai-subtasks`, { method: 'POST' }),
+    suggestSubtasks: (taskId: string) => request(`/tasks/${taskId}/suggest-subtasks`, { method: 'POST' }),
+    batchSubtasks: (taskId: string, subtasks: string[]) =>
+      request(`/tasks/${taskId}/batch-subtasks`, { method: 'POST', body: JSON.stringify({ subtasks }) }),
     getLogs: (taskId: string) => request(`/tasks/${taskId}/logs`),
     toggleDone: (taskId: string) => request(`/tasks/${taskId}/toggle-done`, { method: 'PATCH' }),
   },
