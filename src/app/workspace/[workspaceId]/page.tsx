@@ -64,6 +64,10 @@ export default function WorkspaceDetailPage() {
   const [memberMessage, setMemberMessage] = useState('');
   const [memberError, setMemberError] = useState('');
 
+  // Excel Batch Invite state
+  const [inviteMode, setInviteMode] = useState<'SINGLE' | 'EXCEL'>('SINGLE');
+  const [excelEmails, setExcelEmails] = useState<string[]>([]);
+
   const [pageError, setPageError] = useState('');
 
   useEffect(() => {
