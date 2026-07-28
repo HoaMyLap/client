@@ -422,6 +422,9 @@ export default function ProjectKanbanPage() {
       setComments((prev) => prev.map((c) => (c.id === commentId ? updated : c)));
     } catch (err: any) {
       alert(err.message || 'Lỗi khi tương tác bình luận.');
+    }
+  };
+
   const handleRequestLeaveProject = async () => {
     if (!confirm('Bạn có chắc chắn muốn gửi yêu cầu rời khỏi dự án này? Yêu cầu sẽ được gửi tới Admin để phê duyệt.')) return;
     try {
