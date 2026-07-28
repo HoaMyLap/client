@@ -44,7 +44,7 @@ export default function ProfilePage() {
     }
   };
 
-  // Upload image to Cloudinary (Cloud Name: b88kftny) or convert to Data URL fallback
+  // Upload image to Cloudinary via Spring Boot backend service
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -56,39 +56,22 @@ export default function ProfilePage() {
 
     setUploading(true);
     setError('');
+    setMessage('');
 
     try {
-      // Direct unsigned Cloudinary upload attempt or base64 data URL
       const formData = new FormData();
       formData.append('file', file);
-      formData.append('upload_preset', 'ml_default'); // standard fallback preset
 
-      const res = await fetch('https://api.cloudinary.com/v1_1/b88kftny/image/upload', {
-        method: 'POST',
-        body: formData,
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        if (data.secure_url) {
-          setAvatarUrl(data.secure_url);
-          setMessage('Đã tải ảnh lên Cloudinary thành công! Nhớ bấm "Lưu thay đổi".');
-          return;
-        }
+      const res = await api.uploadImage(formData);
+      if (res && res.url) {
+        setAvatarUrl(res.url);
+        setMessage('Đã tải ảnh lên Cloudinary thành công! Nhớ bấm "Lưu thay đổi".');
+      } else {
+        throw new Error('Tải ảnh thất bại');
       }
-
-      // Fallback to Data URL if unsigned preset is restricted
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        if (reader.result) {
-          setAvatarUrl(reader.result as string);
-          setMessage('Đã chọn ảnh đại diện mới. Bấm "Lưu thay đổi" để hoàn tất.');
-        }
-      };
-      reader.readAsDataURL(file);
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      setError('Lỗi khi tải ảnh lên. Hãy thử dùng URL ảnh bên dưới.');
+      setError(err.message || 'Lỗi khi tải ảnh lên Cloudinary.');
     } finally {
       setUploading(false);
     }

@@ -94,4 +94,5 @@ export const api = {
   ai: {
     getSummary: (projectId: string) => request(`/ai/project/${projectId}/summary`),
   },
+  uploadImage: (formData: FormData) => request('/upload/image', { method: 'POST', body: formData }),
 };
