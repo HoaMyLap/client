@@ -33,6 +33,7 @@ interface Notification {
   isRead: boolean;
   type: string;
   invitationId?: string | null;
+  invitationStatus?: string | null;
   createdAt: string;
 }
 
@@ -63,6 +64,25 @@ export default function Sidebar() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [showNotifDropdown, setShowNotifDropdown] = useState(false);
   const notifClientRef = useRef<Client | null>(null);
+
+  // Click Outside Refs
+  const notifRef = useRef<HTMLDivElement>(null);
+  const userDropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (notifRef.current && !notifRef.current.contains(event.target as Node)) {
+        setShowNotifDropdown(false);
+      }
+      if (userDropdownRef.current && !userDropdownRef.current.contains(event.target as Node)) {
+        setShowUserDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   const [loading, setLoading] = useState(true);
 
@@ -375,7 +395,8 @@ export default function Sidebar() {
           <ThemeToggle />
           
           {/* Collapsible Bell notifications trigger */}
-          <div className="relative">
+          {/* Collapsible Bell notifications trigger */}
+          <div className="relative" ref={notifRef}>
             <button
               onClick={() => {
                 setShowNotifDropdown(!showNotifDropdown);
@@ -424,44 +445,64 @@ export default function Sidebar() {
                       </div>
                       <p className="text-[10px] text-secondary mt-1 line-clamp-2 leading-relaxed">{n.content}</p>
 
-                      {/* Action buttons for Invitation Notification */}
-                      {n.type === 'INVITATION' && n.invitationId && (
-                        <div className="flex items-center gap-2 mt-2.5 pt-2 border-t border-border-subtle" onClick={(e) => e.stopPropagation()}>
-                          <button
-                            type="button"
-                            onClick={() => handleRespondInvitation(n.id, 'ACCEPT')}
-                            className="flex-1 py-1 px-2 rounded-lg bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 border border-emerald-500/30 text-[10px] font-bold flex items-center justify-center gap-1 transition-all"
-                          >
-                            <Check className="h-3 w-3" /> Đồng ý
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleRespondInvitation(n.id, 'DECLINE')}
-                            className="flex-1 py-1 px-2 rounded-lg bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 border border-rose-500/20 text-[10px] font-bold flex items-center justify-center gap-1 transition-all"
-                          >
-                            <X className="h-3 w-3" /> Từ chối
-                          </button>
+                      {/* Confirmation Status Badges vs Interactive Action Buttons */}
+                      {n.invitationStatus && n.invitationStatus !== 'PENDING' ? (
+                        <div className="mt-2 pt-1.5 border-t border-border-subtle">
+                          {n.invitationStatus === 'ACCEPTED' && (
+                            <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20 inline-block">✓ Đã đồng ý</span>
+                          )}
+                          {n.invitationStatus === 'REJECTED' && (
+                            <span className="text-[10px] font-bold text-rose-400 bg-rose-500/10 px-2 py-0.5 rounded-full border border-rose-500/20 inline-block">✕ Đã từ chối</span>
+                          )}
+                          {n.invitationStatus === 'APPROVED' && (
+                            <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20 inline-block">✓ Đã duyệt rời</span>
+                          )}
+                          {n.invitationStatus === 'REJECTED_LEAVE' && (
+                            <span className="text-[10px] font-bold text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20 inline-block">✕ Từ chối rời</span>
+                          )}
                         </div>
-                      )}
+                      ) : (
+                        <>
+                          {/* Action buttons for Invitation Notification */}
+                          {n.type === 'INVITATION' && n.invitationId && (
+                            <div className="flex items-center gap-2 mt-2.5 pt-2 border-t border-border-subtle" onClick={(e) => e.stopPropagation()}>
+                              <button
+                                type="button"
+                                onClick={() => handleRespondInvitation(n.id, 'ACCEPT')}
+                                className="flex-1 py-1 px-2 rounded-lg bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 border border-emerald-500/30 text-[10px] font-bold flex items-center justify-center gap-1 transition-all"
+                              >
+                                <Check className="h-3 w-3" /> Đồng ý
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleRespondInvitation(n.id, 'DECLINE')}
+                                className="flex-1 py-1 px-2 rounded-lg bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 border border-rose-500/20 text-[10px] font-bold flex items-center justify-center gap-1 transition-all"
+                              >
+                                <X className="h-3 w-3" /> Từ chối
+                              </button>
+                            </div>
+                          )}
 
-                      {/* Action buttons for Admin Leave Request Approval */}
-                      {n.type === 'LEAVE_REQUEST' && n.invitationId && (
-                        <div className="flex items-center gap-2 mt-2.5 pt-2 border-t border-border-subtle" onClick={(e) => e.stopPropagation()}>
-                          <button
-                            type="button"
-                            onClick={() => handleRespondLeave(n.id, 'APPROVE')}
-                            className="flex-1 py-1 px-2 rounded-lg bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 border border-emerald-500/30 text-[10px] font-bold flex items-center justify-center gap-1 transition-all"
-                          >
-                            <Check className="h-3 w-3" /> Duyệt rời
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleRespondLeave(n.id, 'REJECT')}
-                            className="flex-1 py-1 px-2 rounded-lg bg-surface border border-border text-secondary hover:text-foreground text-[10px] font-bold flex items-center justify-center gap-1 transition-all"
-                          >
-                            <X className="h-3 w-3" /> Từ chối
-                          </button>
-                        </div>
+                          {/* Action buttons for Admin Leave Request Approval */}
+                          {n.type === 'LEAVE_REQUEST' && n.invitationId && (
+                            <div className="flex items-center gap-2 mt-2.5 pt-2 border-t border-border-subtle" onClick={(e) => e.stopPropagation()}>
+                              <button
+                                type="button"
+                                onClick={() => handleRespondLeave(n.id, 'APPROVE')}
+                                className="flex-1 py-1 px-2 rounded-lg bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 border border-emerald-500/30 text-[10px] font-bold flex items-center justify-center gap-1 transition-all"
+                              >
+                                <Check className="h-3 w-3" /> Duyệt rời
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleRespondLeave(n.id, 'REJECT')}
+                                className="flex-1 py-1 px-2 rounded-lg bg-surface border border-border text-secondary hover:text-foreground text-[10px] font-bold flex items-center justify-center gap-1 transition-all"
+                              >
+                                <X className="h-3 w-3" /> Từ chối
+                              </button>
+                            </div>
+                          )}
+                        </>
                       )}
 
                       <span className="text-[8px] text-muted block mt-2">
@@ -491,7 +532,7 @@ export default function Sidebar() {
 
         {/* User Account Controls */}
         <div className={`border-t border-border-subtle pt-3 ${isCollapsed ? 'w-full flex justify-center' : ''}`}>
-          <div className="relative">
+          <div className="relative" ref={userDropdownRef}>
             <button
               onClick={() => {
                 setShowUserDropdown(!showUserDropdown);

@@ -8,7 +8,7 @@ import { createNotificationStompClient } from '@/lib/socket';
 import Sidebar from '@/components/Sidebar';
 import { 
   Bell, CheckCircle2, MessageSquare, Briefcase, UserCheck, 
-  ArrowLeft, CheckCheck, Filter, Clock, Sparkles
+  ArrowLeft, CheckCheck, Filter, Clock, Sparkles, Check, X
 } from 'lucide-react';
 import { Client } from '@stomp/stompjs';
 
@@ -19,6 +19,8 @@ interface NotificationItem {
   content: string;
   isRead: boolean;
   type: string;
+  invitationId?: string | null;
+  invitationStatus?: string | null;
   createdAt: string;
 }
 
@@ -62,6 +64,24 @@ export default function NotificationsPage() {
       console.error(err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleRespondInvitation = async (notificationId: string, action: 'ACCEPT' | 'DECLINE') => {
+    try {
+      await api.notifications.respondInvitation(notificationId, action);
+      loadNotifications();
+    } catch (err: any) {
+      alert(err.message || 'Lỗi khi phản hồi lời mời.');
+    }
+  };
+
+  const handleRespondLeave = async (notificationId: string, action: 'APPROVE' | 'REJECT') => {
+    try {
+      await api.notifications.respondLeave(notificationId, action);
+      loadNotifications();
+    } catch (err: any) {
+      alert(err.message || 'Lỗi khi duyệt yêu cầu rời.');
     }
   };
 
@@ -220,6 +240,64 @@ export default function NotificationsPage() {
                     <p className="text-xs text-secondary mt-1 leading-relaxed">
                       {n.content}
                     </p>
+
+                    {/* Confirmation Status Badges vs Interactive Action Buttons */}
+                    {n.invitationStatus && n.invitationStatus !== 'PENDING' ? (
+                      <div className="mt-3 pt-2.5 border-t border-border-subtle">
+                        {n.invitationStatus === 'ACCEPTED' && (
+                          <span className="text-xs font-bold text-emerald-400 bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20 inline-flex items-center gap-1">✓ Đã chấp nhận lời mời</span>
+                        )}
+                        {n.invitationStatus === 'REJECTED' && (
+                          <span className="text-xs font-bold text-rose-400 bg-rose-500/10 px-3 py-1 rounded-full border border-rose-500/20 inline-flex items-center gap-1">✕ Đã từ chối lời mời</span>
+                        )}
+                        {n.invitationStatus === 'APPROVED' && (
+                          <span className="text-xs font-bold text-emerald-400 bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20 inline-flex items-center gap-1">✓ Đã duyệt rời</span>
+                        )}
+                        {n.invitationStatus === 'REJECTED_LEAVE' && (
+                          <span className="text-xs font-bold text-amber-400 bg-amber-500/10 px-3 py-1 rounded-full border border-amber-500/20 inline-flex items-center gap-1">✕ Từ chối yêu cầu rời</span>
+                        )}
+                      </div>
+                    ) : (
+                      <>
+                        {n.type === 'INVITATION' && n.invitationId && (
+                          <div className="flex items-center gap-3 mt-3 pt-2.5 border-t border-border-subtle" onClick={(e) => e.stopPropagation()}>
+                            <button
+                              type="button"
+                              onClick={() => handleRespondInvitation(n.id, 'ACCEPT')}
+                              className="px-4 py-1.5 rounded-xl bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 border border-emerald-500/30 text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm"
+                            >
+                              <Check className="h-4 w-4" /> Đồng ý tham gia
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleRespondInvitation(n.id, 'DECLINE')}
+                              className="px-4 py-1.5 rounded-xl bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 border border-rose-500/20 text-xs font-bold flex items-center gap-1.5 transition-all"
+                            >
+                              <X className="h-4 w-4" /> Từ chối
+                            </button>
+                          </div>
+                        )}
+
+                        {n.type === 'LEAVE_REQUEST' && n.invitationId && (
+                          <div className="flex items-center gap-3 mt-3 pt-2.5 border-t border-border-subtle" onClick={(e) => e.stopPropagation()}>
+                            <button
+                              type="button"
+                              onClick={() => handleRespondLeave(n.id, 'APPROVE')}
+                              className="px-4 py-1.5 rounded-xl bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 border border-emerald-500/30 text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm"
+                            >
+                              <Check className="h-4 w-4" /> Duyệt rời
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleRespondLeave(n.id, 'REJECT')}
+                              className="px-4 py-1.5 rounded-xl bg-surface border border-border text-secondary hover:text-foreground text-xs font-bold flex items-center gap-1.5 transition-all"
+                            >
+                              <X className="h-4 w-4" /> Từ chối
+                            </button>
+                          </div>
+                        )}
+                      </>
+                    )}
                     <div className="flex items-center gap-3 text-[10px] text-muted mt-3">
                       <span className="flex items-center gap-1">
                         <Clock className="h-3 w-3" />

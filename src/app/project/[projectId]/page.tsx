@@ -1497,6 +1497,23 @@ export default function ProjectKanbanPage() {
               </div>
             ) : (
               <>
+                {/* Print Only Header (Visible during PDF Export) */}
+                <div className="hidden print:flex items-center justify-between pb-6 mb-6 border-b border-zinc-300">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-violet-600 flex items-center justify-center font-black text-white text-lg">
+                      H
+                    </div>
+                    <div>
+                      <h2 className="text-lg font-black tracking-wider text-black">HOMIX v2.0</h2>
+                      <p className="text-[10px] text-zinc-600 font-semibold">Hệ thống Quản lý Dự án & Tiến độ Thông minh</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <h1 className="text-base font-black text-black uppercase">BÁO CÁO NGHIỆM THU DỰ ÁN</h1>
+                    <p className="text-[10px] text-zinc-600">Ngày lập: {new Date().toLocaleDateString('vi-VN')}</p>
+                  </div>
+                </div>
+
                 {/* Hero Cover Header */}
                 <div className="mb-10 p-8 rounded-2xl bg-gradient-to-r from-zinc-950 via-zinc-900 to-zinc-950 border border-zinc-800/60 shadow-xl relative overflow-hidden no-print">
                   {/* Background glow */}
@@ -1508,11 +1525,11 @@ export default function ProjectKanbanPage() {
                       <span className="text-[10px] font-bold text-violet-400 tracking-widest uppercase">
                         Báo cáo tiến độ phân tích bởi AI
                       </span>
-                      <h1 className="text-2xl font-black text-zinc-100 tracking-tight mt-1 font-display">
-                        Báo Cáo Nghiệm Thu Dự Án
+                      <h1 className="text-2xl font-black text-zinc-100 tracking-tight mt-1 font-display uppercase">
+                        BÁO CÁO NGHIỆM THU DỰ ÁN
                       </h1>
                       <p className="text-xs text-zinc-400 mt-1">
-                        Chủ nhiệm: Ngô Hòa My • Ngày lập: {new Date().toLocaleDateString('vi-VN')} • Hệ thống SmartManager v2.0
+                        Chủ nhiệm: Ngô Hòa My • Ngày lập: {new Date().toLocaleDateString('vi-VN')} • Hệ thống Homix v2.0
                       </p>
                     </div>
                     
