@@ -136,8 +136,12 @@ export default function Sidebar() {
         if (foundWs) {
           setCurrentWorkspace(foundWs);
         }
-        const projList = await api.projects.list(activeWsId);
-        setProjects(projList || []);
+        try {
+          const projList = await api.projects.list(activeWsId);
+          setProjects(projList || []);
+        } catch {
+          setProjects([]);
+        }
       } else {
         setCurrentWorkspace(null);
         setProjects([]);

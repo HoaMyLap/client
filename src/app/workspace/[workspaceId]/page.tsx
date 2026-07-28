@@ -62,6 +62,8 @@ export default function WorkspaceDetailPage() {
   const [memberMessage, setMemberMessage] = useState('');
   const [memberError, setMemberError] = useState('');
 
+  const [pageError, setPageError] = useState('');
+
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (!token) {
@@ -74,14 +76,16 @@ export default function WorkspaceDetailPage() {
   const loadData = async () => {
     try {
       setLoading(true);
+      setPageError('');
       const [projData, memberData] = await Promise.all([
         api.projects.list(workspaceId),
         api.workspaces.getMembers(workspaceId),
       ]);
       setProjects(projData || []);
       setMembers(memberData || []);
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
+      setPageError(err.message || 'Bạn không có quyền truy cập Workspace này hoặc đã rời khỏi Workspace.');
     } finally {
       setLoading(false);
     }
@@ -229,6 +233,26 @@ export default function WorkspaceDetailPage() {
     return (
       <div className="min-h-screen w-full flex items-center justify-center bg-background">
         <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  if (pageError) {
+    return (
+      <div className="flex h-screen w-full bg-background text-foreground relative font-sans items-center justify-center">
+        <Sidebar />
+        <div className="flex-1 text-center p-8 max-w-md mx-auto relative z-10">
+          <div className="w-16 h-16 rounded-2xl bg-amber-500/10 text-amber-400 flex items-center justify-center mx-auto mb-4 border border-amber-500/20">
+            <Shield className="w-8 h-8" />
+          </div>
+          <h2 className="text-xl font-bold font-display text-heading mb-2">Không có quyền truy cập</h2>
+          <p className="text-secondary text-xs leading-relaxed mb-6">
+            {pageError}
+          </p>
+          <Link href="/" className="ui-btn-primary px-5 py-2.5 text-xs font-bold inline-flex items-center gap-2">
+            <ArrowLeft className="w-4 h-4" /> Quay lại Trang chủ
+          </Link>
+        </div>
       </div>
     );
   }
