@@ -391,7 +391,7 @@ export default function WorkspaceDetailPage() {
                   Danh sách thành viên hiện tại
                 </h4>
 
-                <div className="space-y-2.5 max-h-72 overflow-y-auto pr-1">
+                <div className="space-y-2.5 max-h-72 overflow-y-auto no-scrollbar">
                   {members.map((m) => (
                     <div
                       key={m.userId}

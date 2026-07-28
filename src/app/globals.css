@@ -567,3 +567,13 @@ html[data-theme="light"] .ui-drawer {
   border-color: transparent;
   color: var(--text-secondary);
 }
+
+/* Utility to completely hide scrollbars while maintaining scroll functionality */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+

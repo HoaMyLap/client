@@ -409,7 +409,7 @@ export default function Sidebar() {
                   )}
                 </div>
 
-                <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                <div className="space-y-2 max-h-56 overflow-y-auto no-scrollbar">
                   {notifications.map((n) => (
                     <div
                       key={n.id}
