@@ -261,10 +261,14 @@ export default function ProjectKanbanPage() {
           if (prev.some((s) => s.id === payload.id)) return prev;
           return [...prev, payload];
         });
-      } else if (action === 'UPDATE') {
+      } else if (action === 'UPDATE' && payload && payload.id === selectedTask.id) {
         setSelectedTask(payload);
       } else if (action === 'DELETE') {
-        setSelectedTask(null);
+        if (taskId === selectedTask.id) {
+          setSelectedTask(null);
+        } else {
+          setSubtasks((prev) => prev.filter((s) => s.id !== taskId));
+        }
       }
     }
   };
@@ -325,9 +329,24 @@ export default function ProjectKanbanPage() {
     if (!confirm('Bạn có chắc chắn muốn xóa công việc này?')) return;
     try {
       await api.tasks.delete(taskId);
-      setSelectedTask(null);
+      if (selectedTask && selectedTask.id === taskId) {
+        setSelectedTask(null);
+      }
     } catch (err: any) {
       alert(err.message || 'Lỗi khi xóa công việc.');
+    }
+  };
+
+  const handleDeleteSubtask = async (subtaskId: string) => {
+    if (!confirm('Bạn có chắc chắn muốn xóa công việc con này?')) return;
+    try {
+      await api.tasks.delete(subtaskId);
+      setSubtasks((prev) => prev.filter((s) => s.id !== subtaskId));
+      if (selectedTask) {
+        api.tasks.getLogs(selectedTask.id).then((data) => setTaskLogs(data || []));
+      }
+    } catch (err: any) {
+      alert(err.message || 'Lỗi khi xóa công việc con.');
     }
   };
 
@@ -845,8 +864,9 @@ export default function ProjectKanbanPage() {
                         {sub.title}
                       </span>
                       <button
-                        onClick={() => handleDeleteTask(sub.id)}
+                        onClick={() => handleDeleteSubtask(sub.id)}
                         className="text-muted hover:text-error transition-colors p-1 rounded"
+                        title="Xóa công việc con"
                       >
                         <X className="h-3 w-3" />
                       </button>
