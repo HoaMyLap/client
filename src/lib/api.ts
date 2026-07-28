@@ -87,7 +87,12 @@ export const api = {
   },
   comments: {
     list: (taskId: string) => request(`/comments/task/${taskId}`),
-    create: (data: any) => request('/comments', { method: 'POST', body: JSON.stringify(data) }),
+    create: (data: { content: string; taskId: string; parentCommentId?: string | null }) =>
+      request('/comments', { method: 'POST', body: JSON.stringify(data) }),
+    update: (id: string, content: string) =>
+      request(`/comments/${id}`, { method: 'PUT', body: JSON.stringify({ content }) }),
+    delete: (id: string) => request(`/comments/${id}`, { method: 'DELETE' }),
+    like: (id: string) => request(`/comments/${id}/like`, { method: 'PATCH' }),
   },
   notifications: {
     list: () => request('/notifications'),

@@ -11,7 +11,7 @@ import {
   ArrowLeft, Plus, MessageSquare, Calendar, 
   Trash, Send, CheckSquare, X, Clock, AlertCircle, User, Sparkles, FileText, Search,
   Printer, TrendingUp, Activity, CheckCircle2, Users, AlertTriangle, Briefcase, Lightbulb,
-  History, ListChecks, ChevronRight, Check
+  History, ListChecks, ChevronRight, Check, Heart, Edit2, CornerDownRight
 } from 'lucide-react';
 import { Client } from '@stomp/stompjs';
 
@@ -35,7 +35,10 @@ interface Comment {
   content: string;
   userId: string;
   taskId: string;
+  parentCommentId?: string | null;
+  likedUserIds?: string[];
   createdAt: string;
+  updatedAt?: string;
 }
 
 interface Member {
@@ -98,6 +101,12 @@ export default function ProjectKanbanPage() {
   // Drawer Tab
   const [drawerTab, setDrawerTab] = useState<'detail' | 'subtasks' | 'logs' | 'comments'>('detail');
   const [taskLogs, setTaskLogs] = useState<TaskLog[]>([]);
+
+  // Comments Reply & Edit States
+  const [replyParentId, setReplyParentId] = useState<string | null>(null);
+  const [replyContent, setReplyContent] = useState('');
+  const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
+  const [editCommentContent, setEditCommentContent] = useState('');
 
   // AI Loading & Modal States
   const [aiSubtaskLoading, setAiSubtaskLoading] = useState(false);
@@ -254,12 +263,19 @@ export default function ProjectKanbanPage() {
     });
 
     if (selectedTask && selectedTask.id === taskId) {
-      if (action === 'ADD_COMMENT') {
+      if (action === 'ADD_COMMENT' || action === 'UPDATE_COMMENT' || action === 'LIKE_COMMENT') {
         setComments((prev) => {
-          if (prev.some((c) => c.id === payload.id)) return prev;
+          const idx = prev.findIndex((c) => c.id === payload.id);
+          if (idx !== -1) {
+            const next = [...prev];
+            next[idx] = payload;
+            return next;
+          }
           return [...prev, payload];
         });
-      } else if (action === 'CREATE' && payload.parentTaskId === taskId) {
+      } else if (action === 'DELETE_COMMENT') {
+        setComments((prev) => prev.filter((c) => c.id !== payload.id && c.parentCommentId !== payload.id));
+      } else if (action === 'CREATE' && payload && payload.parentTaskId === taskId) {
         setSubtasks((prev) => {
           if (prev.some((s) => s.id === payload.id)) return prev;
           return [...prev, payload];
@@ -353,19 +369,59 @@ export default function ProjectKanbanPage() {
     }
   };
 
-  const handleAddComment = async (e: React.FormEvent) => {
+  const handleAddComment = async (e: React.FormEvent, parentId: string | null = null) => {
     e.preventDefault();
-    if (!selectedTask || !newCommentContent.trim()) return;
+    const content = parentId ? replyContent : newCommentContent;
+    if (!selectedTask || !content.trim()) return;
 
     try {
-      await api.comments.create({
-        content: newCommentContent,
+      const created = await api.comments.create({
+        content: content.trim(),
         taskId: selectedTask.id,
+        parentCommentId: parentId,
       });
-      setNewCommentContent('');
-      loadTaskDetails(selectedTask.id);
+      if (parentId) {
+        setReplyContent('');
+        setReplyParentId(null);
+      } else {
+        setNewCommentContent('');
+      }
+      setComments((prev) => {
+        if (prev.some((c) => c.id === created.id)) return prev;
+        return [...prev, created];
+      });
     } catch (err: any) {
       alert(err.message || 'Lỗi khi gửi bình luận.');
+    }
+  };
+
+  const handleSaveEditComment = async (commentId: string) => {
+    if (!editCommentContent.trim()) return;
+    try {
+      const updated = await api.comments.update(commentId, editCommentContent.trim());
+      setComments((prev) => prev.map((c) => (c.id === commentId ? updated : c)));
+      setEditingCommentId(null);
+    } catch (err: any) {
+      alert(err.message || 'Lỗi khi cập nhật bình luận.');
+    }
+  };
+
+  const handleDeleteComment = async (commentId: string) => {
+    if (!confirm('Bạn có chắc chắn muốn xóa bình luận này?')) return;
+    try {
+      await api.comments.delete(commentId);
+      setComments((prev) => prev.filter((c) => c.id !== commentId && c.parentCommentId !== commentId));
+    } catch (err: any) {
+      alert(err.message || 'Lỗi khi xóa bình luận.');
+    }
+  };
+
+  const handleToggleLikeComment = async (commentId: string) => {
+    try {
+      const updated = await api.comments.like(commentId);
+      setComments((prev) => prev.map((c) => (c.id === commentId ? updated : c)));
+    } catch (err: any) {
+      alert(err.message || 'Lỗi khi tương tác bình luận.');
     }
   };
 
@@ -541,6 +597,131 @@ export default function ProjectKanbanPage() {
     if (!userId) return 'Chưa giao';
     const member = members.find(m => m.userId === userId);
     return member ? member.fullname : 'Thành viên';
+  };
+
+  const renderCommentItem = (comment: Comment, isReply = false) => {
+    const isOwner = comment.userId === currentUserId;
+    const liked = comment.likedUserIds?.includes(currentUserId);
+    const likesCount = comment.likedUserIds?.length || 0;
+    const authorName = getMemberName(comment.userId);
+
+    return (
+      <div key={comment.id} className="p-3.5 bg-surface border border-border rounded-xl flex flex-col gap-2 shadow-sm">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 rounded-full bg-primary/20 text-primary flex items-center justify-center text-[10px] font-bold shrink-0">
+              {authorName.charAt(0).toUpperCase()}
+            </div>
+            <span className="text-xs font-bold text-heading">{authorName}</span>
+            <span className="text-[10px] text-muted flex items-center gap-1">
+              <Clock className="h-3 w-3" />
+              {new Date(comment.createdAt).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' })}
+            </span>
+          </div>
+
+          {/* Action icons for owner */}
+          {isOwner && editingCommentId !== comment.id && (
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => {
+                  setEditingCommentId(comment.id);
+                  setEditCommentContent(comment.content);
+                }}
+                className="text-muted hover:text-primary p-1 rounded transition-colors"
+                title="Chỉnh sửa"
+              >
+                <Edit2 className="h-3.5 w-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={() => handleDeleteComment(comment.id)}
+                className="text-muted hover:text-error p-1 rounded transition-colors"
+                title="Xóa"
+              >
+                <Trash className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Content or Inline Edit */}
+        {editingCommentId === comment.id ? (
+          <div className="flex flex-col gap-2 mt-1">
+            <textarea
+              value={editCommentContent}
+              onChange={(e) => setEditCommentContent(e.target.value)}
+              rows={2}
+              className="ui-input p-2.5 text-xs resize-none"
+            />
+            <div className="flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setEditingCommentId(null)}
+                className="ui-btn-secondary px-2.5 py-1 text-[11px]"
+              >
+                Hủy
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSaveEditComment(comment.id)}
+                className="ui-btn-primary px-3 py-1 text-[11px] font-semibold"
+              >
+                Lưu
+              </button>
+            </div>
+          </div>
+        ) : (
+          <p className="text-body text-xs leading-relaxed whitespace-pre-wrap">{comment.content}</p>
+        )}
+
+        {/* Action Row */}
+        <div className="flex items-center gap-4 pt-1.5 border-t border-border-subtle mt-1 text-[11px] text-muted">
+          <button
+            type="button"
+            onClick={() => handleToggleLikeComment(comment.id)}
+            className={`flex items-center gap-1 font-semibold transition-colors ${
+              liked ? 'text-rose-500' : 'hover:text-foreground'
+            }`}
+          >
+            <Heart className={`h-3.5 w-3.5 ${liked ? 'fill-rose-500 text-rose-500' : ''}`} />
+            <span>{likesCount > 0 ? likesCount : 'Thích'}</span>
+          </button>
+
+          {!isReply && (
+            <button
+              type="button"
+              onClick={() => {
+                setReplyParentId(replyParentId === comment.id ? null : comment.id);
+                setReplyContent('');
+              }}
+              className="flex items-center gap-1 font-semibold hover:text-foreground transition-colors"
+            >
+              <CornerDownRight className="h-3.5 w-3.5" />
+              <span>Trả lời</span>
+            </button>
+          )}
+        </div>
+
+        {/* Inline Reply Form */}
+        {replyParentId === comment.id && (
+          <form onSubmit={(e) => handleAddComment(e, comment.id)} className="flex gap-2 pt-2 mt-1">
+            <input
+              type="text"
+              required
+              autoFocus
+              value={replyContent}
+              onChange={(e) => setReplyContent(e.target.value)}
+              placeholder={`Trả lời ${authorName}...`}
+              className="ui-input flex-1 px-3 py-1.5 text-xs"
+            />
+            <button type="submit" className="ui-btn-primary px-3 py-1.5 text-xs font-semibold shrink-0">
+              Trả lời
+            </button>
+          </form>
+        )}
+      </div>
+    );
   };
 
   const columns = [
@@ -1025,35 +1206,45 @@ export default function ProjectKanbanPage() {
             {/* ===== TAB: Thảo luận ===== */}
             {drawerTab === 'comments' && (
               <>
-                <div className="space-y-3">
-                  {comments.map((comment) => (
-                    <div key={comment.id} className="p-3 bg-surface border border-border rounded-xl">
-                      <p className="text-body text-xs">{comment.content}</p>
-                      <span className="text-[10px] text-muted flex items-center gap-1 mt-2">
-                        <Clock className="h-3 w-3" />
-                        {new Date(comment.createdAt).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' })}
-                      </span>
-                    </div>
-                  ))}
+                <div className="space-y-4">
                   {comments.length === 0 && (
-                    <div className="text-center py-8 text-secondary text-xs">
+                    <div className="text-center py-10 text-secondary text-xs">
                       <MessageSquare className="h-8 w-8 mx-auto mb-2 text-muted" />
-                      Chưa có bình luận nào.
+                      Chưa có bình luận nào. Hãy là người đầu tiên trao đổi!
                     </div>
                   )}
+
+                  {comments
+                    .filter((c) => !c.parentCommentId)
+                    .map((comment) => {
+                      const replies = comments.filter((c) => c.parentCommentId === comment.id);
+                      return (
+                        <div key={comment.id} className="space-y-2">
+                          {renderCommentItem(comment)}
+
+                          {/* Nested Replies */}
+                          {replies.length > 0 && (
+                            <div className="ml-5 pl-3 border-l-2 border-primary/20 space-y-2">
+                              {replies.map((reply) => renderCommentItem(reply, true))}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
                 </div>
 
-                <form onSubmit={handleAddComment} className="flex gap-2 pt-2">
+                <form onSubmit={(e) => handleAddComment(e, null)} className="flex gap-2 pt-3 border-t border-border mt-4">
                   <input
                     type="text"
                     required
                     value={newCommentContent}
                     onChange={(e) => setNewCommentContent(e.target.value)}
-                    placeholder="Viết bình luận của bạn..."
-                    className="ui-input flex-1 px-4 py-2.5 text-xs"
+                    placeholder="Viết bình luận mới..."
+                    className="ui-input flex-1 px-3.5 py-2 text-xs"
                   />
-                  <button type="submit" className="ui-btn-primary p-2.5">
-                    <Send className="h-4 w-4" />
+                  <button type="submit" className="ui-btn-primary px-3.5 py-2 text-xs font-semibold flex items-center gap-1.5 shrink-0">
+                    <Send className="h-3.5 w-3.5" />
+                    Gửi
                   </button>
                 </form>
               </>
