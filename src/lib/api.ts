@@ -98,6 +98,14 @@ export const api = {
     list: () => request('/notifications'),
     read: (id: string) => request(`/notifications/${id}/read`, { method: 'PATCH' }),
     readAll: () => request('/notifications/read-all', { method: 'PATCH' }),
+    invite: (data: { email: string; targetType: 'WORKSPACE' | 'PROJECT'; targetId: string; role?: string }) =>
+      request('/notifications/invite', { method: 'POST', body: JSON.stringify(data) }),
+    respondInvitation: (id: string, action: 'ACCEPT' | 'DECLINE') =>
+      request(`/notifications/${id}/respond-invitation`, { method: 'POST', body: JSON.stringify({ action }) }),
+    requestLeave: (data: { targetType: 'WORKSPACE' | 'PROJECT'; targetId: string }) =>
+      request('/notifications/request-leave', { method: 'POST', body: JSON.stringify(data) }),
+    respondLeave: (id: string, action: 'APPROVE' | 'REJECT') =>
+      request(`/notifications/${id}/respond-leave`, { method: 'POST', body: JSON.stringify({ action }) }),
   },
   ai: {
     getSummary: (projectId: string) => request(`/ai/project/${projectId}/summary`),

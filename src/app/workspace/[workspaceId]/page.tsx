@@ -54,6 +54,8 @@ export default function WorkspaceDetailPage() {
   // Add Member State
   const [memberEmail, setMemberEmail] = useState('');
   const [memberRole, setMemberRole] = useState('MEMBER');
+  const [inviteTargetType, setInviteTargetType] = useState<'WORKSPACE' | 'PROJECT'>('WORKSPACE');
+  const [inviteProjectId, setInviteProjectId] = useState('');
   const [memberLoading, setMemberLoading] = useState(false);
   const [memberMessage, setMemberMessage] = useState('');
   const [memberError, setMemberError] = useState('');
@@ -159,14 +161,34 @@ export default function WorkspaceDetailPage() {
     setMemberLoading(true);
 
     try {
-      await api.workspaces.addMember(workspaceId, memberEmail, memberRole);
-      setMemberMessage('Thêm thành viên thành công!');
+      const targetId = inviteTargetType === 'PROJECT' ? inviteProjectId : workspaceId;
+      if (inviteTargetType === 'PROJECT' && !targetId) {
+        throw new Error('Vui lòng chọn dự án để mời');
+      }
+
+      await api.notifications.invite({
+        email: memberEmail,
+        targetType: inviteTargetType,
+        targetId: targetId,
+        role: memberRole,
+      });
+
+      setMemberMessage('Đã gửi lời mời tới ' + memberEmail + '. Người dùng sẽ nhận được thông báo để xác nhận.');
       setMemberEmail('');
-      loadData();
     } catch (err: any) {
-      setMemberError(err.message || 'Thêm thành viên thất bại. Chỉ Admin mới có quyền thực hiện.');
+      setMemberError(err.message || 'Gửi lời mời thất bại. Chỉ Admin mới có quyền thực hiện.');
     } finally {
       setMemberLoading(false);
+    }
+  };
+
+  const handleRequestLeave = async () => {
+    if (!confirm('Bạn có chắc chắn muốn gửi yêu cầu rời khỏi Workspace này? Yêu cầu sẽ được gửi tới Admin để phê duyệt.')) return;
+    try {
+      await api.notifications.requestLeave({ targetType: 'WORKSPACE', targetId: workspaceId });
+      alert('Yêu cầu rời Workspace đã được gửi thành công tới Admin. Vui lòng chờ phê duyệt.');
+    } catch (err: any) {
+      alert(err.message || 'Không thể gửi yêu cầu rời.');
     }
   };
 
@@ -293,52 +315,118 @@ export default function WorkspaceDetailPage() {
           <div className="space-y-6">
             {/* Invite Form */}
             <div className="glass p-6 rounded-2xl border border-border">
-              <h3 className="text-base font-bold font-display flex items-center gap-2 mb-1 text-heading">
-                <Users className="h-5 w-5 text-primary" />
-                Thành viên Workspace ({members.length})
-              </h3>
+              <div className="flex items-center justify-between mb-1">
+                <h3 className="text-base font-bold font-display flex items-center gap-2 text-heading">
+                  <Users className="h-5 w-5 text-primary" />
+                  Thành viên Workspace ({members.length})
+                </h3>
+                <button
+                  type="button"
+                  onClick={handleRequestLeave}
+                  className="text-[11px] font-semibold text-amber-400 hover:underline border border-amber-500/30 bg-amber-500/10 px-2.5 py-1 rounded-lg"
+                  title="Gửi yêu cầu rời Workspace tới Admin"
+                >
+                  Yêu cầu rời
+                </button>
+              </div>
               <p className="text-secondary text-xs mb-5">
-                Thêm đồng đội tham gia để cùng cộng tác
+                Mời đồng đội tham gia Workspace hoặc Dự án cụ thể
               </p>
 
               {memberError && <div className="ui-alert-error mb-4 text-xs">{memberError}</div>}
               {memberMessage && <div className="ui-alert-success mb-4 text-xs">{memberMessage}</div>}
 
-              <form onSubmit={handleAddMember} className="space-y-4">
-                <div>
-                  <label className="ui-label">Email thành viên</label>
-                  <input
-                    type="email"
-                    required
-                    value={memberEmail}
-                    onChange={(e) => setMemberEmail(e.target.value)}
-                    placeholder="partner@example.com"
-                    className="ui-input px-4 py-2.5 text-xs"
-                  />
-                </div>
+              {/* Only Admin can invite */}
+              {isAdmin ? (
+                <form onSubmit={handleAddMember} className="space-y-4">
+                  {/* Selection Mode: Invite to Workspace vs Invite to Project */}
+                  <div>
+                    <label className="ui-label">Hình thức mời</label>
+                    <div className="grid grid-cols-2 gap-2 mt-1">
+                      <button
+                        type="button"
+                        onClick={() => setInviteTargetType('WORKSPACE')}
+                        className={`py-2 px-3 rounded-xl border text-xs font-semibold transition-all ${
+                          inviteTargetType === 'WORKSPACE'
+                            ? 'bg-primary/20 border-primary text-primary'
+                            : 'bg-surface border-border text-secondary hover:text-foreground'
+                        }`}
+                      >
+                        Vào Workspace
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setInviteTargetType('PROJECT')}
+                        className={`py-2 px-3 rounded-xl border text-xs font-semibold transition-all ${
+                          inviteTargetType === 'PROJECT'
+                            ? 'bg-primary/20 border-primary text-primary'
+                            : 'bg-surface border-border text-secondary hover:text-foreground'
+                        }`}
+                      >
+                        Vào Dự án
+                      </button>
+                    </div>
+                  </div>
 
-                <div>
-                  <label className="ui-label">Vai trò (Role)</label>
-                  <select
-                    value={memberRole}
-                    onChange={(e) => setMemberRole(e.target.value)}
-                    className="ui-input px-4 py-2.5 text-xs"
+                  {/* Project Selector if targetType is PROJECT */}
+                  {inviteTargetType === 'PROJECT' && (
+                    <div>
+                      <label className="ui-label">Chọn dự án cụ thể</label>
+                      <select
+                        required
+                        value={inviteProjectId}
+                        onChange={(e) => setInviteProjectId(e.target.value)}
+                        className="ui-input px-4 py-2.5 text-xs"
+                      >
+                        <option value="">-- Chọn dự án --</option>
+                        {projects.map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+
+                  <div>
+                    <label className="ui-label">Email thành viên được mời</label>
+                    <input
+                      type="email"
+                      required
+                      value={memberEmail}
+                      onChange={(e) => setMemberEmail(e.target.value)}
+                      placeholder="partner@example.com"
+                      className="ui-input px-4 py-2.5 text-xs"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="ui-label">Vai trò (Role)</label>
+                    <select
+                      value={memberRole}
+                      onChange={(e) => setMemberRole(e.target.value)}
+                      className="ui-input px-4 py-2.5 text-xs"
+                    >
+                      <option value="MEMBER">MEMBER (Tạo & Sửa)</option>
+                      <option value="VIEWER">VIEWER (Chỉ xem)</option>
+                      <option value="ADMIN">ADMIN (Toàn quyền)</option>
+                    </select>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={memberLoading}
+                    className="ui-btn-primary w-full py-2.5 flex items-center justify-center gap-2 text-xs font-semibold tracking-wider"
                   >
-                    <option value="MEMBER">MEMBER (Tạo & Sửa)</option>
-                    <option value="VIEWER">VIEWER (Chỉ xem)</option>
-                    <option value="ADMIN">ADMIN (Toàn quyền)</option>
-                  </select>
+                    <PlusCircle className="h-4 w-4" />
+                    {memberLoading ? 'Đang gửi lời mời...' : 'Gửi lời mời thành viên'}
+                  </button>
+                </form>
+              ) : (
+                <div className="p-3.5 rounded-xl bg-surface border border-border text-xs text-secondary text-center">
+                  🔒 Chỉ <strong>Admin</strong> mới có quyền mời thành viên mới.
                 </div>
-
-                <button
-                  type="submit"
-                  disabled={memberLoading}
-                  className="ui-btn-secondary w-full py-2.5 flex items-center justify-center gap-2 text-xs font-semibold tracking-wider text-primary hover:text-foreground"
-                >
-                  <PlusCircle className="h-4 w-4" />
-                  {memberLoading ? 'Đang thêm...' : 'Mời thành viên'}
-                </button>
-              </form>
+              )}
 
               {/* Members List */}
               <div className="border-t border-border-subtle pt-5 mt-6 space-y-3">

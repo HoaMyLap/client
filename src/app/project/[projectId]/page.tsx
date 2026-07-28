@@ -422,6 +422,13 @@ export default function ProjectKanbanPage() {
       setComments((prev) => prev.map((c) => (c.id === commentId ? updated : c)));
     } catch (err: any) {
       alert(err.message || 'Lỗi khi tương tác bình luận.');
+  const handleRequestLeaveProject = async () => {
+    if (!confirm('Bạn có chắc chắn muốn gửi yêu cầu rời khỏi dự án này? Yêu cầu sẽ được gửi tới Admin để phê duyệt.')) return;
+    try {
+      await api.notifications.requestLeave({ targetType: 'PROJECT', targetId: projectId });
+      alert('Yêu cầu rời dự án đã được gửi thành công tới Admin. Vui lòng chờ phê duyệt.');
+    } catch (err: any) {
+      alert(err.message || 'Không thể gửi yêu cầu rời dự án.');
     }
   };
 
@@ -772,13 +779,22 @@ export default function ProjectKanbanPage() {
             </div>
           </div>
 
-          <button
-            onClick={handleFetchAiSummary}
-            className="flex items-center gap-2 bg-primary-muted hover:bg-primary/25 border border-primary/30 px-4 py-2 rounded-xl text-xs font-semibold text-primary transition-all active:scale-[0.98] shrink-0"
-          >
-            <FileText className="h-4 w-4 text-primary animate-pulse" />
-            Báo cáo tiến độ AI 📊
-          </button>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={handleFetchAiSummary}
+              className="flex items-center gap-2 bg-primary-muted hover:bg-primary/25 border border-primary/30 px-4 py-2 rounded-xl text-xs font-semibold text-primary transition-all active:scale-[0.98]"
+            >
+              <FileText className="h-4 w-4 text-primary animate-pulse" />
+              Báo cáo tiến độ AI 📊
+            </button>
+            <button
+              onClick={handleRequestLeaveProject}
+              className="flex items-center gap-1.5 bg-amber-500/10 hover:bg-amber-500/25 border border-amber-500/30 px-3.5 py-2 rounded-xl text-xs font-semibold text-amber-400 transition-all active:scale-[0.98]"
+              title="Gửi yêu cầu rời khỏi dự án này tới Admin"
+            >
+              Yêu cầu rời dự án
+            </button>
+          </div>
         </div>
 
       {/* Kanban Board Container */}

@@ -10,7 +10,7 @@ import ThemeToggle from '@/components/ThemeToggle';
 import { 
   Briefcase, Folder, ChevronRight, Home, Users, 
   Settings, LogOut, ChevronDown, Plus, LayoutGrid, 
-  CheckSquare, Bell, User, X, ChevronLeft, ChevronRight as ChevronRightIcon, 
+  CheckSquare, Bell, User, X, Check, ChevronLeft, ChevronRight as ChevronRightIcon, 
   Sparkles, Zap, TrendingUp, MessageSquare, Calendar, Shield, Activity, FileText
 } from 'lucide-react';
 
@@ -32,6 +32,7 @@ interface Notification {
   content: string;
   isRead: boolean;
   type: string;
+  invitationId?: string | null;
   createdAt: string;
 }
 
@@ -174,6 +175,33 @@ export default function Sidebar() {
       );
     } catch (err) {
       console.error(err);
+    }
+  };
+
+  const handleRespondInvitation = async (id: string, action: 'ACCEPT' | 'DECLINE') => {
+    try {
+      await api.notifications.respondInvitation(id, action);
+      setNotifications((prev) =>
+        prev.map((n) => (n.id === id ? { ...n, isRead: true } : n))
+      );
+      loadNotifications();
+      if (action === 'ACCEPT') {
+        window.location.reload();
+      }
+    } catch (err: any) {
+      alert(err.message || 'Lỗi khi xử lý lời mời.');
+    }
+  };
+
+  const handleRespondLeave = async (id: string, action: 'APPROVE' | 'REJECT') => {
+    try {
+      await api.notifications.respondLeave(id, action);
+      setNotifications((prev) =>
+        prev.map((n) => (n.id === id ? { ...n, isRead: true } : n))
+      );
+      loadNotifications();
+    } catch (err: any) {
+      alert(err.message || 'Lỗi khi xử lý yêu cầu rời.');
     }
   };
 
@@ -391,6 +419,47 @@ export default function Sidebar() {
                         {!n.isRead && <span className="h-1.5 w-1.5 rounded-full bg-primary mt-1.5 flex-shrink-0" />}
                       </div>
                       <p className="text-[10px] text-secondary mt-1 line-clamp-2 leading-relaxed">{n.content}</p>
+
+                      {/* Action buttons for Invitation Notification */}
+                      {n.type === 'INVITATION' && n.invitationId && (
+                        <div className="flex items-center gap-2 mt-2.5 pt-2 border-t border-border-subtle" onClick={(e) => e.stopPropagation()}>
+                          <button
+                            type="button"
+                            onClick={() => handleRespondInvitation(n.id, 'ACCEPT')}
+                            className="flex-1 py-1 px-2 rounded-lg bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 border border-emerald-500/30 text-[10px] font-bold flex items-center justify-center gap-1 transition-all"
+                          >
+                            <Check className="h-3 w-3" /> Đồng ý
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleRespondInvitation(n.id, 'DECLINE')}
+                            className="flex-1 py-1 px-2 rounded-lg bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 border border-rose-500/20 text-[10px] font-bold flex items-center justify-center gap-1 transition-all"
+                          >
+                            <X className="h-3 w-3" /> Từ chối
+                          </button>
+                        </div>
+                      )}
+
+                      {/* Action buttons for Admin Leave Request Approval */}
+                      {n.type === 'LEAVE_REQUEST' && n.invitationId && (
+                        <div className="flex items-center gap-2 mt-2.5 pt-2 border-t border-border-subtle" onClick={(e) => e.stopPropagation()}>
+                          <button
+                            type="button"
+                            onClick={() => handleRespondLeave(n.id, 'APPROVE')}
+                            className="flex-1 py-1 px-2 rounded-lg bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 border border-emerald-500/30 text-[10px] font-bold flex items-center justify-center gap-1 transition-all"
+                          >
+                            <Check className="h-3 w-3" /> Duyệt rời
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleRespondLeave(n.id, 'REJECT')}
+                            className="flex-1 py-1 px-2 rounded-lg bg-surface border border-border text-secondary hover:text-foreground text-[10px] font-bold flex items-center justify-center gap-1 transition-all"
+                          >
+                            <X className="h-3 w-3" /> Từ chối
+                          </button>
+                        </div>
+                      )}
+
                       <span className="text-[8px] text-muted block mt-2">
                         {new Date(n.createdAt).toLocaleDateString()}
                       </span>
