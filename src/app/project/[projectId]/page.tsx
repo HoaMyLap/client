@@ -598,55 +598,88 @@ export default function ProjectKanbanPage() {
 
               {/* Task list in column */}
               <div className="flex-1 space-y-3 overflow-y-auto max-h-[600px] pr-1">
-                {colTasks.map((task) => (
-                  <div
-                    key={task.id}
-                    draggable
-                    onDragStart={(e) => handleDragStart(e, task.id)}
-                    onDragOver={handleDragOver}
-                    onDrop={(e) => handleDropOnCard(e, col.id, task.id)}
-                    onClick={() => setSelectedTask(task)}
-                    className="glass hover:border-primary/30 p-4 rounded-xl cursor-grab active:cursor-grabbing transition-all border border-border hover:scale-[1.01] flex flex-col justify-between min-h-[120px]"
-                  >
-                    <div>
-                      <h4 className="font-bold text-sm text-title line-clamp-2">
-                        {task.title}
-                      </h4>
-                      {task.description && (
-                        <p className="text-secondary text-xs mt-2 line-clamp-2">
-                          {task.description}
-                        </p>
-                      )}
-                    </div>
+                {colTasks.map((task) => {
+                  const childSubtasks = tasks.filter((t) => t.parentTaskId === task.id);
+                  const totalSubtasks = childSubtasks.length;
+                  const doneSubtasks = childSubtasks.filter((t) => t.status === 'DONE').length;
+                  const pendingSubtasks = totalSubtasks - doneSubtasks;
 
-                    <div className="mt-4 pt-3 border-t border-border-subtle flex flex-col gap-2">
-                      {task.assigneeId && (
-                        <div className="flex items-center gap-1.5 text-[10px] text-secondary">
-                          <User className="h-3 w-3 text-primary" />
-                          <span>{getMemberName(task.assigneeId)}</span>
+                  return (
+                    <div
+                      key={task.id}
+                      draggable
+                      onDragStart={(e) => handleDragStart(e, task.id)}
+                      onDragOver={handleDragOver}
+                      onDrop={(e) => handleDropOnCard(e, col.id, task.id)}
+                      onClick={() => setSelectedTask(task)}
+                      className="glass hover:border-primary/30 p-4 rounded-xl cursor-grab active:cursor-grabbing transition-all border border-border hover:scale-[1.01] flex flex-col justify-between min-h-[120px]"
+                    >
+                      <div>
+                        <h4 className="font-bold text-sm text-title line-clamp-2">
+                          {task.title}
+                        </h4>
+                        {task.description && (
+                          <p className="text-secondary text-xs mt-2 line-clamp-2">
+                            {task.description}
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Subtasks summary widget */}
+                      {totalSubtasks > 0 && (
+                        <div className="mt-3 p-2.5 rounded-lg bg-surface border border-border flex flex-col gap-1.5">
+                          <div className="flex items-center justify-between text-[10px]">
+                            <div className="flex items-center gap-1.5 font-semibold text-heading">
+                              <ListChecks className="h-3.5 w-3.5 text-primary shrink-0" />
+                              <span>Subtasks ({totalSubtasks})</span>
+                            </div>
+                            <div className="flex items-center gap-2 font-bold text-[10px]">
+                              <span className="text-emerald-400">✓ {doneSubtasks} xong</span>
+                              {pendingSubtasks > 0 && (
+                                <span className="text-amber-400">⏳ {pendingSubtasks} chưa</span>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Mini Progress Bar */}
+                          <div className="w-full bg-border rounded-full h-1.5 overflow-hidden">
+                            <div
+                              className="h-full rounded-full bg-emerald-400 transition-all duration-300"
+                              style={{ width: `${Math.round((doneSubtasks / totalSubtasks) * 100)}%` }}
+                            />
+                          </div>
                         </div>
                       )}
-                      
-                      {task.dueDate && (
-                        <div className="flex items-center gap-1.5 text-[10px] text-secondary">
-                          <Calendar className="h-3 w-3 text-primary" />
-                          <span>Hạn: {new Date(task.dueDate).toLocaleDateString()}</span>
-                        </div>
-                      )}
 
-                      <div className="flex items-center justify-between text-[10px] text-muted">
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${getPriorityBadgeColor(task.priority)}`}>
-                          {task.priority}
-                        </span>
+                      <div className="mt-3 pt-3 border-t border-border-subtle flex flex-col gap-2">
+                        {task.assigneeId && (
+                          <div className="flex items-center gap-1.5 text-[10px] text-secondary">
+                            <User className="h-3 w-3 text-primary" />
+                            <span>{getMemberName(task.assigneeId)}</span>
+                          </div>
+                        )}
                         
-                        <div className="flex items-center gap-2">
-                          <MessageSquare className="h-3 w-3" />
-                          <span>Thảo luận</span>
+                        {task.dueDate && (
+                          <div className="flex items-center gap-1.5 text-[10px] text-secondary">
+                            <Calendar className="h-3 w-3 text-primary" />
+                            <span>Hạn: {new Date(task.dueDate).toLocaleDateString()}</span>
+                          </div>
+                        )}
+
+                        <div className="flex items-center justify-between text-[10px] text-muted">
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${getPriorityBadgeColor(task.priority)}`}>
+                            {task.priority}
+                          </span>
+                          
+                          <div className="flex items-center gap-2">
+                            <MessageSquare className="h-3 w-3" />
+                            <span>Thảo luận</span>
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
 
                 {colTasks.length === 0 && (
                   <div className="h-32 border border-dashed border-border rounded-xl flex items-center justify-center text-muted text-xs">
@@ -1345,38 +1378,70 @@ export default function ProjectKanbanPage() {
                   Không tìm thấy công việc nào phù hợp với yêu cầu tìm kiếm của bạn.
                 </div>
               ) : (
-                aiSearchResults.map((res, idx) => (
-                  <div
-                    key={res.task.id || idx}
-                    onClick={() => {
-                      setSelectedTask(res.task);
-                      setShowAiSearchModal(false);
-                    }}
-                    className="bg-surface hover:bg-hover border border-border hover:border-primary/40 p-4.5 rounded-xl cursor-pointer transition-all flex flex-col gap-2.5 shadow-sm hover:shadow-md"
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <h4 className="font-bold text-sm text-title">
-                        {res.task.title}
-                      </h4>
-                      <span className="text-[11px] font-bold px-3 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 shrink-0">
-                        {(res.relevanceScore * 100).toFixed(0)}% Phù hợp
-                      </span>
-                    </div>
+                aiSearchResults.map((res, idx) => {
+                  const childSubtasks = tasks.filter((t) => t.parentTaskId === res.task.id);
+                  const totalSubtasks = childSubtasks.length;
+                  const doneSubtasks = childSubtasks.filter((t) => t.status === 'DONE').length;
+                  const pendingSubtasks = totalSubtasks - doneSubtasks;
 
-                    {/* AI Reasoning pill */}
-                    <div className="text-xs bg-primary/10 border border-primary/25 p-3 rounded-xl text-primary font-medium flex items-start gap-2.5">
-                      <Sparkles className="h-4 w-4 shrink-0 mt-0.5 text-primary" />
-                      <span className="leading-relaxed">{res.reason}</span>
-                    </div>
+                  return (
+                    <div
+                      key={res.task.id || idx}
+                      onClick={() => {
+                        setSelectedTask(res.task);
+                        setShowAiSearchModal(false);
+                      }}
+                      className="bg-surface hover:bg-hover border border-border hover:border-primary/40 p-4.5 rounded-xl cursor-pointer transition-all flex flex-col gap-2.5 shadow-sm hover:shadow-md"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <h4 className="font-bold text-sm text-title">
+                          {res.task.title}
+                        </h4>
+                        <span className="text-[11px] font-bold px-3 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 shrink-0">
+                          {(res.relevanceScore * 100).toFixed(0)}% Phù hợp
+                        </span>
+                      </div>
 
-                    <div className="flex items-center justify-between text-[11px] text-muted pt-2.5 border-t border-border-subtle mt-0.5">
-                      <span>Trạng thái: <strong className="text-foreground">{res.task.status}</strong> · Ưu tiên: <strong className="text-foreground">{res.task.priority}</strong></span>
-                      {res.task.dueDate && (
-                        <span>Hạn: {new Date(res.task.dueDate).toLocaleDateString('vi-VN')}</span>
+                      {/* AI Reasoning pill */}
+                      <div className="text-xs bg-primary/10 border border-primary/25 p-3 rounded-xl text-primary font-medium flex items-start gap-2.5">
+                        <Sparkles className="h-4 w-4 shrink-0 mt-0.5 text-primary" />
+                        <span className="leading-relaxed">{res.reason}</span>
+                      </div>
+
+                      {/* Subtasks summary widget */}
+                      {totalSubtasks > 0 && (
+                        <div className="p-2.5 rounded-lg bg-surface-elevated border border-border flex flex-col gap-1.5">
+                          <div className="flex items-center justify-between text-[10px]">
+                            <div className="flex items-center gap-1.5 font-semibold text-heading">
+                              <ListChecks className="h-3.5 w-3.5 text-primary shrink-0" />
+                              <span>Subtasks ({totalSubtasks})</span>
+                            </div>
+                            <div className="flex items-center gap-2 font-bold text-[10px]">
+                              <span className="text-emerald-400">✓ {doneSubtasks} xong</span>
+                              {pendingSubtasks > 0 && (
+                                <span className="text-amber-400">⏳ {pendingSubtasks} chưa</span>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="w-full bg-border rounded-full h-1.5 overflow-hidden">
+                            <div
+                              className="h-full rounded-full bg-emerald-400 transition-all duration-300"
+                              style={{ width: `${Math.round((doneSubtasks / totalSubtasks) * 100)}%` }}
+                            />
+                          </div>
+                        </div>
                       )}
+
+                      <div className="flex items-center justify-between text-[11px] text-muted pt-2.5 border-t border-border-subtle mt-0.5">
+                        <span>Trạng thái: <strong className="text-foreground">{res.task.status}</strong> · Ưu tiên: <strong className="text-foreground">{res.task.priority}</strong></span>
+                        {res.task.dueDate && (
+                          <span>Hạn: {new Date(res.task.dueDate).toLocaleDateString('vi-VN')}</span>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                ))
+                  );
+                })
               )}
             </div>
           </div>
