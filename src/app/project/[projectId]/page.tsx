@@ -792,7 +792,7 @@ export default function ProjectKanbanPage() {
             </button>
             <button
               onClick={handleRequestLeaveProject}
-              className="flex items-center gap-1.5 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 px-3.5 py-2 rounded-xl text-xs font-bold text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300 transition-all active:scale-[0.98]"
+              className="flex items-center gap-1.5 bg-amber-100 dark:bg-amber-500/10 hover:bg-amber-200 dark:hover:bg-amber-500/20 border border-amber-300 dark:border-amber-500/30 px-3.5 py-2 rounded-xl text-xs font-bold text-amber-900 dark:text-amber-300 transition-all active:scale-[0.98] shadow-sm"
               title="Gửi yêu cầu rời khỏi dự án này tới Admin"
             >
               Yêu cầu rời dự án

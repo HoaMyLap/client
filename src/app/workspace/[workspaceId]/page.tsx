@@ -359,7 +359,7 @@ export default function WorkspaceDetailPage() {
                 <button
                   type="button"
                   onClick={handleRequestLeave}
-                  className="text-[11px] font-bold text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300 hover:underline border border-amber-500/30 bg-amber-500/10 px-2.5 py-1 rounded-lg transition-colors"
+                  className="text-[11px] font-bold text-amber-900 dark:text-amber-300 bg-amber-100 dark:bg-amber-500/10 hover:bg-amber-200 dark:hover:bg-amber-500/20 border border-amber-300 dark:border-amber-500/30 px-2.5 py-1 rounded-lg transition-all shadow-sm"
                   title="Gửi yêu cầu rời Workspace tới Admin"
                 >
                   Yêu cầu rời
