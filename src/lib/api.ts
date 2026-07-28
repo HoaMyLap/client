@@ -17,7 +17,7 @@ async function request(path: string, options: RequestInit = {}) {
   });
 
   if (!response.ok) {
-    if (response.status === 401 || response.status === 403) {
+    if (response.status === 401) {
       if (typeof window !== 'undefined') {
         localStorage.removeItem('token');
         const currentPath = window.location.pathname;
