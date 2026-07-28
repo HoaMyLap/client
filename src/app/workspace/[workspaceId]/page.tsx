@@ -7,7 +7,7 @@ import { api } from '@/lib/api';
 import Sidebar from '@/components/Sidebar';
 import { 
   ArrowLeft, Plus, Folder, Users, Trash, PlusCircle, 
-  Pencil, Shield, User, X, CheckCircle2 
+  Pencil, Shield, User, X, CheckCircle2, Activity, BarChart3, Sparkles, Layers 
 } from 'lucide-react';
 
 interface Project {
@@ -271,20 +271,112 @@ export default function WorkspaceDetailPage() {
           </Link>
         </div>
 
-        <main className="max-w-6xl mx-auto px-6 mt-10 grid grid-cols-1 lg:grid-cols-3 gap-8 relative z-10 w-full">
+        {/* Hero Header Banner & Stats Overview */}
+        <div className="max-w-6xl w-full mx-auto px-6 mt-6">
+          <div className="glass p-6 md:p-8 rounded-2xl border border-border relative overflow-hidden shadow-xl">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-[10px] font-bold text-primary bg-primary/10 border border-primary/20 px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+                    Homix Workspace
+                  </span>
+                  <span className="text-[10px] font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" /> Hoạt động
+                  </span>
+                </div>
+                <h1 className="text-2xl md:text-3xl font-black font-display text-heading tracking-tight">
+                  Không Gian Làm Việc
+                </h1>
+                <p className="text-secondary text-xs md:text-sm mt-1 max-w-xl leading-relaxed">
+                  Theo dõi tiến độ, quản lý dự án và phân công công việc cộng tác thời gian thực
+                </p>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex items-center gap-3 shrink-0">
+                <button
+                  onClick={() => setShowProjModal(true)}
+                  className="ui-btn-primary px-4 py-2.5 text-xs font-bold flex items-center gap-2 shadow-md hover:scale-[1.02] transition-transform"
+                >
+                  <Plus className="h-4 w-4" />
+                  Tạo Dự án Mới
+                </button>
+                {isAdmin && (
+                  <button
+                    onClick={() => setShowInviteModal(true)}
+                    className="ui-btn-secondary px-4 py-2.5 text-xs font-bold flex items-center gap-2 border-primary/30 text-primary hover:bg-primary/10"
+                  >
+                    <Users className="h-4 w-4" />
+                    Mời thành viên
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* 4 Stats Grid */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-8 pt-6 border-t border-border-subtle">
+              <div className="bg-surface/50 border border-border p-4 rounded-xl">
+                <div className="flex items-center justify-between text-muted mb-1">
+                  <span className="text-[10px] font-bold uppercase tracking-wider">Tổng số Dự án</span>
+                  <Layers className="h-4 w-4 text-primary" />
+                </div>
+                <div className="text-xl font-extrabold text-heading">{projects.length}</div>
+                <div className="text-[10px] text-secondary mt-1">
+                  {projects.filter(p => p.status === 'COMPLETED').length} đã hoàn thành
+                </div>
+              </div>
+
+              <div className="bg-surface/50 border border-border p-4 rounded-xl">
+                <div className="flex items-center justify-between text-muted mb-1">
+                  <span className="text-[10px] font-bold uppercase tracking-wider">Thành viên</span>
+                  <Users className="h-4 w-4 text-blue-400" />
+                </div>
+                <div className="text-xl font-extrabold text-heading">{members.length}</div>
+                <div className="text-[10px] text-secondary mt-1">
+                  {members.filter(m => m.role === 'ADMIN').length} Admin quản trị
+                </div>
+              </div>
+
+              <div className="bg-surface/50 border border-border p-4 rounded-xl">
+                <div className="flex items-center justify-between text-muted mb-1">
+                  <span className="text-[10px] font-bold uppercase tracking-wider">Mức độ Hoạt động</span>
+                  <Activity className="h-4 w-4 text-emerald-400" />
+                </div>
+                <div className="text-xl font-extrabold text-emerald-400">Ổn định</div>
+                <div className="text-[9px] text-secondary mt-1">Đã đồng bộ WebSocket</div>
+              </div>
+
+              <div className="bg-surface/50 border border-border p-4 rounded-xl">
+                <div className="flex items-center justify-between text-muted mb-1">
+                  <span className="text-[10px] font-bold uppercase tracking-wider">Quyền hạn của bạn</span>
+                  <Shield className="h-4 w-4 text-amber-400" />
+                </div>
+                <div className="text-xl font-extrabold text-heading">
+                  {isAdmin ? 'ADMIN' : (currentUserMember?.role || 'MEMBER')}
+                </div>
+                <div className="text-[10px] text-secondary mt-1">Quyền hạn hệ thống</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <main className="max-w-6xl mx-auto px-6 mt-8 grid grid-cols-1 lg:grid-cols-3 gap-8 relative z-10 w-full">
           {/* Left Column: Projects list */}
           <div className="lg:col-span-2 space-y-6">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-2xl font-bold tracking-tight font-display text-heading">Các dự án</h2>
-                <p className="text-secondary text-sm mt-1">
-                  Lựa chọn dự án để theo dõi Kanban Board
+                <h2 className="text-xl font-bold tracking-tight font-display text-heading flex items-center gap-2">
+                  <Folder className="h-5 w-5 text-primary" />
+                  Danh sách Dự án ({projects.length})
+                </h2>
+                <p className="text-secondary text-xs mt-0.5">
+                  Lựa chọn dự án để theo dõi bảng Kanban và báo cáo tiến độ AI
                 </p>
               </div>
 
-              <button onClick={() => setShowProjModal(true)} className="ui-btn-primary flex items-center gap-2 px-4 py-2.5 text-sm">
-                <Plus className="h-4 w-4" />
-                Tạo Dự án
+              <button onClick={() => setShowProjModal(true)} className="ui-btn-ghost text-xs font-semibold text-primary flex items-center gap-1 hover:underline">
+                <Plus className="h-3.5 w-3.5" />
+                Tạo mới
               </button>
             </div>
 
@@ -303,28 +395,28 @@ export default function WorkspaceDetailPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {projects.map((proj) => (
                   <Link key={proj.id} href={`/project/${proj.id}`}>
-                    <div className="glass hover:border-primary/40 p-5 rounded-2xl transition-all cursor-pointer group hover:scale-[1.01] flex flex-col justify-between min-h-[150px] relative border border-border">
+                    <div className="glass hover:border-primary/50 p-5 rounded-2xl transition-all cursor-pointer group hover:scale-[1.01] flex flex-col justify-between min-h-[170px] relative border border-border shadow-sm hover:shadow-md">
                       <div>
                         <div className="flex items-start justify-between gap-2">
-                          <h3 className="font-bold group-hover:text-primary transition-colors text-title">
+                          <h3 className="font-bold text-sm group-hover:text-primary transition-colors text-title">
                             {proj.name}
                           </h3>
-                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                          <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border shrink-0 ${
                             proj.status === 'COMPLETED' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' :
                             proj.status === 'ARCHIVED' ? 'bg-zinc-800 text-zinc-400 border-zinc-700' :
                             'bg-primary/10 text-primary border-primary/20'
                           }`}>
-                            {proj.status}
+                            {proj.status === 'COMPLETED' ? 'Đã xong' : proj.status === 'ARCHIVED' ? 'Lưu trữ' : 'Đang chạy'}
                           </span>
                         </div>
-                        <p className="text-secondary text-xs mt-2 line-clamp-2">
+                        <p className="text-secondary text-xs mt-2 line-clamp-2 leading-relaxed">
                           {proj.description || 'Không có mô tả chi tiết.'}
                         </p>
                       </div>
 
-                      <div className="flex items-center justify-between text-xs text-muted mt-4 pt-3 border-t border-border-subtle">
-                        <span>Tạo ngày: {new Date(proj.createdAt).toLocaleDateString()}</span>
-                        <div className="flex items-center gap-1">
+                      <div className="flex items-center justify-between text-[11px] text-muted mt-4 pt-3 border-t border-border-subtle">
+                        <span>Tạo ngày: {new Date(proj.createdAt).toLocaleDateString('vi-VN')}</span>
+                        <div className="flex items-center gap-1.5">
                           <button
                             onClick={(e) => handleOpenEditProject(e, proj)}
                             className="p-1.5 rounded-lg text-secondary hover:text-primary hover:bg-primary/10 transition-colors"
