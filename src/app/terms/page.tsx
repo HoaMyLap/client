@@ -4,9 +4,11 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import ThemeToggle from '@/components/ThemeToggle';
 import Sidebar from '@/components/Sidebar';
+import { useLanguage } from '@/lib/i18n';
 import { Shield, Lock, FileText, ArrowRight, Sparkles } from 'lucide-react';
 
 export default function TermsPage() {
+  const { t } = useLanguage();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -29,13 +31,13 @@ export default function TermsPage() {
       {/* Hero Section */}
       <section className="max-w-4xl mx-auto text-center relative z-10 pb-12">
         <span className="text-xs font-bold text-primary uppercase tracking-widest bg-primary/10 px-3.5 py-1.5 rounded-full border border-primary/20">
-          Pháp lý & Bảo mật
+          {t('legalPrivacy')}
         </span>
         <h1 className="text-3xl md:text-4xl font-black tracking-tight font-display text-heading mt-6 leading-tight">
-          Điều khoản Sử dụng & Chính sách Bảo mật
+          {t('termsPageTitle')}
         </h1>
         <p className="text-secondary text-xs mt-4 max-w-xl mx-auto leading-relaxed">
-          Cam kết bảo vệ dữ liệu dự án và quyền riêng tư phân tích của trợ lý trí tuệ nhân tạo.
+          {t('termsPageSubtitle')}
         </p>
       </section>
 

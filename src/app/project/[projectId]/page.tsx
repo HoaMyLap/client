@@ -199,7 +199,7 @@ export default function ProjectKanbanPage() {
     setAiSearchLoading(true);
     setAiSearchError('');
     try {
-      const results = await api.ai.smartSearch(projectId, aiSearchQuery);
+      const results = await api.ai.smartSearch(projectId, aiSearchQuery, language);
       setAiSearchResults(results || []);
       setShowAiSearchModal(true);
     } catch (err: any) {
@@ -727,20 +727,6 @@ export default function ProjectKanbanPage() {
       setAiSummaryContent('Lỗi: ' + (err.message || 'Không thể lấy báo cáo AI.'));
     } finally {
       setAiSummaryLoading(false);
-    }
-  };
-
-  const handleAiSmartSearch = async () => {
-    if (!aiSearchQuery.trim()) return;
-    setAiSearchLoading(true);
-    try {
-      const results = await api.ai.smartSearch(projectId, aiSearchQuery, language);
-      setAiSearchResults(results || []);
-      setShowAiSearchModal(true);
-    } catch (err: any) {
-      alert(err.message || (language === 'vi' ? 'Lỗi tìm kiếm AI' : 'AI Search Error'));
-    } finally {
-      setAiSearchLoading(false);
     }
   };
 

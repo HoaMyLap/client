@@ -4,12 +4,14 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import ThemeToggle from '@/components/ThemeToggle';
 import Sidebar from '@/components/Sidebar';
+import { useLanguage } from '@/lib/i18n';
 import { 
   ArrowLeft, Sparkles, Zap, TrendingUp, CheckSquare, 
   MessageSquare, Calendar, Shield, Users, ArrowRight 
 } from 'lucide-react';
 
 export default function FeaturesPage() {
+  const { t, language, setLanguage } = useLanguage();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -33,13 +35,13 @@ export default function FeaturesPage() {
       {/* Hero Section */}
       <section className="max-w-4xl mx-auto text-center relative z-10 pb-12">
         <span className="text-xs font-bold text-primary uppercase tracking-widest bg-primary/10 px-3.5 py-1.5 rounded-full border border-primary/20">
-          Khám phá Công nghệ
+          {t('discoverTech')}
         </span>
         <h1 className="text-3xl md:text-5xl font-black tracking-tight font-display text-heading mt-6 leading-tight">
-          Tính năng được tối ưu hóa bằng <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">Trí tuệ Nhân tạo</span>
+          {t('featuresPageTitle')}
         </h1>
         <p className="text-secondary text-sm mt-4 max-w-xl mx-auto leading-relaxed">
-          Chúng tôi mang đến bộ công cụ đột phá kết hợp giữa tốc độ truyền tải thời gian thực và sức mạnh phân tích chuyên sâu của AI.
+          {t('featuresPageSubtitle')}
         </p>
       </section>
 

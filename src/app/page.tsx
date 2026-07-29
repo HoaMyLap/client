@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { api } from '@/lib/api';
 import ThemeToggle from '@/components/ThemeToggle';
 import Sidebar from '@/components/Sidebar';
+import { useLanguage } from '@/lib/i18n';
 import { 
   Plus, Folder, Users, Briefcase, Sparkles, Zap, 
   TrendingUp, MessageSquare, Calendar, ArrowRight, 
@@ -39,6 +40,7 @@ const getWorkspaceGradient = (name: string) => {
 
 export default function WorkspacesPage() {
   const router = useRouter();
+  const { t, language, setLanguage } = useLanguage();
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [loading, setLoading] = useState(true);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -121,23 +123,34 @@ export default function WorkspacesPage() {
 
             <div className="flex items-center gap-6">
               <Link href="/features" className="text-sm font-semibold text-secondary hover:text-primary transition-all">
-                Tính năng
+                {t('features')}
               </Link>
               <Link href="/pricing" className="text-sm font-semibold text-secondary hover:text-primary transition-all">
-                Bảng giá
+                {t('pricing')}
               </Link>
               <Link href="/terms" className="text-sm font-semibold text-secondary hover:text-primary transition-all font-sans">
-                Điều khoản
+                {t('terms')}
               </Link>
               <Link href="/contact" className="text-sm font-semibold text-secondary hover:text-primary transition-all">
-                Liên hệ
+                {t('contact')}
               </Link>
+
+              {/* Language Selector Pill */}
+              <button
+                type="button"
+                onClick={() => setLanguage(language === 'vi' ? 'en' : 'vi')}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-border bg-surface hover:border-primary/40 text-xs font-bold text-heading transition-all shadow-sm"
+                title="Đổi ngôn ngữ / Change language"
+              >
+                <span>{language === 'vi' ? '🇻🇳 VI' : '🇬🇧 EN'}</span>
+              </button>
+
               <ThemeToggle />
               <Link href="/login" className="text-sm font-semibold text-secondary hover:text-primary transition-all">
-                Đăng nhập
+                {t('login')}
               </Link>
               <Link href="/register" className="ui-btn-primary px-4 py-2 text-sm shadow-md shadow-primary/10">
-                Bắt đầu ngay
+                {t('startFree')}
               </Link>
             </div>
           </div>
@@ -147,24 +160,23 @@ export default function WorkspacesPage() {
         <section className="max-w-5xl mx-auto px-6 pt-20 pb-16 text-center relative z-10">
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-xs font-semibold text-primary mb-6 animate-pulse">
             <Sparkles className="h-3.5 w-3.5" />
-            Tích hợp AI Trợ lý Báo cáo Tiến độ 2.0
+            {t('heroBadge')}
           </div>
           
           <h1 className="text-4xl md:text-6xl font-black tracking-tight font-display text-heading leading-[1.1] max-w-4xl mx-auto">
-            Quản lý công việc thông minh với <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">Trí tuệ Nhân tạo</span>
+            {t('heroTitlePart1')}<span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">{t('heroTitlePart2')}</span>
           </h1>
           
           <p className="text-secondary text-base md:text-lg mt-6 max-w-2xl mx-auto leading-relaxed">
-            SmartManager v2.0 mang đến giải pháp quản trị dự án, bảng Kanban thời gian thực,
-            kèm trợ lý AI tự động lập báo cáo tiến độ và phân chia công việc tối ưu.
+            {t('heroSubtitle')}
           </p>
 
           <div className="mt-10 flex flex-wrap justify-center gap-4">
             <Link href="/register" className="ui-btn-primary px-6 py-3.5 text-sm flex items-center gap-2 shadow-lg shadow-primary/20 hover:scale-[1.02] transition-transform">
-              Trải nghiệm Miễn phí <ArrowRight className="h-4 w-4" />
+              {t('startFree')} <ArrowRight className="h-4 w-4" />
             </Link>
             <Link href="/login" className="ui-btn-secondary px-6 py-3.5 text-sm hover:scale-[1.02] transition-transform">
-              Đăng nhập tài khoản
+              {t('loginAccount')}
             </Link>
           </div>
 
