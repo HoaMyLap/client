@@ -7,11 +7,12 @@ import { api } from '@/lib/api';
 import { createNotificationStompClient } from '@/lib/socket';
 import { Client } from '@stomp/stompjs';
 import ThemeToggle from '@/components/ThemeToggle';
+import { useLanguage } from '@/lib/i18n';
 import { 
   Briefcase, Folder, ChevronRight, Home, Users, 
   Settings, LogOut, ChevronDown, Plus, LayoutGrid, 
   CheckSquare, Bell, User, X, Check, ChevronLeft, ChevronRight as ChevronRightIcon, 
-  Sparkles, Zap, TrendingUp, MessageSquare, Calendar, Shield, Activity, FileText
+  Sparkles, Zap, TrendingUp, MessageSquare, Calendar, Shield, Activity, FileText, Globe
 } from 'lucide-react';
 
 interface Workspace {
@@ -249,6 +250,8 @@ export default function Sidebar() {
     }
   };
 
+  const { t, language, setLanguage } = useLanguage();
+
   const handleLogout = () => {
     localStorage.clear();
     router.push('/login');
@@ -258,11 +261,11 @@ export default function Sidebar() {
 
   // Informational Guest pages to add to sidebar
   const infoPages = [
-    { name: 'Trang chủ', path: '/', icon: <Home className="w-5 h-5 shrink-0" /> },
-    { name: 'Tính năng', path: '/features', icon: <Zap className="w-5 h-5 shrink-0" /> },
-    { name: 'Bảng giá', path: '/pricing', icon: <TrendingUp className="w-5 h-5 shrink-0" /> },
-    { name: 'Điều khoản', path: '/terms', icon: <Shield className="w-5 h-5 shrink-0" /> },
-    { name: 'Liên hệ', path: '/contact', icon: <MessageSquare className="w-5 h-5 shrink-0" /> },
+    { name: t('home'), path: '/', icon: <Home className="w-5 h-5 shrink-0" /> },
+    { name: t('features'), path: '/features', icon: <Zap className="w-5 h-5 shrink-0" /> },
+    { name: t('pricing'), path: '/pricing', icon: <TrendingUp className="w-5 h-5 shrink-0" /> },
+    { name: t('terms'), path: '/terms', icon: <Shield className="w-5 h-5 shrink-0" /> },
+    { name: t('contact'), path: '/contact', icon: <MessageSquare className="w-5 h-5 shrink-0" /> },
   ];
 
   return (
@@ -298,7 +301,7 @@ export default function Sidebar() {
         <div className="p-3 space-y-1">
           {!isCollapsed && (
             <div className="text-[9px] font-bold text-muted uppercase tracking-wider px-3 mb-1">
-              Liên kết chính
+              {language === 'vi' ? 'Liên kết chính' : 'Main Links'}
             </div>
           )}
           {infoPages.map((page, idx) => {
@@ -327,7 +330,7 @@ export default function Sidebar() {
         <div className="px-3 py-2 flex-1 border-t border-border-subtle mt-2">
           {!isCollapsed && (
             <div className="flex items-center justify-between text-[9px] font-bold text-muted uppercase tracking-wider px-3 mb-2">
-              <span>Không gian làm việc</span>
+              <span>{t('workspace')}</span>
             </div>
           )}
           
@@ -390,11 +393,24 @@ export default function Sidebar() {
       {/* Bottom Section: Profile Summary & Controls */}
       <div className={`p-3 border-t border-border bg-card/25 relative ${isCollapsed ? 'flex flex-col items-center gap-4' : ''}`}>
         
-        {/* Row of Controls: Theme and Notifications */}
-        <div className={`flex items-center justify-between mb-3 px-1 ${isCollapsed ? 'flex-col gap-4 mb-0' : ''}`}>
+        {/* Row of Controls: Theme, Language and Notifications */}
+        <div className={`flex items-center justify-between mb-3 px-1 gap-2 ${isCollapsed ? 'flex-col gap-4 mb-0' : ''}`}>
           <ThemeToggle />
+
+          {/* Language Switcher Button */}
+          <button
+            type="button"
+            onClick={() => setLanguage(language === 'vi' ? 'en' : 'vi')}
+            className="p-1.5 rounded-xl bg-surface border border-border text-xs font-bold flex items-center gap-1 hover:border-primary/40 transition-all text-foreground cursor-pointer shadow-sm"
+            title={language === 'vi' ? 'Chuyển sang Tiếng Anh (English)' : 'Switch to Vietnamese (Tiếng Việt)'}
+          >
+            {language === 'vi' ? (
+              <><span>🇻🇳</span> <span className="text-[10px]">VI</span></>
+            ) : (
+              <><span>🇬🇧</span> <span className="text-[10px]">EN</span></>
+            )}
+          </button>
           
-          {/* Collapsible Bell notifications trigger */}
           {/* Collapsible Bell notifications trigger */}
           <div className="relative" ref={notifRef}>
             <button

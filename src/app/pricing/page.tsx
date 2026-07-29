@@ -1,239 +1,295 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
-import ThemeToggle from '@/components/ThemeToggle';
 import Sidebar from '@/components/Sidebar';
+import { useLanguage } from '@/lib/i18n';
 import { 
-  ArrowLeft, Check, Sparkles, Zap, ArrowRight, Shield 
+  Check, Sparkles, Shield, Zap, ArrowRight, Star, HelpCircle, 
+  ChevronDown, MessageSquare, Headphones, Award
 } from 'lucide-react';
 
 export default function PricingPage() {
-  const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'yearly'>('monthly');
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const { t, language } = useLanguage();
+  const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('annual');
+  const [openFaq, setOpenFaq] = useState<number | null>(0);
 
-  useEffect(() => {
-    const token = localStorage.getItem('token');
-    setIsLoggedIn(!!token);
-    setLoading(false);
-  }, []);
+  const discountMultiplier = billingCycle === 'annual' ? 0.8 : 1;
 
-  if (loading) {
-    return (
-      <div className="min-h-screen w-full flex items-center justify-center bg-background">
-        <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
-
-  const plans = [
+  const faqs = [
     {
-      name: 'Free',
-      description: 'Dành cho cá nhân hoặc các nhóm nhỏ bắt đầu lập kế hoạch dự án.',
-      price: 0,
-      features: [
-        'Tối đa 1 Không gian làm việc (Workspace)',
-        'Tối đa 2 Dự án',
-        'Bảng Kanban thời gian thực (Realtime)',
-        'Checklist & Bình luận thảo luận',
-        'Báo cáo AI cơ bản (3 lượt chạy/ngày)',
-        'Bộ lọc Dark/Light Mode',
-      ],
-      cta: 'Bắt đầu miễn phí',
-      href: '/register',
-      popular: false,
+      q: language === 'vi' ? 'Tôi có thể đổi gói dịch vụ bất kỳ lúc nào không?' : 'Can I change my plan anytime?',
+      a: language === 'vi' 
+        ? 'Có, bạn có thể nâng cấp hoặc hạ cấp gói dịch vụ bất kỳ lúc nào. Số tiền chưa sử dụng của gói cũ sẽ được quy đổi trừ vào gói mới.' 
+        : 'Yes, you can upgrade or downgrade your plan at any time. Unused credits from your previous plan will be credited.'
     },
     {
-      name: 'Pro',
-      description: 'Dành cho các đội ngũ hiệu suất cao cần trợ lý AI tối đa công suất.',
-      price: billingPeriod === 'monthly' ? 12 : 9.6,
-      features: [
-        'Không giới hạn Không gian làm việc',
-        'Không giới hạn Dự án & Nhiệm vụ',
-        'Bảng Kanban thời gian thực',
-        'Phân rã công việc bằng AI không giới hạn',
-        'Báo cáo AI & Vẽ biểu đồ tự động (Không giới hạn)',
-        'Tải báo cáo PDF chất lượng cao',
-        'Hỗ trợ khách hàng ưu tiên (24/7)',
-      ],
-      cta: 'Trải nghiệm Pro ngay',
-      href: '/register',
-      popular: true,
+      q: language === 'vi' ? 'Các hình thức thanh toán được hỗ trợ là gì?' : 'What payment methods are supported?',
+      a: language === 'vi' 
+        ? 'Homix v2.0 hỗ trợ chuyển khoản ngân hàng qua VietQR, Ví MoMo, ZaloPay và Thẻ quốc tế Visa/Mastercard.' 
+        : 'Homix v2.0 supports bank transfers via VietQR, MoMo e-wallet, ZaloPay, and Visa/Mastercard.'
     },
     {
-      name: 'Enterprise',
-      description: 'Bảo mật tuyệt đối, phân tích AI tùy biến sâu cho các tổ chức lớn.',
-      price: 'Liên hệ',
-      features: [
-        'Toàn bộ tính năng gói Pro',
-        'Tích hợp Private LLM Model riêng biệt',
-        'Quản lý quyền truy cập bảo mật SSO/SAML',
-        'Cam kết băng thông riêng biệt cho WebSockets',
-        'Chuyên viên tư vấn triển khai dự án',
-        'Thỏa thuận cam kết dịch vụ (SLA 99.9%)',
-      ],
-      cta: 'Liên hệ kinh doanh',
-      href: '/contact',
-      popular: false,
+      q: language === 'vi' ? 'Tính năng AI Assistant hoạt động như thế nào?' : 'How does the AI Assistant work?',
+      a: language === 'vi' 
+        ? 'Trợ lý AI tích hợp mô hình Google Gemini 2.0 Flash giúp phân tích báo cáo tiến độ, tự động tách nhỏ công việc (Subtasks) và tìm kiếm ngữ nghĩa thông minh.' 
+        : 'The AI Assistant integrates Google Gemini 2.0 Flash to generate progress reports, breakdown subtasks, and perform semantic search.'
     },
+    {
+      q: language === 'vi' ? 'Dữ liệu của tôi có được bảo mật không?' : 'Is my data secure?',
+      a: language === 'vi' 
+        ? 'Tất cả dữ liệu được mã hóa SSL/TLS 256-bit, lưu trữ an toàn trên hạ tầng Docker & Cloudinary với bản sao lưu định kỳ hàng ngày.' 
+        : 'All data is encrypted via 256-bit SSL/TLS and securely backed up daily on Docker & Cloudinary infrastructure.'
+    }
   ];
 
-  const renderPricingContent = () => (
-    <>
-      {/* Hero Section */}
-      <section className="max-w-4xl mx-auto text-center relative z-10 pb-12">
-        <span className="text-xs font-bold text-primary uppercase tracking-widest bg-primary/10 px-3.5 py-1.5 rounded-full border border-primary/20">
-          Minh bạch & Linh hoạt
-        </span>
-        <h1 className="text-3xl md:text-5xl font-black tracking-tight font-display text-heading mt-6 leading-tight">
-          Chọn gói dịch vụ phù hợp với <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">nhu cầu của bạn</span>
-        </h1>
-        <p className="text-secondary text-sm mt-4 max-w-xl mx-auto leading-relaxed">
-          Tối ưu hóa năng suất làm việc nhóm với sự hỗ trợ của trợ lý AI thông minh nhất.
-        </p>
+  return (
+    <div className="flex min-h-screen bg-background text-foreground font-sans">
+      <Sidebar />
 
-        {/* Toggle billing period */}
-        <div className="mt-8 flex justify-center items-center gap-3">
-          <span className={`text-xs ${billingPeriod === 'monthly' ? 'font-bold text-title' : 'text-muted'}`}>Thanh toán hàng tháng</span>
-          <button
-            onClick={() => setBillingPeriod(billingPeriod === 'monthly' ? 'yearly' : 'monthly')}
-            className="w-12 h-6 rounded-full bg-primary/20 border border-primary/30 p-1 flex items-center transition-all cursor-pointer"
-          >
-            <div className={`w-4 h-4 rounded-full bg-primary transition-all ${billingPeriod === 'yearly' ? 'translate-x-6' : 'translate-x-0'}`} />
-          </button>
-          <span className={`text-xs ${billingPeriod === 'yearly' ? 'font-bold text-title' : 'text-muted'} flex items-center gap-1.5`}>
-            Thanh toán hàng năm 
-            <span className="text-[9px] bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 px-2 py-0.5 rounded-full font-bold">
-              Tiết kiệm 20%
-            </span>
-          </span>
-        </div>
-      </section>
+      <div className="flex-1 flex flex-col min-w-0 overflow-y-auto">
+        <main className="max-w-7xl mx-auto px-6 py-12 w-full">
+          {/* Header Badge */}
+          <div className="text-center max-w-3xl mx-auto space-y-4">
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-bold shadow-sm">
+              <Sparkles className="h-4 w-4" />
+              <span>{language === 'vi' ? 'HỆ THỐNG HOMIX V2.0 ECOSYSTEM' : 'HOMIX V2.0 ECOSYSTEM'}</span>
+            </div>
 
-      {/* Pricing Cards Grid */}
-      <div className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8 relative z-10 mt-6 items-stretch">
-        {plans.map((plan, idx) => (
-          <div 
-            key={idx} 
-            className={`glass p-6 rounded-3xl border flex flex-col justify-between relative transition-all duration-300 hover:scale-[1.01] ${
-              plan.popular 
-                ? 'border-primary/50 bg-gradient-to-b from-primary/5 via-transparent to-transparent shadow-xl shadow-primary/5' 
-                : 'border-border'
-            }`}
-          >
-            {plan.popular && (
-              <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-gradient-to-r from-primary to-accent text-white text-[9px] font-black uppercase tracking-wider px-3.5 py-1 rounded-full shadow-md">
-                Phổ biến nhất
+            <h1 className="text-3xl sm:text-5xl font-black font-display text-heading tracking-tight">
+              {t('pricingTitle')}
+            </h1>
+
+            <p className="text-secondary text-sm sm:text-base leading-relaxed">
+              {t('pricingSubtitle')}
+            </p>
+
+            {/* Monthly / Annual Toggle */}
+            <div className="pt-6 flex items-center justify-center gap-4">
+              <span className={`text-xs font-bold transition-colors ${billingCycle === 'monthly' ? 'text-heading font-black' : 'text-muted'}`}>
+                {t('monthly')}
+              </span>
+
+              <button
+                type="button"
+                onClick={() => setBillingCycle(billingCycle === 'monthly' ? 'annual' : 'monthly')}
+                className="relative w-14 h-7 rounded-full bg-surface border border-border p-1 transition-colors cursor-pointer"
+              >
+                <div
+                  className={`w-5 h-5 rounded-full bg-primary transition-transform shadow-md ${
+                    billingCycle === 'annual' ? 'translate-x-7' : 'translate-x-0'
+                  }`}
+                />
+              </button>
+
+              <div className="flex items-center gap-1.5">
+                <span className={`text-xs font-bold transition-colors ${billingCycle === 'annual' ? 'text-heading font-black' : 'text-muted'}`}>
+                  {t('annual')}
+                </span>
+                <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+                  {t('save20')}
+                </span>
               </div>
-            )}
+            </div>
+          </div>
 
-            <div>
-              <div className="flex justify-between items-start mb-4">
-                <h3 className="text-lg font-bold font-display text-heading">{plan.name}</h3>
-              </div>
-              <p className="text-secondary text-xs leading-relaxed mb-6 h-12">
-                {plan.description}
-              </p>
-              
-              <div className="mb-6 flex items-baseline gap-1">
-                {typeof plan.price === 'number' ? (
-                  <>
-                    <span className="text-3xl font-black text-title">${plan.price}</span>
-                    <span className="text-muted text-[10px]">/thành viên/tháng</span>
-                  </>
-                ) : (
-                  <span className="text-2xl font-black text-title">{plan.price}</span>
-                )}
-              </div>
+          {/* Pricing Cards Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-14">
+            {/* Free Plan */}
+            <div className="glass p-8 rounded-3xl border border-border flex flex-col justify-between hover:border-primary/30 transition-all shadow-lg">
+              <div>
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xl font-bold font-display text-heading">{t('freePlan')}</h3>
+                  <div className="p-2.5 rounded-2xl bg-secondary/10 text-secondary">
+                    <Zap className="h-5 w-5" />
+                  </div>
+                </div>
+                <p className="text-xs text-secondary mt-2 min-h-[36px]">{t('freeDesc')}</p>
 
-              <div className="border-t border-border-subtle pt-6 mb-6">
-                <ul className="space-y-4 text-xs text-secondary">
-                  {plan.features.map((feat, fIdx) => (
-                    <li key={fIdx} className="flex items-start gap-2.5">
-                      <div className="h-4.5 w-4.5 rounded-full bg-emerald-500/10 text-emerald-500 flex items-center justify-center shrink-0 mt-0.5">
-                        <Check className="h-3 w-3" />
-                      </div>
-                      <span>{feat}</span>
-                    </li>
-                  ))}
+                <div className="mt-6 border-y border-border-subtle py-4">
+                  <span className="text-3xl font-black font-display text-heading">{t('freePrice')}</span>
+                  <span className="text-xs text-muted"> / {t('monthly').toLowerCase()}</span>
+                </div>
+
+                <ul className="mt-6 space-y-3 text-xs text-secondary">
+                  <li className="flex items-center gap-2.5">
+                    <Check className="h-4 w-4 text-emerald-400 shrink-0" />
+                    <span>Tối đa 3 Workspace & 5 Dự án</span>
+                  </li>
+                  <li className="flex items-center gap-2.5">
+                    <Check className="h-4 w-4 text-emerald-400 shrink-0" />
+                    <span>Bảng Kanban quản lý công việc</span>
+                  </li>
+                  <li className="flex items-center gap-2.5">
+                    <Check className="h-4 w-4 text-emerald-400 shrink-0" />
+                    <span>50 MB Lưu trữ tài liệu đính kèm</span>
+                  </li>
+                  <li className="flex items-center gap-2.5 opacity-50">
+                    <Check className="h-4 w-4 text-muted shrink-0" />
+                    <span className="line-through">Báo cáo AI & Tìm kiếm ngữ nghĩa</span>
+                  </li>
+                  <li className="flex items-center gap-2.5 opacity-50">
+                    <Check className="h-4 w-4 text-muted shrink-0" />
+                    <span className="line-through">Nhập / Xuất Excel hàng loạt</span>
+                  </li>
                 </ul>
+              </div>
+
+              <div className="mt-8">
+                <button type="button" disabled className="w-full py-3 rounded-2xl bg-surface border border-border text-xs font-bold text-muted cursor-not-allowed">
+                  {t('currentPlan')}
+                </button>
               </div>
             </div>
 
-            <Link 
-              href={plan.href}
-              className={`w-full py-3 rounded-2xl text-xs font-bold text-center block transition-all ${
-                plan.popular 
-                  ? 'ui-btn-primary shadow-lg shadow-primary/20' 
-                  : 'ui-btn-secondary'
-              }`}
-            >
-              {plan.cta}
-            </Link>
+            {/* Pro Plan (Popular Choice) */}
+            <div className="glass p-8 rounded-3xl border-2 border-primary/60 flex flex-col justify-between relative shadow-2xl shadow-primary/10 hover:scale-[1.02] transition-all bg-gradient-to-b from-primary/5 via-transparent to-transparent">
+              <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-primary text-white text-[10px] font-black uppercase tracking-widest shadow-md">
+                {t('popularBadge')}
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xl font-bold font-display text-heading flex items-center gap-2">
+                    {t('proPlan')}
+                    <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
+                  </h3>
+                  <div className="p-2.5 rounded-2xl bg-primary/20 text-primary">
+                    <Sparkles className="h-5 w-5" />
+                  </div>
+                </div>
+                <p className="text-xs text-secondary mt-2 min-h-[36px]">{t('proDesc')}</p>
+
+                <div className="mt-6 border-y border-primary/20 py-4">
+                  <span className="text-3xl font-black font-display text-primary">
+                    {billingCycle === 'annual' ? '159.000 VNĐ' : '199.000 VNĐ'}
+                  </span>
+                  <span className="text-xs text-muted"> / {t('monthly').toLowerCase()}</span>
+                </div>
+
+                <ul className="mt-6 space-y-3 text-xs text-secondary">
+                  <li className="flex items-center gap-2.5 font-semibold text-heading">
+                    <Check className="h-4 w-4 text-emerald-400 shrink-0" />
+                    <span>Workspace & Dự án KHÔNG GIỚI HẠN</span>
+                  </li>
+                  <li className="flex items-center gap-2.5 font-semibold text-heading">
+                    <Check className="h-4 w-4 text-emerald-400 shrink-0" />
+                    <span>Trợ lý AI 24/7 (Báo cáo 5 phần & Smart Search)</span>
+                  </li>
+                  <li className="flex items-center gap-2.5 font-semibold text-heading">
+                    <Check className="h-4 w-4 text-emerald-400 shrink-0" />
+                    <span>Nhập / Xuất Excel hàng loạt (.xlsx)</span>
+                  </li>
+                  <li className="flex items-center gap-2.5">
+                    <Check className="h-4 w-4 text-emerald-400 shrink-0" />
+                    <span>10 GB Lưu trữ đám mây Cloudinary</span>
+                  </li>
+                  <li className="flex items-center gap-2.5">
+                    <Check className="h-4 w-4 text-emerald-400 shrink-0" />
+                    <span>Xuất báo cáo nghiệm thu In PDF</span>
+                  </li>
+                </ul>
+              </div>
+
+              <div className="mt-8">
+                <Link
+                  href={`/checkout?plan=PRO&billing=${billingCycle}`}
+                  className="w-full ui-btn-primary py-3 rounded-2xl text-xs font-bold flex items-center justify-center gap-2 shadow-lg shadow-primary/25 hover:scale-[1.02] transition-transform"
+                >
+                  <span>{t('upgradeNow')}</span>
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+              </div>
+            </div>
+
+            {/* Enterprise Plan */}
+            <div className="glass p-8 rounded-3xl border border-border flex flex-col justify-between hover:border-primary/30 transition-all shadow-lg">
+              <div>
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xl font-bold font-display text-heading">{t('enterprisePlan')}</h3>
+                  <div className="p-2.5 rounded-2xl bg-amber-500/10 text-amber-400">
+                    <Shield className="h-5 w-5" />
+                  </div>
+                </div>
+                <p className="text-xs text-secondary mt-2 min-h-[36px]">{t('enterpriseDesc')}</p>
+
+                <div className="mt-6 border-y border-border-subtle py-4">
+                  <span className="text-3xl font-black font-display text-heading">
+                    {billingCycle === 'annual' ? '399.000 VNĐ' : '499.000 VNĐ'}
+                  </span>
+                  <span className="text-xs text-muted"> / {t('monthly').toLowerCase()}</span>
+                </div>
+
+                <ul className="mt-6 space-y-3 text-xs text-secondary">
+                  <li className="flex items-center gap-2.5 font-semibold text-heading">
+                    <Check className="h-4 w-4 text-emerald-400 shrink-0" />
+                    <span>Tất cả tính năng của gói PRO</span>
+                  </li>
+                  <li className="flex items-center gap-2.5 font-semibold text-heading">
+                    <Check className="h-4 w-4 text-emerald-400 shrink-0" />
+                    <span>Server AI riêng biệt (Dedicated Gemini Node)</span>
+                  </li>
+                  <li className="flex items-center gap-2.5">
+                    <Check className="h-4 w-4 text-emerald-400 shrink-0" />
+                    <span>Dung lượng lưu trữ 100 GB</span>
+                  </li>
+                  <li className="flex items-center gap-2.5">
+                    <Check className="h-4 w-4 text-emerald-400 shrink-0" />
+                    <span>Tích hợp Đăng nhập SSO / SAML</span>
+                  </li>
+                  <li className="flex items-center gap-2.5">
+                    <Check className="h-4 w-4 text-emerald-400 shrink-0" />
+                    <span>Hỗ trợ kỹ thuật ưu tiên VIP 24/7</span>
+                  </li>
+                </ul>
+              </div>
+
+              <div className="mt-8">
+                <Link
+                  href={`/checkout?plan=ENTERPRISE&billing=${billingCycle}`}
+                  className="w-full ui-btn-secondary py-3 rounded-2xl text-xs font-bold flex items-center justify-center gap-2 hover:bg-hover transition-colors"
+                >
+                  <span>{t('choosePlan')}</span>
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+              </div>
+            </div>
           </div>
-        ))}
-      </div>
 
-      <div className="max-w-md mx-auto text-center mt-12 flex items-center justify-center gap-2 text-xs text-muted">
-        <Shield className="h-4 w-4 text-primary" />
-        <span>Cam kết bảo mật dữ liệu cấp doanh nghiệp & An toàn logs</span>
-      </div>
-    </>
-  );
+          {/* FAQs Accordion Section */}
+          <div className="mt-20 max-w-4xl mx-auto">
+            <div className="text-center space-y-2 mb-10">
+              <h2 className="text-2xl font-bold font-display text-heading flex items-center justify-center gap-2">
+                <HelpCircle className="h-6 w-6 text-primary" />
+                <span>{language === 'vi' ? 'Câu Hỏi Thường Gặp (FAQs)' : 'Frequently Asked Questions'}</span>
+              </h2>
+              <p className="text-xs text-secondary">
+                {language === 'vi' ? 'Giải đáp thắc mắc về đăng ký gói dịch vụ Homix v2.0' : 'Common questions regarding Homix v2.0 subscription'}
+              </p>
+            </div>
 
-  // --- RENDERING FOR LOGGED-IN USERS (WITH SIDEBAR) ---
-  if (isLoggedIn) {
-    return (
-      <div className="flex h-screen w-full bg-background text-foreground relative font-sans overflow-hidden">
-        <div className="absolute top-0 right-0 w-[50%] h-[50%] rounded-full glow-orb-primary blur-[140px] pointer-events-none opacity-20" />
-        <div className="absolute bottom-0 left-0 w-[50%] h-[50%] rounded-full glow-orb-accent blur-[140px] pointer-events-none opacity-15" />
-        
-        <Sidebar />
-
-        <div className="flex-1 flex flex-col min-w-0 h-screen relative z-10 overflow-y-auto px-6 py-8 md:px-12 pb-12">
-          {renderPricingContent()}
-        </div>
-      </div>
-    );
-  }
-
-  // --- RENDERING FOR GUEST USERS (WITH TOP HEADER) ---
-  return (
-    <div className="min-h-screen w-full bg-background text-foreground relative overflow-x-hidden font-sans pb-20">
-      {/* Background glow orbs */}
-      <div className="absolute top-0 right-0 w-[50%] h-[50%] rounded-full glow-orb-primary blur-[140px] pointer-events-none opacity-35" />
-      <div className="absolute bottom-0 left-0 w-[50%] h-[50%] rounded-full glow-orb-accent blur-[140px] pointer-events-none opacity-25" />
-
-      {/* Navigation bar */}
-      <header className="sticky top-0 z-50 border-b border-border bg-header/80 backdrop-blur-md px-6 py-1 h-20 flex items-center">
-        <div className="max-w-6xl w-full mx-auto flex items-center justify-between">
-          <Link href="/" className="flex items-center group">
-            <img src="/logo2.png" alt="Logo" style={{ transform: 'scale(1.3)', transformOrigin: 'left center' }} className="h-18 w-auto object-contain group-hover:scale-[1.02] transition-transform" />
-          </Link>
-
-          <div className="flex items-center gap-6">
-            <Link href="/features" className="text-sm font-semibold text-secondary hover:text-primary transition-all">
-              Tính năng
-            </Link>
-            <Link href="/pricing" className="text-sm font-bold text-primary transition-all">
-              Bảng giá
-            </Link>
-            <Link href="/terms" className="text-sm font-semibold text-secondary hover:text-primary transition-all">
-              Điều khoản
-            </Link>
-            <Link href="/contact" className="text-sm font-semibold text-secondary hover:text-primary transition-all">
-              Liên hệ
-            </Link>
-            <ThemeToggle />
-            <Link href="/login" className="text-sm font-semibold text-secondary hover:text-primary transition-all">
-              Đăng nhập
-            </Link>
+            <div className="space-y-4">
+              {faqs.map((faq, idx) => (
+                <div key={idx} className="glass rounded-2xl border border-border overflow-hidden transition-all">
+                  <button
+                    type="button"
+                    onClick={() => setOpenFaq(openFaq === idx ? null : idx)}
+                    className="w-full p-5 text-left flex items-center justify-between gap-4 cursor-pointer hover:bg-surface/50"
+                  >
+                    <span className="font-bold text-sm text-heading">{faq.q}</span>
+                    <ChevronDown className={`h-4 w-4 text-secondary transition-transform ${openFaq === idx ? 'rotate-180 text-primary' : ''}`} />
+                  </button>
+                  {openFaq === idx && (
+                    <div className="px-5 pb-5 text-xs text-secondary leading-relaxed border-t border-border-subtle pt-3">
+                      {faq.a}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
-      </header>
-
-      {renderPricingContent()}
+        </main>
+      </div>
     </div>
   );
 }

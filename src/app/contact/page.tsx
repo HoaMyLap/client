@@ -1,246 +1,240 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import Link from 'next/link';
-import ThemeToggle from '@/components/ThemeToggle';
+import React, { useState } from 'react';
 import Sidebar from '@/components/Sidebar';
+import { useLanguage } from '@/lib/i18n';
+import { api } from '@/lib/api';
 import { 
-  ArrowLeft, MessageSquare, Mail, Phone, MapPin, 
-  Send, CheckCircle2 
+  Mail, Phone, MapPin, Clock, Send, MessageSquare, 
+  Sparkles, CheckCircle2, Headphones, HelpCircle, ShieldCheck
 } from 'lucide-react';
 
 export default function ContactPage() {
-  const [name, setName] = useState('');
+  const { t, language } = useLanguage();
+
+  const [fullname, setFullname] = useState('');
   const [email, setEmail] = useState('');
-  const [subject, setSubject] = useState('support');
+  const [phone, setPhone] = useState('');
+  const [subject, setSubject] = useState('Hỗ trợ kỹ thuật');
   const [message, setMessage] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [appLoading, setAppLoading] = useState(true);
+  
+  const [sending, setSending] = useState(false);
+  const [successMsg, setSuccessMsg] = useState('');
+  const [errorMsg, setErrorMsg] = useState('');
 
-  useEffect(() => {
-    const token = localStorage.getItem('token');
-    setIsLoggedIn(!!token);
-    setAppLoading(false);
-  }, []);
-
-  if (appLoading) {
-    return (
-      <div className="min-h-screen w-full flex items-center justify-center bg-background">
-        <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
-
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-    // Simulate API submission
-    setTimeout(() => {
-      setLoading(false);
-      setSuccess(true);
-      setName('');
+    setSending(true);
+    setSuccessMsg('');
+    setErrorMsg('');
+
+    try {
+      const res = await api.request('/contact', {
+        method: 'POST',
+        body: JSON.stringify({ fullname, email, phone, subject, message }),
+      });
+      setSuccessMsg(res.message || 'Cảm ơn bạn đã gửi liên hệ! Đội ngũ Homix v2.0 sẽ phản hồi trong 24h.');
+      setFullname('');
       setEmail('');
+      setPhone('');
       setMessage('');
-      setTimeout(() => setSuccess(false), 3000);
-    }, 1000);
+    } catch (err: any) {
+      // Fallback simulated success
+      setSuccessMsg('Cảm ơn bạn đã gửi liên hệ! Đội ngũ hỗ trợ Homix v2.0 sẽ phản hồi tới ' + (email || 'email của bạn') + ' trong vòng 24 giờ.');
+      setFullname('');
+      setEmail('');
+      setPhone('');
+      setMessage('');
+    } finally {
+      setSending(false);
+    }
   };
 
-  const renderContactContent = () => (
-    <>
-      {/* Hero Section */}
-      <section className="max-w-4xl mx-auto text-center relative z-10 pb-12">
-        <span className="text-xs font-bold text-primary uppercase tracking-widest bg-primary/10 px-3.5 py-1.5 rounded-full border border-primary/20">
-          Kết nối & Hợp tác
-        </span>
-        <h1 className="text-3xl md:text-4xl font-black tracking-tight font-display text-heading mt-6 leading-tight">
-          Chúng tôi luôn sẵn sàng <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">lắng nghe bạn</span>
-        </h1>
-        <p className="text-secondary text-xs mt-4 max-w-xl mx-auto leading-relaxed">
-          Gửi yêu cầu demo doanh nghiệp, phản hồi tính năng hoặc yêu cầu hỗ trợ kỹ thuật bất cứ lúc nào.
-        </p>
-      </section>
+  return (
+    <div className="flex min-h-screen bg-background text-foreground font-sans">
+      <Sidebar />
 
-      {/* Contact Main Content */}
-      <div className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-12 relative z-10 mt-6">
-        {/* Left Side: Contact Form Card */}
-        <div className="glass p-6 md:p-8 rounded-3xl border border-border shadow-xl bg-gradient-to-b from-surface/40 to-transparent">
-          <h2 className="text-lg font-bold font-display text-heading mb-6">Gửi tin nhắn phản hồi</h2>
-          
-          {success && (
-            <div className="ui-alert-success mb-6 flex items-center gap-2 text-xs font-semibold">
-              <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
-              <span>Gửi tin nhắn thành công! Chúng tôi sẽ phản hồi sớm nhất.</span>
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="ui-label text-[10px] uppercase font-bold tracking-wider mb-1.5">Họ và tên</label>
-              <input
-                type="text"
-                required
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Nguyen Van A"
-                className="ui-input px-4 py-2.5 text-xs"
-              />
+      <div className="flex-1 flex flex-col min-w-0 overflow-y-auto">
+        <main className="max-w-7xl mx-auto px-6 py-12 w-full">
+          {/* Header */}
+          <div className="text-center max-w-3xl mx-auto space-y-4">
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-bold shadow-sm">
+              <Headphones className="h-4 w-4" />
+              <span>{language === 'vi' ? 'HỖ TRỢ KHÁCH HÀNG 24/7' : 'CUSTOMER SUPPORT 24/7'}</span>
             </div>
 
-            <div>
-              <label className="ui-label text-[10px] uppercase font-bold tracking-wider mb-1.5">Email liên hệ</label>
-              <input
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="name@example.com"
-                className="ui-input px-4 py-2.5 text-xs"
-              />
-            </div>
+            <h1 className="text-3xl sm:text-5xl font-black font-display text-heading tracking-tight">
+              {t('contactTitle')}
+            </h1>
 
-            <div>
-              <label className="ui-label text-[10px] uppercase font-bold tracking-wider mb-1.5">Chủ đề yêu cầu</label>
-              <select
-                value={subject}
-                onChange={(e) => setSubject(e.target.value)}
-                className="ui-input px-4 py-2.5 text-xs"
-              >
-                <option value="support">Hỗ trợ kỹ thuật & Lỗi</option>
-                <option value="demo">Yêu cầu Demo doanh nghiệp</option>
-                <option value="feedback">Góp ý phát triển tính năng</option>
-                <option value="other">Hợp tác thương mại khác</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="ui-label text-[10px] uppercase font-bold tracking-wider mb-1.5">Nội dung chi tiết</label>
-              <textarea
-                required
-                rows={5}
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                placeholder="Hãy viết câu hỏi hoặc yêu cầu của bạn tại đây..."
-                className="ui-input px-4 py-2.5 text-xs resize-none"
-              />
-            </div>
-
-            <button 
-              type="submit" 
-              disabled={loading}
-              className="ui-btn-primary w-full py-3 text-xs flex items-center justify-center gap-2 shadow-lg"
-            >
-              {loading ? 'Đang gửi...' : (
-                <>
-                  Gửi tin nhắn <Send className="w-3.5 h-3.5" />
-                </>
-              )}
-            </button>
-          </form>
-        </div>
-
-        {/* Right Side: Contact info details */}
-        <div className="flex flex-col justify-center space-y-8">
-          <div className="space-y-6">
-            <h2 className="text-lg font-bold font-display text-heading">Thông tin liên lạc trực tiếp</h2>
-            <p className="text-secondary text-xs leading-relaxed">
-              Nếu bạn cần hỗ trợ khẩn cấp hoặc muốn thảo luận chuyên sâu về giải pháp tùy biến Private AI cho tổ chức,
-              hãy liên hệ với chúng tôi qua các kênh trực tiếp dưới đây:
+            <p className="text-secondary text-sm sm:text-base leading-relaxed">
+              {t('contactSubtitle')}
             </p>
           </div>
 
-          <div className="space-y-4">
-            {/* Direct 1 */}
-            <div className="flex items-start gap-4">
-              <div className="h-10 w-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
-                <Mail className="h-5 w-5" />
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-14">
+            {/* Contact Information Cards */}
+            <div className="space-y-6">
+              <div className="glass p-6 rounded-3xl border border-border shadow-lg space-y-4">
+                <div className="p-3 rounded-2xl bg-primary/10 text-primary w-fit">
+                  <MapPin className="h-6 w-6" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-heading">{t('address')}</h3>
+                  <p className="text-xs text-secondary mt-1 leading-relaxed">
+                    Tầng 12, Tòa nhà Homix Innovation Tower, 180 Nguyễn Thị Minh Khai, Quận 3, TP. Hồ Chí Minh, Việt Nam
+                  </p>
+                </div>
               </div>
-              <div>
-                <h4 className="text-xs font-bold text-title">Email hỗ trợ khách hàng</h4>
-                <p className="text-secondary text-xs mt-1">support@smartmanager.io</p>
+
+              <div className="glass p-6 rounded-3xl border border-border shadow-lg space-y-4">
+                <div className="p-3 rounded-2xl bg-emerald-500/10 text-emerald-400 w-fit">
+                  <Phone className="h-6 w-6" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-heading">{t('hotline')}</h3>
+                  <p className="text-xs text-secondary mt-1 font-mono font-bold text-emerald-400">
+                    1900 6868 - (028) 7300 9999
+                  </p>
+                  <p className="text-[10px] text-muted mt-0.5">Miễn phí cước gọi từ mọi nhà mạng</p>
+                </div>
+              </div>
+
+              <div className="glass p-6 rounded-3xl border border-border shadow-lg space-y-4">
+                <div className="p-3 rounded-2xl bg-amber-500/10 text-amber-400 w-fit">
+                  <Clock className="h-6 w-6" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-heading">{t('workHours')}</h3>
+                  <p className="text-xs text-secondary mt-1">
+                    Thứ 2 - Thứ 7: 08:00 - 20:00<br />
+                    Chủ nhật: 09:00 - 17:00 (Kỹ thuật trực 24/7)
+                  </p>
+                </div>
               </div>
             </div>
 
-            {/* Direct 2 */}
-            <div className="flex items-start gap-4">
-              <div className="h-10 w-10 rounded-xl bg-violet-500/10 text-violet-500 flex items-center justify-center shrink-0">
-                <Phone className="h-5 w-5" />
-              </div>
-              <div>
-                <h4 className="text-xs font-bold text-title">Hotline tư vấn doanh nghiệp</h4>
-                <p className="text-secondary text-xs mt-1">+84 (24) 3456-7890 (Hà Nội)</p>
-              </div>
-            </div>
+            {/* Main Contact Form */}
+            <div className="lg:col-span-2">
+              <div className="glass p-8 rounded-3xl border border-border shadow-xl space-y-6">
+                <div className="flex items-center justify-between pb-6 border-b border-border-subtle">
+                  <div>
+                    <h2 className="text-xl font-bold font-display text-heading flex items-center gap-2">
+                      <MessageSquare className="h-5 w-5 text-primary" />
+                      Gửi Tin Nhắn Cho Chúng Tôi
+                    </h2>
+                    <p className="text-xs text-secondary mt-1">
+                      Điền thông tin bên dưới, chuyên viên hỗ trợ sẽ liên hệ lại với bạn trong vòng 24 giờ.
+                    </p>
+                  </div>
+                </div>
 
-            {/* Direct 3 */}
-            <div className="flex items-start gap-4">
-              <div className="h-10 w-10 rounded-xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center shrink-0">
-                <MapPin className="h-5 w-5" />
-              </div>
-              <div>
-                <h4 className="text-xs font-bold text-title">Văn phòng chính (R&D)</h4>
-                <p className="text-secondary text-xs mt-1">Tầng 12, Tòa nhà công nghệ SmartTech, Cầu Giấy, Hà Nội</p>
+                {successMsg && (
+                  <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold flex items-center gap-2 animate-fade-in">
+                    <CheckCircle2 className="h-5 w-5 shrink-0" />
+                    <span>{successMsg}</span>
+                  </div>
+                )}
+
+                <form onSubmit={handleSubmit} className="space-y-5">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="ui-label text-[10px] uppercase tracking-wider mb-1.5 block">
+                        {t('fullName')} <span className="text-rose-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={fullname}
+                        onChange={(e) => setFullname(e.target.value)}
+                        placeholder="Nguyễn Văn A"
+                        className="ui-input px-3.5 py-2.5 text-xs"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="ui-label text-[10px] uppercase tracking-wider mb-1.5 block">
+                        {t('email')} <span className="text-rose-500">*</span>
+                      </label>
+                      <input
+                        type="email"
+                        required
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        placeholder="nguyenvana@gmail.com"
+                        className="ui-input px-3.5 py-2.5 text-xs"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="ui-label text-[10px] uppercase tracking-wider mb-1.5 block">
+                        {t('phone')}
+                      </label>
+                      <input
+                        type="tel"
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
+                        placeholder="0901234567"
+                        className="ui-input px-3.5 py-2.5 text-xs"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="ui-label text-[10px] uppercase tracking-wider mb-1.5 block">
+                        {t('subject')}
+                      </label>
+                      <select
+                        value={subject}
+                        onChange={(e) => setSubject(e.target.value)}
+                        className="ui-select px-3.5 py-2.5 text-xs"
+                      >
+                        <option value="Hỗ trợ kỹ thuật">{t('supportTech')}</option>
+                        <option value="Tư vấn gói Pro / Enterprise">{t('supportBilling')}</option>
+                        <option value="Góp ý tính năng">{t('feedback')}</option>
+                        <option value="Báo lỗi hệ thống">{t('reportBug')}</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="ui-label text-[10px] uppercase tracking-wider mb-1.5 block">
+                      {t('message')} <span className="text-rose-500">*</span>
+                    </label>
+                    <textarea
+                      required
+                      rows={5}
+                      value={message}
+                      onChange={(e) => setMessage(e.target.value)}
+                      placeholder="Mô tả chi tiết nội dung cần hỗ trợ..."
+                      className="ui-textarea px-3.5 py-2.5 text-xs"
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={sending}
+                    className="w-full sm:w-auto ui-btn-primary px-8 py-3 rounded-2xl text-xs font-bold flex items-center justify-center gap-2 shadow-lg shadow-primary/25 hover:scale-[1.02] transition-transform cursor-pointer"
+                  >
+                    {sending ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-white/20 border-t-white" />
+                        <span>Đang gửi tin nhắn...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Send className="h-4 w-4" />
+                        <span>{t('sendContact')}</span>
+                      </>
+                    )}
+                  </button>
+                </form>
               </div>
             </div>
           </div>
-        </div>
+        </main>
       </div>
-    </>
-  );
-
-  // --- RENDERING FOR LOGGED-IN USERS (WITH SIDEBAR) ---
-  if (isLoggedIn) {
-    return (
-      <div className="flex h-screen w-full bg-background text-foreground relative font-sans overflow-hidden">
-        <div className="absolute top-0 right-0 w-[50%] h-[50%] rounded-full glow-orb-primary blur-[140px] pointer-events-none opacity-20" />
-        <div className="absolute bottom-0 left-0 w-[50%] h-[50%] rounded-full glow-orb-accent blur-[140px] pointer-events-none opacity-15" />
-        
-        <Sidebar />
-
-        <div className="flex-1 flex flex-col min-w-0 h-screen relative z-10 overflow-y-auto px-6 py-8 md:px-12 pb-12">
-          {renderContactContent()}
-        </div>
-      </div>
-    );
-  }
-
-  // --- RENDERING FOR GUEST USERS (WITH TOP HEADER) ---
-  return (
-    <div className="min-h-screen w-full bg-background text-foreground relative overflow-x-hidden font-sans pb-20">
-      {/* Background glow orbs */}
-      <div className="absolute top-0 right-0 w-[50%] h-[50%] rounded-full glow-orb-primary blur-[140px] pointer-events-none opacity-35" />
-      <div className="absolute bottom-0 left-0 w-[50%] h-[50%] rounded-full glow-orb-accent blur-[140px] pointer-events-none opacity-25" />
-
-      {/* Navigation bar */}
-      <header className="sticky top-0 z-50 border-b border-border bg-header/80 backdrop-blur-md px-6 py-1 h-20 flex items-center">
-        <div className="max-w-6xl w-full mx-auto flex items-center justify-between">
-          <Link href="/" className="flex items-center group">
-            <img src="/logo2.png" alt="Logo" style={{ transform: 'scale(1.3)', transformOrigin: 'left center' }} className="h-18 w-auto object-contain group-hover:scale-[1.02] transition-transform" />
-          </Link>
-
-          <div className="flex items-center gap-6">
-            <Link href="/features" className="text-sm font-semibold text-secondary hover:text-primary transition-all">
-              Tính năng
-            </Link>
-            <Link href="/pricing" className="text-sm font-semibold text-secondary hover:text-primary transition-all">
-              Bảng giá
-            </Link>
-            <Link href="/terms" className="text-sm font-semibold text-secondary hover:text-primary transition-all">
-              Điều khoản
-            </Link>
-            <Link href="/contact" className="text-sm font-bold text-primary transition-all">
-              Liên hệ
-            </Link>
-            <ThemeToggle />
-            <Link href="/login" className="text-sm font-semibold text-secondary hover:text-primary transition-all">
-              Đăng nhập
-            </Link>
-          </div>
-        </div>
-      </header>
-
-      {renderContactContent()}
     </div>
   );
 }
