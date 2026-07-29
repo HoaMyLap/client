@@ -200,17 +200,17 @@ export default function WorkspacesPage() {
                 {/* Column 1 */}
                 <div className="bg-background/80 p-4 rounded-xl border border-border-subtle">
                   <div className="flex items-center justify-between mb-3">
-                    <span className="text-xs font-bold uppercase tracking-wider text-primary">Cần thực hiện</span>
+                    <span className="text-xs font-bold uppercase tracking-wider text-primary">{t('todo')}</span>
                     <span className="text-[10px] bg-surface px-1.5 py-0.5 rounded text-muted">2</span>
                   </div>
                   <div className="space-y-3">
                     <div className="glass p-3 rounded-lg border border-border-subtle shadow-sm">
-                      <div className="text-xs font-bold text-title">Thiết kế database hệ thống</div>
-                      <div className="text-[10px] text-muted mt-2">Hạn chót: 28/7/2026</div>
+                      <div className="text-xs font-bold text-title">{language === 'vi' ? 'Thiết kế database hệ thống' : 'Database Schema Design'}</div>
+                      <div className="text-[10px] text-muted mt-2">{t('dueDate')}: 28/7/2026</div>
                     </div>
                     <div className="glass p-3 rounded-lg border border-border-subtle shadow-sm">
-                      <div className="text-xs font-bold text-title">Xây dựng API xác thực JWT</div>
-                      <div className="text-[10px] text-muted mt-2">Hạn chót: 30/7/2026</div>
+                      <div className="text-xs font-bold text-title">{language === 'vi' ? 'Xây dựng API xác thực JWT' : 'JWT Auth API Development'}</div>
+                      <div className="text-[10px] text-muted mt-2">{t('dueDate')}: 30/7/2026</div>
                     </div>
                   </div>
                 </div>
@@ -218,14 +218,14 @@ export default function WorkspacesPage() {
                 {/* Column 2 */}
                 <div className="bg-background/80 p-4 rounded-xl border border-border-subtle">
                   <div className="flex items-center justify-between mb-3">
-                    <span className="text-xs font-bold uppercase tracking-wider text-amber-500">Đang tiến hành</span>
+                    <span className="text-xs font-bold uppercase tracking-wider text-amber-500">{t('inProgress')}</span>
                     <span className="text-[10px] bg-surface px-1.5 py-0.5 rounded text-muted">1</span>
                   </div>
                   <div className="glass p-3 rounded-lg border border-primary/20 shadow-sm relative overflow-hidden">
                     <div className="absolute top-0 right-0 w-1 h-full bg-primary" />
-                    <div className="text-xs font-bold text-title">Ghép giao diện Kanban Board</div>
+                    <div className="text-xs font-bold text-title">{language === 'vi' ? 'Ghép giao diện Kanban Board' : 'Kanban UI Integration'}</div>
                     <div className="text-[10px] text-primary font-semibold mt-2 flex items-center gap-1">
-                      <Sparkles className="w-3 h-3 animate-pulse" /> AI đang phân tích
+                      <Sparkles className="w-3 h-3 animate-pulse" /> {language === 'vi' ? 'AI đang phân tích' : 'AI Analyzing'}
                     </div>
                   </div>
                 </div>
@@ -233,12 +233,12 @@ export default function WorkspacesPage() {
                 {/* Column 3 */}
                 <div className="bg-background/80 p-4 rounded-xl border border-border-subtle">
                   <div className="flex items-center justify-between mb-3">
-                    <span className="text-xs font-bold uppercase tracking-wider text-emerald-500">Hoàn thành</span>
+                    <span className="text-xs font-bold uppercase tracking-wider text-emerald-500">{t('done')}</span>
                     <span className="text-[10px] bg-surface px-1.5 py-0.5 rounded text-muted">1</span>
                   </div>
                   <div className="glass p-3 rounded-lg border border-border-subtle opacity-75 shadow-sm">
-                    <div className="text-xs font-bold text-title line-through text-muted">Khởi tạo khung xương dự án</div>
-                    <div className="text-[10px] text-emerald-500 font-bold mt-2">Đã xong</div>
+                    <div className="text-xs font-bold text-title line-through text-muted">{language === 'vi' ? 'Khởi tạo khung xương dự án' : 'Project Scaffold Init'}</div>
+                    <div className="text-[10px] text-emerald-500 font-bold mt-2">{t('done')}</div>
                   </div>
                 </div>
               </div>
@@ -249,9 +249,9 @@ export default function WorkspacesPage() {
         {/* Key Features Grid */}
         <section className="max-w-6xl mx-auto px-6 py-20 border-t border-border/80 relative z-10">
           <div className="text-center mb-16">
-            <h2 className="text-3xl font-bold tracking-tight font-display text-heading">Các tính năng đột phá</h2>
+            <h2 className="text-3xl font-bold tracking-tight font-display text-heading">{t('breakthroughFeatures')}</h2>
             <p className="text-secondary text-sm mt-2 max-w-xl mx-auto">
-              Được trang bị những công nghệ hiện đại giúp tối ưu hóa hiệu năng và tăng hiệu suất làm việc nhóm
+              {t('featuresSubtitle')}
             </p>
           </div>
 
@@ -261,9 +261,9 @@ export default function WorkspacesPage() {
               <div className="h-10 w-10 rounded-lg bg-primary/10 text-primary flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
                 <Zap className="h-5 w-5" />
               </div>
-              <h3 className="text-lg font-bold text-title mb-2">Bảng Kanban Realtime</h3>
+              <h3 className="text-lg font-bold text-title mb-2">{t('featKanbanTitle')}</h3>
               <p className="text-secondary text-sm leading-relaxed">
-                Tương tác kéo thả thẻ công việc mượt mà và đồng bộ ngay lập tức cho tất cả thành viên trong nhóm qua giao thức WebSockets.
+                {t('featKanbanDesc')}
               </p>
             </div>
 
@@ -272,9 +272,9 @@ export default function WorkspacesPage() {
               <div className="h-10 w-10 rounded-lg bg-violet-500/10 text-violet-500 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
                 <Sparkles className="h-5 w-5" />
               </div>
-              <h3 className="text-lg font-bold text-title mb-2">Báo cáo & Biểu đồ AI</h3>
+              <h3 className="text-lg font-bold text-title mb-2">{t('featAiReportTitle')}</h3>
               <p className="text-secondary text-sm leading-relaxed">
-                Trợ lý AI phân tích nhật ký hoạt động dự án trong 24 giờ qua để vẽ biểu đồ thống kê thực tế và đưa ra các đề xuất cải tiến sâu sắc.
+                {t('featAiReportDesc')}
               </p>
             </div>
 
@@ -283,9 +283,9 @@ export default function WorkspacesPage() {
               <div className="h-10 w-10 rounded-lg bg-emerald-500/10 text-emerald-500 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
                 <CheckSquare className="h-5 w-5" />
               </div>
-              <h3 className="text-lg font-bold text-title mb-2">AI Phân rã Công việc</h3>
+              <h3 className="text-lg font-bold text-title mb-2">{t('featSubtaskTitle')}</h3>
               <p className="text-secondary text-sm leading-relaxed">
-                Giải quyết các việc lớn dễ dàng nhờ AI tự động bóc tách và tạo lập danh sách các công việc con (subtasks) thực thi chi tiết.
+                {t('featSubtaskDesc')}
               </p>
             </div>
 
@@ -294,9 +294,9 @@ export default function WorkspacesPage() {
               <div className="h-10 w-10 rounded-lg bg-blue-500/10 text-blue-500 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
                 <Users className="h-5 w-5" />
               </div>
-              <h3 className="text-lg font-bold text-title mb-2">Không gian cộng tác</h3>
+              <h3 className="text-lg font-bold text-title mb-2">{t('featWorkspaceTitle')}</h3>
               <p className="text-secondary text-sm leading-relaxed">
-                Tạo lập nhiều Workspace khác nhau, quản lý thành viên, phân quyền vai trò (Admin/Member) và gán trách nhiệm rõ ràng.
+                {t('featWorkspaceDesc')}
               </p>
             </div>
 
@@ -305,9 +305,9 @@ export default function WorkspacesPage() {
               <div className="h-10 w-10 rounded-lg bg-amber-500/10 text-amber-500 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
                 <MessageSquare className="h-5 w-5" />
               </div>
-              <h3 className="text-lg font-bold text-title mb-2">Thảo luận thời gian thực</h3>
+              <h3 className="text-lg font-bold text-title mb-2">{t('featDiscussionTitle')}</h3>
               <p className="text-secondary text-sm leading-relaxed">
-                Trò chuyện, góp ý và phản hồi ngay dưới thẻ công việc giúp tập trung luồng thông tin và giải quyết vướng mắc nhanh chóng.
+                {t('featDiscussionDesc')}
               </p>
             </div>
 
@@ -316,9 +316,9 @@ export default function WorkspacesPage() {
               <div className="h-10 w-10 rounded-lg bg-rose-500/10 text-rose-500 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
                 <Shield className="h-5 w-5" />
               </div>
-              <h3 className="text-lg font-bold text-title mb-2">Giao diện Đen / Sáng</h3>
+              <h3 className="text-lg font-bold text-title mb-2">{t('featThemeTitle')}</h3>
               <p className="text-secondary text-sm leading-relaxed">
-                Trải nghiệm mượt mà với Dark/Light Mode chuyển đổi tức thì, kết hợp các tông màu dịu mắt để bảo vệ thị lực của bạn.
+                {t('featThemeDesc')}
               </p>
             </div>
           </div>
@@ -328,26 +328,26 @@ export default function WorkspacesPage() {
         <section className="max-w-5xl mx-auto px-6 py-20 text-center relative z-10">
           <div className="glass p-12 rounded-3xl border border-border shadow-xl bg-gradient-to-b from-surface/50 to-surface/20">
             <h2 className="text-3xl font-bold tracking-tight font-display text-heading mb-4">
-              Sẵn sàng tối ưu hóa quy trình làm việc?
+              {t('ctaReadyTitle')}
             </h2>
             <p className="text-secondary text-sm max-w-lg mx-auto mb-8">
-              Bắt đầu tạo không gian làm việc cho doanh nghiệp hoặc cá nhân bạn chỉ trong chưa đầy 1 phút. Hoàn toàn miễn phí.
+              {t('ctaReadyDesc')}
             </p>
             <Link href="/register" className="ui-btn-primary px-8 py-3.5 text-sm inline-flex items-center gap-2 hover:scale-[1.02] transition-transform">
-              Đăng ký tài khoản ngay <ChevronRight className="h-4 w-4" />
+              {t('ctaRegisterNow')} <ChevronRight className="h-4 w-4" />
             </Link>
           </div>
           
           {/* Sitemap Footer Links */}
           <div className="flex flex-wrap justify-center gap-x-8 gap-y-3 text-xs text-secondary mt-12 mb-6">
-            <Link href="/features" className="hover:text-primary transition-all font-medium">Tính năng chi tiết</Link>
-            <Link href="/pricing" className="hover:text-primary transition-all font-medium">Gói dịch vụ & Bảng giá</Link>
-            <Link href="/contact" className="hover:text-primary transition-all font-medium">Liên hệ hỗ trợ</Link>
-            <Link href="/terms" className="hover:text-primary transition-all font-medium font-sans">Điều khoản & Bảo mật</Link>
+            <Link href="/features" className="hover:text-primary transition-all font-medium">{t('sitemapFeatures')}</Link>
+            <Link href="/pricing" className="hover:text-primary transition-all font-medium">{t('sitemapPricing')}</Link>
+            <Link href="/contact" className="hover:text-primary transition-all font-medium">{t('sitemapContact')}</Link>
+            <Link href="/terms" className="hover:text-primary transition-all font-medium font-sans">{t('sitemapTerms')}</Link>
           </div>
 
           <div className="text-center text-[10px] text-muted">
-            © 2026 Homix v2.0. Hệ thống quản lý công việc và tiến độ dự án thông minh.
+            {t('copyrightText')}
           </div>
         </section>
       </div>
@@ -379,14 +379,14 @@ export default function WorkspacesPage() {
                     Homix v2.0 Workspace Hub
                   </span>
                   <span className="text-xs font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-0.5 rounded-full flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" /> {workspaces.length} Không gian
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" /> {workspaces.length} {t('workspace')}
                   </span>
                 </div>
                 <h2 className="text-2xl md:text-3xl font-black tracking-tight font-display text-heading">
-                  Không Gian Làm Việc Của Bạn
+                  {t('workspaceHubTitle')}
                 </h2>
                 <p className="text-secondary text-xs md:text-sm mt-1 max-w-lg leading-relaxed">
-                  Lựa chọn không gian làm việc để truy cập danh sách dự án, bảng Kanban và báo cáo tiến độ AI
+                  {t('workspaceHubDesc')}
                 </p>
               </div>
 
@@ -395,7 +395,7 @@ export default function WorkspacesPage() {
                 className="ui-btn-primary flex items-center gap-2 px-5 py-3 text-xs font-bold shadow-xl hover:scale-[1.02] transition-transform shrink-0"
               >
                 <Plus className="h-4 w-4" />
-                Tạo Workspace Mới
+                {t('createWorkspace')}
               </button>
             </div>
 
@@ -408,7 +408,7 @@ export default function WorkspacesPage() {
                     type="text"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    placeholder="Tìm kiếm không gian làm việc theo tên hoặc mô tả..."
+                    placeholder={t('searchWorkspacePlaceholder')}
                     className="ui-input pl-10 pr-4 py-2 text-xs font-medium w-full"
                   />
                   {searchTerm && (
@@ -421,7 +421,7 @@ export default function WorkspacesPage() {
                   )}
                 </div>
                 <span className="text-xs text-muted font-medium hidden sm:inline">
-                  Hiển thị {filteredWorkspaces.length}/{workspaces.length} kết quả
+                  {t('showingResultsCount')} {filteredWorkspaces.length}/{workspaces.length}
                 </span>
               </div>
             )}
@@ -432,21 +432,21 @@ export default function WorkspacesPage() {
               <div className="w-16 h-16 rounded-2xl bg-primary/10 text-primary flex items-center justify-center mx-auto mb-4 border border-primary/20">
                 <Briefcase className="h-8 w-8" />
               </div>
-              <h3 className="text-lg font-bold mb-2 text-heading">Chưa có Workspace nào</h3>
+              <h3 className="text-lg font-bold mb-2 text-heading">{t('noWorkspaceYet')}</h3>
               <p className="text-secondary text-xs leading-relaxed mb-6">
-                Bạn chưa tham gia không gian làm việc nào. Hãy tạo mới ngay để quản lý dự án!
+                {t('noWorkspaceDesc')}
               </p>
               <button onClick={() => setShowModal(true)} className="ui-btn-primary px-6 py-2.5 text-xs font-bold">
-                + Tạo Workspace đầu tiên
+                {t('createFirstWorkspace')}
               </button>
             </div>
           ) : filteredWorkspaces.length === 0 ? (
             <div className="glass rounded-2xl p-8 text-center border border-border max-w-md mx-auto mt-8">
               <Search className="h-8 w-8 text-muted mx-auto mb-2" />
-              <h4 className="text-sm font-bold text-heading">Không tìm thấy kết quả phù hợp</h4>
-              <p className="text-secondary text-xs mt-1 mb-4">Không tìm thấy Workspace nào khớp với "{searchTerm}"</p>
+              <h4 className="text-sm font-bold text-heading">{t('noSearchMatch')}</h4>
+              <p className="text-secondary text-xs mt-1 mb-4">{t('noSearchMatchDesc')} "{searchTerm}"</p>
               <button onClick={() => setSearchTerm('')} className="ui-btn-secondary px-3.5 py-1.5 text-xs">
-                Xóa từ khóa tìm kiếm
+                {t('clearSearchTerm')}
               </button>
             </div>
           ) : (

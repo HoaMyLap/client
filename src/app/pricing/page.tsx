@@ -114,23 +114,23 @@ export default function PricingPage() {
                 <ul className="mt-6 space-y-3 text-xs text-secondary">
                   <li className="flex items-center gap-2.5">
                     <Check className="h-4 w-4 text-emerald-400 shrink-0" />
-                    <span>Tối đa 3 Workspace & 5 Dự án</span>
+                    <span>{language === 'vi' ? 'Tối đa 3 Workspace & 5 Dự án' : 'Up to 3 Workspaces & 5 Projects'}</span>
                   </li>
                   <li className="flex items-center gap-2.5">
                     <Check className="h-4 w-4 text-emerald-400 shrink-0" />
-                    <span>Bảng Kanban quản lý công việc</span>
+                    <span>{language === 'vi' ? 'Bảng Kanban quản lý công việc' : 'Real-time Kanban task management'}</span>
                   </li>
                   <li className="flex items-center gap-2.5">
                     <Check className="h-4 w-4 text-emerald-400 shrink-0" />
-                    <span>50 MB Lưu trữ tài liệu đính kèm</span>
+                    <span>{language === 'vi' ? '50 MB Lưu trữ tài liệu đính kèm' : '50 MB Document storage'}</span>
                   </li>
                   <li className="flex items-center gap-2.5 opacity-50">
                     <Check className="h-4 w-4 text-muted shrink-0" />
-                    <span className="line-through">Báo cáo AI & Tìm kiếm ngữ nghĩa</span>
+                    <span className="line-through">{language === 'vi' ? 'Báo cáo AI & Tìm kiếm ngữ nghĩa' : 'AI Report & Semantic Search'}</span>
                   </li>
                   <li className="flex items-center gap-2.5 opacity-50">
                     <Check className="h-4 w-4 text-muted shrink-0" />
-                    <span className="line-through">Nhập / Xuất Excel hàng loạt</span>
+                    <span className="line-through">{language === 'vi' ? 'Nhập / Xuất Excel hàng loạt' : 'Batch Excel Import / Export'}</span>
                   </li>
                 </ul>
               </div>
@@ -162,7 +162,7 @@ export default function PricingPage() {
 
                 <div className="mt-6 border-y border-primary/20 py-4">
                   <span className="text-3xl font-black font-display text-primary">
-                    {billingCycle === 'annual' ? '159.000 VNĐ' : '199.000 VNĐ'}
+                    {billingCycle === 'annual' ? (language === 'vi' ? '159.000 VNĐ' : '$7.99') : (language === 'vi' ? '199.000 VNĐ' : '$9.99')}
                   </span>
                   <span className="text-xs text-muted"> / {t('monthly').toLowerCase()}</span>
                 </div>
@@ -170,23 +170,23 @@ export default function PricingPage() {
                 <ul className="mt-6 space-y-3 text-xs text-secondary">
                   <li className="flex items-center gap-2.5 font-semibold text-heading">
                     <Check className="h-4 w-4 text-emerald-400 shrink-0" />
-                    <span>Workspace & Dự án KHÔNG GIỚI HẠN</span>
+                    <span>{language === 'vi' ? 'Workspace & Dự án KHÔNG GIỚI HẠN' : 'UNLIMITED Workspaces & Projects'}</span>
                   </li>
                   <li className="flex items-center gap-2.5 font-semibold text-heading">
                     <Check className="h-4 w-4 text-emerald-400 shrink-0" />
-                    <span>Trợ lý AI 24/7 (Báo cáo 5 phần & Smart Search)</span>
+                    <span>{language === 'vi' ? 'Trợ lý AI 24/7 (Báo cáo 5 phần & Smart Search)' : '24/7 AI Assistant (5-part Report & Smart Search)'}</span>
                   </li>
                   <li className="flex items-center gap-2.5 font-semibold text-heading">
                     <Check className="h-4 w-4 text-emerald-400 shrink-0" />
-                    <span>Nhập / Xuất Excel hàng loạt (.xlsx)</span>
+                    <span>{language === 'vi' ? 'Nhập / Xuất Excel hàng loạt (.xlsx)' : 'Batch Excel Import / Export (.xlsx)'}</span>
                   </li>
                   <li className="flex items-center gap-2.5">
                     <Check className="h-4 w-4 text-emerald-400 shrink-0" />
-                    <span>10 GB Lưu trữ đám mây Cloudinary</span>
+                    <span>{language === 'vi' ? '10 GB Lưu trữ đám mây Cloudinary' : '10 GB Cloudinary Storage'}</span>
                   </li>
                   <li className="flex items-center gap-2.5">
                     <Check className="h-4 w-4 text-emerald-400 shrink-0" />
-                    <span>Xuất báo cáo nghiệm thu In PDF</span>
+                    <span>{language === 'vi' ? 'Xuất báo cáo nghiệm thu In PDF' : 'Export Printable PDF Reports'}</span>
                   </li>
                 </ul>
               </div>
@@ -215,7 +215,7 @@ export default function PricingPage() {
 
                 <div className="mt-6 border-y border-border-subtle py-4">
                   <span className="text-3xl font-black font-display text-heading">
-                    {billingCycle === 'annual' ? '399.000 VNĐ' : '499.000 VNĐ'}
+                    {billingCycle === 'annual' ? (language === 'vi' ? '399.000 VNĐ' : '$19.99') : (language === 'vi' ? '499.000 VNĐ' : '$24.99')}
                   </span>
                   <span className="text-xs text-muted"> / {t('monthly').toLowerCase()}</span>
                 </div>
@@ -223,23 +223,23 @@ export default function PricingPage() {
                 <ul className="mt-6 space-y-3 text-xs text-secondary">
                   <li className="flex items-center gap-2.5 font-semibold text-heading">
                     <Check className="h-4 w-4 text-emerald-400 shrink-0" />
-                    <span>Tất cả tính năng của gói PRO</span>
+                    <span>{language === 'vi' ? 'Tất cả tính năng của gói PRO' : 'All PRO Plan Features'}</span>
                   </li>
                   <li className="flex items-center gap-2.5 font-semibold text-heading">
                     <Check className="h-4 w-4 text-emerald-400 shrink-0" />
-                    <span>Server AI riêng biệt (Dedicated Gemini Node)</span>
+                    <span>{language === 'vi' ? 'Server AI riêng biệt (Dedicated Gemini Node)' : 'Dedicated AI Node (Dedicated Gemini)'}</span>
                   </li>
                   <li className="flex items-center gap-2.5">
                     <Check className="h-4 w-4 text-emerald-400 shrink-0" />
-                    <span>Dung lượng lưu trữ 100 GB</span>
+                    <span>{language === 'vi' ? 'Dung lượng lưu trữ 100 GB' : '100 GB Cloud Storage'}</span>
                   </li>
                   <li className="flex items-center gap-2.5">
                     <Check className="h-4 w-4 text-emerald-400 shrink-0" />
-                    <span>Tích hợp Đăng nhập SSO / SAML</span>
+                    <span>{language === 'vi' ? 'Tích hợp Đăng nhập SSO / SAML' : 'SSO / SAML Single Sign-On'}</span>
                   </li>
                   <li className="flex items-center gap-2.5">
                     <Check className="h-4 w-4 text-emerald-400 shrink-0" />
-                    <span>Hỗ trợ kỹ thuật ưu tiên VIP 24/7</span>
+                    <span>{language === 'vi' ? 'Hỗ trợ kỹ thuật ưu tiên VIP 24/7' : '24/7 VIP Priority Support'}</span>
                   </li>
                 </ul>
               </div>
