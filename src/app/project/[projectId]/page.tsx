@@ -94,33 +94,51 @@ export default function ProjectKanbanPage() {
     }
   ]);
   const [fileUploading, setFileUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<{ current: number; total: number } | null>(null);
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const handleMultipleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
 
+    const fileList = Array.from(files);
     setFileUploading(true);
-    try {
-      const formData = new FormData();
-      formData.append('file', file);
-      const res = await api.uploadFile(formData);
+    setUploadProgress({ current: 0, total: fileList.length });
 
-      const newFile = {
-        id: Date.now().toString(),
-        name: res.name || file.name,
-        url: res.url,
-        size: res.size || file.size,
-        type: res.type || file.type,
-        uploadedAt: new Date().toISOString(),
-      };
+    const newUploadedFiles: any[] = [];
 
-      setProjectFiles((prev) => [newFile, ...prev]);
-      alert('Tải tệp tin lên dự án thành công!');
-    } catch (err: any) {
-      alert(err.message || 'Lỗi tải tệp tin lên dự án.');
-    } finally {
-      setFileUploading(false);
+    for (let i = 0; i < fileList.length; i++) {
+      const file = fileList[i];
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+        const res = await api.uploadFile(formData);
+
+        newUploadedFiles.push({
+          id: (Date.now() + i + Math.random()).toString(),
+          name: res.name || file.name,
+          url: res.url,
+          size: res.size || file.size,
+          type: res.type || file.type,
+          uploadedAt: new Date().toISOString(),
+        });
+        setUploadProgress({ current: i + 1, total: fileList.length });
+      } catch (err: any) {
+        console.error(`Lỗi tải tệp ${file.name}:`, err);
+      }
     }
+
+    if (newUploadedFiles.length > 0) {
+      setProjectFiles((prev) => [...newUploadedFiles, ...prev]);
+    }
+
+    setFileUploading(false);
+    setUploadProgress(null);
+    e.target.value = ''; // Reset input to allow adding more files anytime
+  };
+
+  const handleDeleteProjectFile = (fileId: string, fileName: string) => {
+    if (!confirm(`Bạn có chắc muốn xóa tệp "${fileName}" khỏi dự án?`)) return;
+    setProjectFiles((prev) => prev.filter((f) => f.id !== fileId));
   };
 
   // Drag state
@@ -1020,58 +1038,90 @@ export default function ProjectKanbanPage() {
 
       {projectTab === 'FILES' ? (
         <main className="max-w-7xl mx-auto px-6 mt-6 relative z-10">
-          <div className="glass p-8 rounded-3xl border border-border shadow-xl">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-border-subtle mb-6">
+          <div className="glass p-8 rounded-3xl border border-border shadow-xl space-y-6">
+            {/* Header */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-border-subtle">
               <div>
                 <h3 className="text-xl font-bold font-display text-heading flex items-center gap-2">
                   <FolderArchive className="h-5 w-5 text-primary" />
                   Kho Lưu Trữ Tài Liệu Dự Án
                 </h3>
                 <p className="text-xs text-secondary mt-1">
-                  Quản lý và tải lên tệp tin, tài liệu đính kèm phục vụ dự án (PDF, Word, Excel, Hình ảnh)
+                  Quản lý, tải lên nhiều tệp tin cùng lúc (PDF, Word, Excel, Hình ảnh, Zip) và bổ sung tệp bất kỳ lúc nào
                 </p>
               </div>
 
               <label className="ui-btn-primary px-5 py-2.5 text-xs font-bold flex items-center gap-2 cursor-pointer shadow-md hover:scale-[1.02] transition-transform shrink-0">
                 <Upload className="h-4 w-4" />
-                {fileUploading ? 'Đang tải lên...' : 'Tải tệp tin mới lên'}
-                <input type="file" onChange={handleFileUpload} disabled={fileUploading} className="hidden" />
+                {fileUploading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-3.5 w-3.5 border-2 border-white/20 border-t-white" />
+                    {uploadProgress ? `Đang tải: ${uploadProgress.current}/${uploadProgress.total}` : 'Đang tải lên...'}
+                  </>
+                ) : (
+                  '+ Tải nhiều tệp tin mới lên'
+                )}
+                <input type="file" multiple onChange={handleMultipleFileUpload} disabled={fileUploading} className="hidden" />
               </label>
             </div>
 
+            {/* Quick Upload Drop Area */}
+            <label className="block border-2 border-dashed border-border hover:border-primary/50 bg-surface/30 p-6 rounded-2xl text-center cursor-pointer transition-all">
+              <Upload className="h-8 w-8 text-primary mx-auto mb-2 opacity-80" />
+              <p className="text-xs font-bold text-heading">Bấm hoặc kéo thả nhiều tệp tin vào đây để thêm vào dự án</p>
+              <p className="text-[10px] text-muted mt-1">Hỗ trợ chọn nhiều file cùng lúc (.pdf, .docx, .xlsx, .png, .jpg, .zip)</p>
+              <input type="file" multiple onChange={handleMultipleFileUpload} disabled={fileUploading} className="hidden" />
+            </label>
+
+            {/* File List Grid */}
             {projectFiles.length === 0 ? (
-              <div className="p-12 text-center border-2 border-dashed border-border rounded-2xl">
+              <div className="p-12 text-center border border-border rounded-2xl">
                 <File className="h-10 w-10 text-muted mx-auto mb-3" />
                 <h4 className="text-sm font-bold text-heading">Chưa có tệp tin nào trong dự án</h4>
-                <p className="text-xs text-secondary mt-1 mb-4">Hãy tải lên tệp tin đầu tiên để chia sẻ với các thành viên!</p>
+                <p className="text-xs text-secondary mt-1 mb-4">Hãy tải lên các tệp tin đầu tiên để chia sẻ với mọi người!</p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {projectFiles.map((file) => (
-                  <div key={file.id} className="bg-surface/50 border border-border p-4 rounded-2xl flex items-center justify-between gap-3 shadow-sm hover:border-primary/40 transition-all">
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="p-2.5 rounded-xl bg-primary/10 text-primary shrink-0">
-                        <File className="h-5 w-5" />
+              <div>
+                <div className="flex items-center justify-between mb-3 text-xs font-bold text-heading">
+                  <span>Danh sách tệp tin đã lưu ({projectFiles.length} tệp):</span>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {projectFiles.map((file) => (
+                    <div key={file.id} className="bg-surface/60 border border-border p-4 rounded-2xl flex items-center justify-between gap-3 shadow-sm hover:border-primary/40 transition-all group">
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
+                        <div className="p-2.5 rounded-xl bg-primary/10 text-primary shrink-0">
+                          <File className="h-5 w-5" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <h4 className="text-xs font-bold text-heading truncate" title={file.name}>{file.name}</h4>
+                          <p className="text-[10px] text-muted mt-0.5">
+                            {(file.size / 1024).toFixed(1)} KB · {new Date(file.uploadedAt).toLocaleDateString('vi-VN')}
+                          </p>
+                        </div>
                       </div>
-                      <div className="min-w-0">
-                        <h4 className="text-xs font-bold text-heading truncate" title={file.name}>{file.name}</h4>
-                        <p className="text-[10px] text-muted mt-0.5">
-                          {(file.size / 1024).toFixed(1)} KB · {new Date(file.uploadedAt).toLocaleDateString('vi-VN')}
-                        </p>
+
+                      <div className="flex items-center gap-1 shrink-0">
+                        <a
+                          href={file.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="p-2 rounded-xl bg-surface border border-border text-secondary hover:text-primary transition-colors"
+                          title="Tải về / Xem"
+                        >
+                          <Download className="h-4 w-4" />
+                        </a>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteProjectFile(file.id, file.name)}
+                          className="p-2 rounded-xl bg-surface border border-border text-muted hover:text-rose-400 hover:border-rose-500/30 transition-colors"
+                          title="Xóa tệp tin"
+                        >
+                          <Trash className="h-4 w-4" />
+                        </button>
                       </div>
                     </div>
-
-                    <a
-                      href={file.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="p-2 rounded-xl bg-surface border border-border text-secondary hover:text-primary transition-colors shrink-0"
-                      title="Tải về / Xem"
-                    >
-                      <Download className="h-4 w-4" />
-                    </a>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
             )}
           </div>
