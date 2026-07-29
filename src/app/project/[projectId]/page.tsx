@@ -2346,20 +2346,48 @@ function parseAiReport(content: string): { sections: ReportSection[]; rawText: s
   const jsonStart = cleaned.indexOf('[');
   const jsonEnd = cleaned.lastIndexOf(']');
   
+  let rawJson = '';
   if (jsonStart !== -1 && jsonEnd !== -1 && jsonEnd > jsonStart) {
-    const rawJson = cleaned.substring(jsonStart, jsonEnd + 1);
+    rawJson = cleaned.substring(jsonStart, jsonEnd + 1);
+  } else {
+    const objStart = cleaned.indexOf('{');
+    const objEnd = cleaned.lastIndexOf('}');
+    if (objStart !== -1 && objEnd !== -1 && objEnd > objStart) {
+      rawJson = cleaned.substring(objStart, objEnd + 1);
+    }
+  }
+
+  if (rawJson) {
+    let parsedObj: any = null;
     try {
-      // Bước 1: thử parse trực tiếp (nếu AI đã sinh ra JSON hợp lệ)
-      const sections = JSON.parse(rawJson);
-      return { sections, rawText: '' };
+      parsedObj = JSON.parse(rawJson);
     } catch {
-      // Bước 2: dùng jsonrepair để sửa JSON lỗi
       try {
         const repaired = jsonrepair(rawJson);
-        const sections = JSON.parse(repaired);
-        return { sections, rawText: '' };
+        parsedObj = JSON.parse(repaired);
       } catch (e2) {
         console.error('jsonrepair also failed:', e2);
+      }
+    }
+
+    if (parsedObj) {
+      let rawSections: any[] = [];
+      if (Array.isArray(parsedObj)) {
+        rawSections = parsedObj;
+      } else if (Array.isArray(parsedObj.sections)) {
+        rawSections = parsedObj.sections;
+      } else if (typeof parsedObj === 'object') {
+        rawSections = Object.values(parsedObj);
+      }
+
+      const sections: ReportSection[] = rawSections.map((sec: any) => ({
+        title: sec.title || sec['Tiêu đề'] || sec.name || 'Mục phân tích',
+        content: sec.content || sec['Nội dung'] || sec.description || '',
+        chart: sec.chart || sec['biểu đồ'] || sec.chartConfig || null,
+      }));
+
+      if (sections.length > 0) {
+        return { sections, rawText: '' };
       }
     }
   }
@@ -2460,8 +2488,43 @@ const AiReportRenderer = ({ content }: { content: string }) => {
 
 const colors = ["var(--chart-1, #8b5cf6)", "var(--chart-2, #3b82f6)", "var(--chart-3, #10b981)", "var(--chart-4, #f59e0b)", "var(--chart-5, #ef4444)", "var(--chart-6, #ec4899)", "var(--chart-7, #6366f1)", "var(--chart-8, #14b8a6)"];
 
+const getChartData = (config: ChartConfig): number[] => {
+  if (!config) return [];
+  // Case 1: config.datasets[0].data is an array of numbers
+  if (Array.isArray(config.datasets) && config.datasets[0] && Array.isArray(config.datasets[0].data)) {
+    return config.datasets[0].data.map(v => typeof v === 'number' ? v : (parseFloat(v as any) || 0));
+  }
+  // Case 2: config.datasets is directly an array of numbers: [11, 7, 50]
+  if (Array.isArray(config.datasets) && (typeof config.datasets[0] === 'number' || typeof config.datasets[0] === 'string')) {
+    return (config.datasets as any[]).map(v => typeof v === 'number' ? v : (parseFloat(v as any) || 0));
+  }
+  // Case 3: config.data is an array of numbers: [11, 7, 50]
+  if (Array.isArray((config as any).data)) {
+    return (config as any).data.map((v: any) => typeof v === 'number' ? v : (parseFloat(v as any) || 0));
+  }
+  // Case 4: config.dataset is an array
+  if (Array.isArray((config as any).dataset)) {
+    const d = (config as any).dataset;
+    if (Array.isArray(d[0]?.data)) return d[0].data.map((v: any) => typeof v === 'number' ? v : (parseFloat(v as any) || 0));
+    if (typeof d[0] === 'number' || typeof d[0] === 'string') return d.map((v: any) => typeof v === 'number' ? v : (parseFloat(v as any) || 0));
+  }
+  return [];
+};
+
+const getChartLabels = (config: ChartConfig): string[] => {
+  if (!config) return [];
+  if (Array.isArray(config.labels) && config.labels.length > 0) {
+    return config.labels.map(l => l.toString());
+  }
+  if (Array.isArray((config as any).label) && (config as any).label.length > 0) {
+    return (config as any).label.map((l: any) => l.toString());
+  }
+  return [];
+};
+
 const DoughnutChart = ({ config }: { config: ChartConfig }) => {
-  const data = config.datasets[0]?.data || [];
+  const data = getChartData(config);
+  const labels = getChartLabels(config);
   const total = data.reduce((a, b) => a + b, 0);
   let current = 0;
   
@@ -2487,10 +2550,10 @@ const DoughnutChart = ({ config }: { config: ChartConfig }) => {
         )}
       </div>
       <div className="grid grid-cols-2 gap-2 text-[10px] w-full border-t border-zinc-900 pt-3">
-        {config.labels.map((label, idx) => (
+        {labels.map((label, idx) => (
           <div key={idx} className="flex items-center gap-1.5 text-zinc-400">
             <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: colors[idx % colors.length] }} />
-            <span className="truncate">{label}: <strong className="text-zinc-200">{data[idx]}</strong></span>
+            <span className="truncate">{label}: <strong className="text-zinc-200">{data[idx] ?? 0}</strong></span>
           </div>
         ))}
       </div>
@@ -2499,8 +2562,8 @@ const DoughnutChart = ({ config }: { config: ChartConfig }) => {
 };
 
 const LineChart = ({ config }: { config: ChartConfig }) => {
-  const data = config.datasets[0]?.data || [];
-  const labels = config.labels || [];
+  const data = getChartData(config);
+  const labels = getChartLabels(config);
   if (data.length === 0) return <div className="text-xs text-zinc-600">Không có dữ liệu</div>;
   
   const maxVal = Math.max(...data, 1);
@@ -2517,7 +2580,7 @@ const LineChart = ({ config }: { config: ChartConfig }) => {
   const points = data.map((val, idx) => {
     const x = paddingLeft + (idx * chartWidth) / (data.length - 1 || 1);
     const y = paddingTop + chartHeight - (val * chartHeight) / maxVal;
-    return { x, y, val, label: labels[idx] };
+    return { x, y, val, label: labels[idx] || `Point ${idx + 1}` };
   });
   
   const polylinePoints = points.map(p => `${p.x},${p.y}`).join(' ');
@@ -2578,8 +2641,8 @@ const LineChart = ({ config }: { config: ChartConfig }) => {
 };
 
 const BarChart = ({ config }: { config: ChartConfig }) => {
-  const data = config.datasets[0]?.data || [];
-  const labels = config.labels || [];
+  const data = getChartData(config);
+  const labels = getChartLabels(config);
   const maxVal = Math.max(...data, 1);
   
   return (
@@ -2596,7 +2659,7 @@ const BarChart = ({ config }: { config: ChartConfig }) => {
               className="w-6 bg-gradient-to-t from-violet-600 to-indigo-500 rounded-t-sm group-hover:from-violet-500 group-hover:to-indigo-400 transition-all shadow-md shadow-violet-500/10 cursor-pointer"
             />
             <span className="text-[9px] text-zinc-500 truncate max-w-[50px] mt-1 h-3 text-center">
-              {labels[idx]}
+              {labels[idx] || `Mục ${idx + 1}`}
             </span>
           </div>
         );
@@ -2606,8 +2669,8 @@ const BarChart = ({ config }: { config: ChartConfig }) => {
 };
 
 const HorizontalBarChart = ({ config }: { config: ChartConfig }) => {
-  const data = config.datasets[0]?.data || [];
-  const labels = config.labels || [];
+  const data = getChartData(config);
+  const labels = getChartLabels(config);
   const maxVal = Math.max(...data, 1);
   
   return (
@@ -2617,7 +2680,7 @@ const HorizontalBarChart = ({ config }: { config: ChartConfig }) => {
         return (
           <div key={idx} className="space-y-1">
             <div className="flex justify-between text-[10px] text-zinc-400">
-              <span className="truncate max-w-[70%] font-medium">{labels[idx]}</span>
+              <span className="truncate max-w-[70%] font-medium">{labels[idx] || `Mục ${idx + 1}`}</span>
               <span className="font-semibold text-zinc-300">{val}</span>
             </div>
             <div className="w-full bg-zinc-900 h-2 rounded-full overflow-hidden border border-zinc-800/50">
@@ -2634,8 +2697,8 @@ const HorizontalBarChart = ({ config }: { config: ChartConfig }) => {
 };
 
 const StackedBarChart = ({ config }: { config: ChartConfig }) => {
-  const data = config.datasets[0]?.data || [];
-  const labels = config.labels || [];
+  const data = getChartData(config);
+  const labels = getChartLabels(config);
   const total = data.reduce((a, b) => a + b, 0);
   const colorsList = ["var(--chart-5, #ef4444)", "var(--chart-4, #f59e0b)", "var(--chart-2, #3b82f6)", "var(--chart-3, #10b981)", "var(--chart-1, #8b5cf6)", "var(--chart-7, #6366f1)"];
   
@@ -2654,7 +2717,7 @@ const StackedBarChart = ({ config }: { config: ChartConfig }) => {
               }}
               className="h-full first:rounded-l-full last:rounded-r-full transition-all cursor-pointer"
             >
-              <title>{`${labels[idx]}: ${val}`}</title>
+              <title>{`${labels[idx] || 'Mục'}: ${val}`}</title>
             </div>
           );
         })}
@@ -2665,7 +2728,7 @@ const StackedBarChart = ({ config }: { config: ChartConfig }) => {
         {labels.map((label, idx) => (
           <div key={idx} className="flex items-center gap-1.5 text-zinc-400">
             <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: colorsList[idx % colorsList.length] }} />
-            <span className="truncate">{label}: <strong className="text-zinc-200">{data[idx]}</strong> ({total > 0 ? Math.round((data[idx] / total) * 100) : 0}%)</span>
+            <span className="truncate">{label}: <strong className="text-zinc-200">{data[idx] ?? 0}</strong> ({total > 0 ? Math.round(((data[idx] ?? 0) / total) * 100) : 0}%)</span>
           </div>
         ))}
       </div>
@@ -2674,8 +2737,8 @@ const StackedBarChart = ({ config }: { config: ChartConfig }) => {
 };
 
 const RadarChart = ({ config }: { config: ChartConfig }) => {
-  const data = config.datasets[0]?.data || [];
-  const labels = config.labels || [];
+  const data = getChartData(config);
+  const labels = getChartLabels(config);
   if (data.length === 0) return <div className="text-xs text-zinc-600">Không có dữ liệu</div>;
   
   const maxVal = Math.max(...data, 1);
@@ -2688,7 +2751,7 @@ const RadarChart = ({ config }: { config: ChartConfig }) => {
     const angle = (idx * 2 * Math.PI) / numPoints - Math.PI / 2;
     const x = cx + r * Math.cos(angle);
     const y = cy + r * Math.sin(angle);
-    return { x, y, label: labels[idx] };
+    return { x, y, label: labels[idx] || `P${idx + 1}` };
   });
 
   const gridPolygon = gridPoints.map(p => `${p.x},${p.y}`).join(' ');
