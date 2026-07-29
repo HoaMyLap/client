@@ -113,9 +113,10 @@ export const api = {
       request(`/notifications/${id}/respond-leave`, { method: 'POST', body: JSON.stringify({ action }) }),
   },
   ai: {
-    getSummary: (projectId: string) => request(`/ai/project/${projectId}/summary`),
-    smartSearch: (projectId: string, query: string) =>
-      request(`/ai/project/${projectId}/smart-search`, { method: 'POST', body: JSON.stringify({ query }) }),
+    getSummary: (projectId: string, lang: string = 'vi') => 
+      request(`/ai/project/${projectId}/summary?lang=${lang}`),
+    smartSearch: (projectId: string, query: string, lang: string = 'vi') =>
+      request(`/ai/project/${projectId}/smart-search`, { method: 'POST', body: JSON.stringify({ query, lang }) }),
   },
   uploadImage: (formData: FormData) => request('/upload/image', { method: 'POST', body: formData }),
   uploadFile: (formData: FormData) => request('/upload/file', { method: 'POST', body: formData }),

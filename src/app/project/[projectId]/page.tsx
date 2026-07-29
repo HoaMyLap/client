@@ -720,13 +720,27 @@ export default function ProjectKanbanPage() {
     setShowAiSummaryModal(true);
     setAiSummaryContent('');
     try {
-      const data = await api.ai.getSummary(projectId);
-      setAiSummaryContent(data.summary || 'Không có hoạt động.');
+      const data = await api.ai.getSummary(projectId, language);
+      setAiSummaryContent(data.summary || (language === 'vi' ? 'Không có hoạt động.' : 'No data.'));
       setIsReportStale(false);
     } catch (err: any) {
       setAiSummaryContent('Lỗi: ' + (err.message || 'Không thể lấy báo cáo AI.'));
     } finally {
       setAiSummaryLoading(false);
+    }
+  };
+
+  const handleAiSmartSearch = async () => {
+    if (!aiSearchQuery.trim()) return;
+    setAiSearchLoading(true);
+    try {
+      const results = await api.ai.smartSearch(projectId, aiSearchQuery, language);
+      setAiSearchResults(results || []);
+      setShowAiSearchModal(true);
+    } catch (err: any) {
+      alert(err.message || (language === 'vi' ? 'Lỗi tìm kiếm AI' : 'AI Search Error'));
+    } finally {
+      setAiSearchLoading(false);
     }
   };
 

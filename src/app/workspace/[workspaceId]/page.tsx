@@ -5,6 +5,7 @@ import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import { api } from '@/lib/api';
 import Sidebar from '@/components/Sidebar';
+import { useLanguage } from '@/lib/i18n';
 import * as XLSX from 'xlsx';
 import { 
   ArrowLeft, Plus, Folder, Users, Trash, PlusCircle, 
@@ -32,6 +33,7 @@ interface WorkspaceMember {
 export default function WorkspaceDetailPage() {
   const router = useRouter();
   const { workspaceId } = useParams() as { workspaceId: string };
+  const { t, language } = useLanguage();
 
   const [projects, setProjects] = useState<Project[]>([]);
   const [members, setMembers] = useState<WorkspaceMember[]>([]);
