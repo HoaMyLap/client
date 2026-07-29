@@ -18,7 +18,7 @@ function CheckoutContent() {
   const planType = searchParams.get('plan') || 'PRO';
   const billing = searchParams.get('billing') || 'annual';
 
-  const [paymentMethod, setPaymentMethod] = useState<'qr' | 'momo' | 'card'>('qr');
+  const [paymentMethod, setPaymentMethod] = useState<'qr' | 'card'>('qr');
   const [voucherCode, setVoucherCode] = useState('');
   const [discount, setDiscount] = useState(0);
   const [appliedVoucher, setAppliedVoucher] = useState('');
@@ -89,7 +89,7 @@ function CheckoutContent() {
                 {t('paymentMethod')}
               </label>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <button
                   type="button"
                   onClick={() => setPaymentMethod('qr')}
@@ -103,22 +103,6 @@ function CheckoutContent() {
                   <div>
                     <div className="text-xs font-bold">VietQR Bank Transfer</div>
                     <div className="text-[10px] opacity-70">Quét mã chuyển khoản tức thì</div>
-                  </div>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setPaymentMethod('momo')}
-                  className={`p-4 rounded-2xl border text-left flex flex-col justify-between gap-3 transition-all cursor-pointer ${
-                    paymentMethod === 'momo'
-                      ? 'border-pink-500 bg-pink-500/10 text-pink-400 shadow-md'
-                      : 'border-border bg-surface/50 text-secondary hover:border-pink-500/40'
-                  }`}
-                >
-                  <Sparkles className="h-6 w-6 text-pink-400" />
-                  <div>
-                    <div className="text-xs font-bold">Ví MoMo</div>
-                    <div className="text-[10px] opacity-70">Thanh toán MoMo QR</div>
                   </div>
                 </button>
 
@@ -178,16 +162,6 @@ function CheckoutContent() {
                     </div>
                   </div>
                 </div>
-              </div>
-            )}
-
-            {paymentMethod === 'momo' && (
-              <div className="p-6 rounded-2xl bg-pink-500/5 border border-pink-500/20 text-center space-y-3">
-                <Sparkles className="h-10 w-10 text-pink-400 mx-auto" />
-                <h4 className="text-sm font-bold text-heading">Thanh toán qua Ví MoMo</h4>
-                <p className="text-xs text-secondary max-w-md mx-auto">
-                  Mở ứng dụng MoMo trên điện thoại và quét mã QR hoặc chuyển khoản đến số điện thoại MoMo VIP: <strong>0909888999</strong> (Chủ TK: Homix Support).
-                </p>
               </div>
             )}
 
