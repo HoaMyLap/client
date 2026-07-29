@@ -33,18 +33,17 @@ export default function ContactPage() {
         method: 'POST',
         body: JSON.stringify({ fullname, email, phone, subject, message }),
       });
-      setSuccessMsg(res.message || 'Cảm ơn bạn đã gửi liên hệ! Đội ngũ Homix v2.0 sẽ phản hồi trong 24h.');
-      setFullname('');
-      setEmail('');
-      setPhone('');
-      setMessage('');
+      if (res && res.success) {
+        setSuccessMsg(res.message || 'Cảm ơn bạn đã gửi liên hệ! Đội ngũ Homix v2.0 sẽ phản hồi trong 24h.');
+        setFullname('');
+        setEmail('');
+        setPhone('');
+        setMessage('');
+      } else {
+        setErrorMsg(res?.error || 'Lỗi gửi tin nhắn liên hệ.');
+      }
     } catch (err: any) {
-      // Fallback simulated success
-      setSuccessMsg('Cảm ơn bạn đã gửi liên hệ! Đội ngũ hỗ trợ Homix v2.0 sẽ phản hồi tới ' + (email || 'email của bạn') + ' trong vòng 24 giờ.');
-      setFullname('');
-      setEmail('');
-      setPhone('');
-      setMessage('');
+      setErrorMsg(err.message || 'Không thể kết nối đến máy chủ.');
     } finally {
       setSending(false);
     }
@@ -133,6 +132,12 @@ export default function ContactPage() {
                   <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold flex items-center gap-2 animate-fade-in">
                     <CheckCircle2 className="h-5 w-5 shrink-0" />
                     <span>{successMsg}</span>
+                  </div>
+                )}
+
+                {errorMsg && (
+                  <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs font-semibold flex items-center gap-2 animate-fade-in">
+                    <span>⚠️ {errorMsg}</span>
                   </div>
                 )}
 
