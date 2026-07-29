@@ -47,6 +47,20 @@ export const translations = {
     getStarted: 'Bắt đầu ngay',
     backToHome: 'Về trang chủ',
 
+    // Login & Register Pages
+    loginPageTitle: 'Đăng nhập',
+    loginPageSubtitle: 'Chào mừng quay trở lại hệ thống quản trị công việc',
+    yourEmail: 'Email của bạn',
+    password: 'Mật khẩu',
+    processing: 'Đang xử lý...',
+    noAccountYet: 'Chưa có tài khoản?',
+    registerNewAccount: 'Đăng ký tài khoản mới',
+    registerPageTitle: 'Tạo tài khoản',
+    registerPageSubtitle: 'Đăng ký để quản lý dự án và công việc thời gian thực',
+    registerSuccessRedirect: 'Đăng ký thành công! Đang chuyển hướng đăng nhập...',
+    alreadyHaveAccount: 'Đã có tài khoản?',
+    loginNow: 'Đăng nhập ngay',
+
     // Home Landing Page
     heroBadge: 'Tích hợp AI Trợ lý Báo cáo Tiến độ 2.0',
     heroTitlePart1: 'Quản lý công việc thông minh với ',
@@ -311,6 +325,20 @@ export const translations = {
     loginAccount: 'Log In',
     getStarted: 'Get Started Now',
     backToHome: 'Back to Home',
+
+    // Login & Register Pages
+    loginPageTitle: 'Log In',
+    loginPageSubtitle: 'Welcome back to intelligent work management platform',
+    yourEmail: 'Your Email',
+    password: 'Password',
+    processing: 'Processing...',
+    noAccountYet: "Don't have an account?",
+    registerNewAccount: 'Register a new account',
+    registerPageTitle: 'Create Account',
+    registerPageSubtitle: 'Sign up to manage real-time tasks and projects',
+    registerSuccessRedirect: 'Registration successful! Redirecting to login...',
+    alreadyHaveAccount: 'Already have an account?',
+    loginNow: 'Log in now',
 
     // Home Landing Page
     heroBadge: 'Integrated AI Progress Assistant 2.0',

@@ -5,10 +5,12 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { api } from '@/lib/api';
 import ThemeToggle from '@/components/ThemeToggle';
+import { useLanguage } from '@/lib/i18n';
 import { ArrowLeft } from 'lucide-react';
 
 export default function LoginPage() {
   const router = useRouter();
+  const { t, language, setLanguage } = useLanguage();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -27,35 +29,46 @@ export default function LoginPage() {
       localStorage.setItem('userId', response.userId);
       router.push('/');
     } catch (err: any) {
-      setError(err.message || 'Đăng nhập thất bại. Vui lòng kiểm tra lại email hoặc mật khẩu.');
+      setError(err.message || (language === 'vi' ? 'Đăng nhập thất bại. Vui lòng kiểm tra lại email hoặc mật khẩu.' : 'Login failed. Please check your credentials.'));
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <main className="min-h-screen w-full flex items-center justify-center relative bg-background text-foreground overflow-hidden px-4">
+    <main className="min-h-screen w-full flex items-center justify-center relative bg-background text-foreground overflow-hidden px-4 font-sans">
+      {/* Top Left: Back to Home */}
       <div className="absolute top-6 left-6 z-20">
         <Link href="/" className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-border bg-card/60 text-secondary hover:text-primary transition-all text-xs font-semibold shadow-sm">
           <ArrowLeft className="w-4 h-4" />
-          Quay lại trang chủ
+          {t('backToHome')}
         </Link>
       </div>
 
-      <div className="absolute top-6 right-6 z-20">
+      {/* Top Right: Language Switcher & Theme Toggle */}
+      <div className="absolute top-6 right-6 z-20 flex items-center gap-3">
+        <button
+          type="button"
+          onClick={() => setLanguage(language === 'vi' ? 'en' : 'vi')}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-border bg-surface hover:border-primary/40 text-xs font-bold text-heading transition-all shadow-sm cursor-pointer"
+          title="Đổi ngôn ngữ / Change language"
+        >
+          <span>{language === 'vi' ? '🇻🇳 VI' : '🇬🇧 EN'}</span>
+        </button>
         <ThemeToggle />
       </div>
 
+      {/* Background Decorative Orbs */}
       <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] rounded-full glow-orb-accent blur-[120px] pointer-events-none" />
       <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] rounded-full glow-orb-primary blur-[120px] pointer-events-none" />
 
       <div className="w-full max-w-md glass glass-glow rounded-2xl p-8 z-10">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold tracking-tight text-gradient-brand font-display">
-            Đăng nhập
+            {t('loginPageTitle')}
           </h1>
           <p className="text-secondary text-sm mt-2 font-sans">
-            Chào mừng quay trở lại hệ thống quản trị công việc
+            {t('loginPageSubtitle')}
           </p>
         </div>
 
@@ -63,7 +76,7 @@ export default function LoginPage() {
 
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>
-            <label className="ui-label tracking-wider">Email của bạn</label>
+            <label className="ui-label tracking-wider">{t('yourEmail')}</label>
             <input
               type="email"
               required
@@ -75,7 +88,7 @@ export default function LoginPage() {
           </div>
 
           <div>
-            <label className="ui-label tracking-wider">Mật khẩu</label>
+            <label className="ui-label tracking-wider">{t('password')}</label>
             <input
               type="password"
               required
@@ -86,15 +99,15 @@ export default function LoginPage() {
             />
           </div>
 
-          <button type="submit" disabled={loading} className="ui-btn-primary w-full py-3.5 mt-2 text-sm">
-            {loading ? 'Đang xử lý...' : 'Đăng nhập'}
+          <button type="submit" disabled={loading} className="ui-btn-primary w-full py-3.5 mt-2 text-sm font-bold">
+            {loading ? t('processing') : t('loginPageTitle')}
           </button>
         </form>
 
         <p className="text-center text-sm text-secondary mt-6">
-          Chưa có tài khoản?{' '}
-          <Link href="/register" className="text-link hover:underline">
-            Đăng ký tài khoản mới
+          {t('noAccountYet')}{' '}
+          <Link href="/register" className="text-link hover:underline font-semibold">
+            {t('registerNewAccount')}
           </Link>
         </p>
       </div>
