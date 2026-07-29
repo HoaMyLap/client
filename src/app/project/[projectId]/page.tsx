@@ -194,49 +194,56 @@ export default function ProjectKanbanPage() {
   // Excel Task Import Modal state
   const [showExcelTaskModal, setShowExcelTaskModal] = useState(false);
   const [excelTasks, setExcelTasks] = useState<any[]>([]);
+  const [excelTaskFileName, setExcelTaskFileName] = useState<string>('');
   const [excelTaskLoading, setExcelTaskLoading] = useState(false);
   const [excelTaskError, setExcelTaskError] = useState('');
+  const excelTaskFileInputRef = useRef<HTMLInputElement | null>(null);
 
   const handleExcelTaskUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    setExcelTaskFileName(file.name);
+
     const reader = new FileReader();
     reader.onload = (evt) => {
       try {
         const data = new Uint8Array(evt.target?.result as ArrayBuffer);
         const workbook = XLSX.read(data, { type: 'array' });
-        const sheetName = workbook.SheetNames[0];
-        const worksheet = workbook.Sheets[sheetName];
-        const json: any[] = XLSX.utils.sheet_to_json(worksheet);
-
+        
         const tasks: any[] = [];
-        json.forEach((row) => {
-          const title = row['Tiêu đề'] || row.Title || row['Tên công việc'] || row.title;
-          if (title && typeof title === 'string' && title.trim().length > 0) {
-            const desc = row['Mô tả'] || row.Description || row.description || '';
-            const statusRaw = (row['Trạng thái'] || row.Status || row.status || 'TODO').toString().toUpperCase();
-            const priorityRaw = (row['Mức độ ưu tiên'] || row.Priority || row.priority || 'MEDIUM').toString().toUpperCase();
 
-            let status = 'TODO';
-            if (statusRaw.includes('PROGRESS') || statusRaw.includes('TIẾN HÀNH') || statusRaw.includes('ĐANG')) {
-              status = 'IN_PROGRESS';
-            } else if (statusRaw.includes('DONE') || statusRaw.includes('HOÀN THÀNH') || statusRaw.includes('XONG')) {
-              status = 'DONE';
+        workbook.SheetNames.forEach((sheetName) => {
+          const worksheet = workbook.Sheets[sheetName];
+          const json: any[] = XLSX.utils.sheet_to_json(worksheet);
+
+          json.forEach((row) => {
+            const title = row['Tiêu đề'] || row.Title || row['Tên công việc'] || row.title;
+            if (title && typeof title === 'string' && title.trim().length > 0) {
+              const desc = row['Mô tả'] || row.Description || row.description || '';
+              const statusRaw = (row['Trạng thái'] || row.Status || row.status || 'TODO').toString().toUpperCase();
+              const priorityRaw = (row['Mức độ ưu tiên'] || row.Priority || row.priority || 'MEDIUM').toString().toUpperCase();
+
+              let status = 'TODO';
+              if (statusRaw.includes('PROGRESS') || statusRaw.includes('TIẾN HÀNH') || statusRaw.includes('ĐANG')) {
+                status = 'IN_PROGRESS';
+              } else if (statusRaw.includes('DONE') || statusRaw.includes('HOÀN THÀNH') || statusRaw.includes('XONG')) {
+                status = 'DONE';
+              }
+
+              let priority = 'MEDIUM';
+              if (priorityRaw.includes('HIGH') || priorityRaw.includes('CAO')) priority = 'HIGH';
+              else if (priorityRaw.includes('URGENT') || priorityRaw.includes('KHẨN')) priority = 'URGENT';
+              else if (priorityRaw.includes('LOW') || priorityRaw.includes('THẤP')) priority = 'LOW';
+
+              tasks.push({
+                title: title.trim(),
+                description: desc ? desc.toString().trim() : '',
+                status,
+                priority,
+                projectId,
+              });
             }
-
-            let priority = 'MEDIUM';
-            if (priorityRaw.includes('HIGH') || priorityRaw.includes('CAO')) priority = 'HIGH';
-            else if (priorityRaw.includes('URGENT') || priorityRaw.includes('KHẨN')) priority = 'URGENT';
-            else if (priorityRaw.includes('LOW') || priorityRaw.includes('THẤP')) priority = 'LOW';
-
-            tasks.push({
-              title: title.trim(),
-              description: desc ? desc.toString().trim() : '',
-              status,
-              priority,
-              projectId,
-            });
-          }
+          });
         });
 
         if (tasks.length === 0) {
@@ -250,6 +257,15 @@ export default function ProjectKanbanPage() {
       }
     };
     reader.readAsArrayBuffer(file);
+  };
+
+  const handleClearExcelTaskFile = () => {
+    setExcelTaskFileName('');
+    setExcelTasks([]);
+    setExcelTaskError('');
+    if (excelTaskFileInputRef.current) {
+      excelTaskFileInputRef.current.value = '';
+    }
   };
 
   const handleImportExcelTasks = async (e: React.FormEvent) => {
@@ -2125,17 +2141,45 @@ export default function ProjectKanbanPage() {
               {excelTaskError && <div className="ui-alert-error text-xs">{excelTaskError}</div>}
 
               {/* File Upload Box */}
-              <div className="border-2 border-dashed border-border hover:border-emerald-500/50 bg-surface/50 p-6 rounded-2xl text-center transition-all">
-                <FileSpreadsheet className="h-10 w-10 text-emerald-400 mx-auto mb-2" />
-                <p className="text-sm font-bold text-heading">Chọn file Excel (.xlsx / .xls)</p>
-                <p className="text-xs text-muted mt-1">Yêu cầu có các cột: "Tiêu đề", "Mô tả", "Trạng thái", "Mức độ ưu tiên"</p>
-                <input
-                  type="file"
-                  accept=".xlsx, .xls"
-                  onChange={handleExcelTaskUpload}
-                  className="mt-4 text-xs file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-emerald-500/20 file:text-emerald-400 hover:file:bg-emerald-500/30 cursor-pointer"
-                />
-              </div>
+              {!excelTaskFileName ? (
+                <div className="border-2 border-dashed border-border hover:border-emerald-500/50 bg-surface/50 p-6 rounded-2xl text-center transition-all space-y-2">
+                  <FileSpreadsheet className="h-10 w-10 text-emerald-400 mx-auto mb-1" />
+                  <p className="text-sm font-bold text-heading">Chọn file Excel (.xlsx / .xls)</p>
+                  <p className="text-xs text-muted">Yêu cầu có các cột: "Tiêu đề", "Mô tả", "Trạng thái", "Mức độ ưu tiên"</p>
+                  <input
+                    ref={excelTaskFileInputRef}
+                    type="file"
+                    accept=".xlsx, .xls"
+                    onChange={handleExcelTaskUpload}
+                    className="mt-3 text-xs file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-emerald-500/20 file:text-emerald-400 hover:file:bg-emerald-500/30 cursor-pointer"
+                  />
+                </div>
+              ) : (
+                <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3 min-w-0 pr-2">
+                      <div className="p-2.5 rounded-xl bg-emerald-500/20 text-emerald-400 shrink-0">
+                        <FileSpreadsheet className="h-6 w-6" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-xs font-bold text-heading truncate">{excelTaskFileName}</p>
+                        <p className="text-[11px] font-semibold text-emerald-400 mt-0.5">
+                          ✓ Đã tìm thấy {excelTasks.length} công việc hợp lệ
+                        </p>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={handleClearExcelTaskFile}
+                      className="p-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-400 transition-colors shrink-0 flex items-center gap-1.5 text-xs font-semibold"
+                      title="Xóa file để chọn file khác"
+                    >
+                      <Trash className="h-4 w-4" /> Xóa
+                    </button>
+                  </div>
+                </div>
+              )}
 
               {/* Sample Template Download Button */}
               <div className="flex items-center justify-between p-3.5 rounded-xl bg-surface border border-border">

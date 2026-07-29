@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import { api } from '@/lib/api';
@@ -67,6 +67,8 @@ export default function WorkspaceDetailPage() {
   // Excel Batch Invite state
   const [inviteMode, setInviteMode] = useState<'SINGLE' | 'EXCEL'>('SINGLE');
   const [excelEmails, setExcelEmails] = useState<string[]>([]);
+  const [excelFileName, setExcelFileName] = useState<string>('');
+  const excelFileInputRef = useRef<HTMLInputElement | null>(null);
 
   const [pageError, setPageError] = useState('');
 
@@ -169,27 +171,45 @@ export default function WorkspaceDetailPage() {
   const handleExcelUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    setExcelFileName(file.name);
+
     const reader = new FileReader();
     reader.onload = (evt) => {
       try {
         const data = new Uint8Array(evt.target?.result as ArrayBuffer);
         const workbook = XLSX.read(data, { type: 'array' });
-        const sheetName = workbook.SheetNames[0];
-        const worksheet = workbook.Sheets[sheetName];
-        const json: any[] = XLSX.utils.sheet_to_json(worksheet);
 
-        const emails: string[] = [];
-        json.forEach((row) => {
-          const val = row.Email || row.email || row.Mail || row['Địa chỉ Email'] || Object.values(row).find((v: any) => typeof v === 'string' && v.includes('@'));
-          if (val && typeof val === 'string' && val.includes('@')) {
-            emails.push(val.trim());
-          }
+        const allExtractedEmails: string[] = [];
+
+        // Scan all sheets in the workbook
+        workbook.SheetNames.forEach((sheetName) => {
+          const worksheet = workbook.Sheets[sheetName];
+          // Read raw matrix rows to catch every single cell
+          const rawRows: any[] = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
+
+          rawRows.forEach((row) => {
+            if (Array.isArray(row)) {
+              row.forEach((cell) => {
+                if (cell) {
+                  const cellStr = cell.toString();
+                  const matches = cellStr.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g);
+                  if (matches) {
+                    allExtractedEmails.push(...matches.map(m => m.trim().toLowerCase()));
+                  }
+                }
+              });
+            }
+          });
         });
 
-        if (emails.length === 0) {
-          setMemberError('Không tìm thấy địa chỉ email hợp lệ trong file Excel.');
+        // Deduplicate emails
+        const uniqueEmails = Array.from(new Set(allExtractedEmails));
+
+        if (uniqueEmails.length === 0) {
+          setMemberError('Không tìm thấy địa chỉ email hợp lệ trong file Excel vừa tải lên.');
+          setExcelEmails([]);
         } else {
-          setExcelEmails(emails);
+          setExcelEmails(uniqueEmails);
           setMemberError('');
         }
       } catch (err: any) {
@@ -197,6 +217,27 @@ export default function WorkspaceDetailPage() {
       }
     };
     reader.readAsArrayBuffer(file);
+  };
+
+  const handleClearExcelFile = () => {
+    setExcelFileName('');
+    setExcelEmails([]);
+    setMemberError('');
+    if (excelFileInputRef.current) {
+      excelFileInputRef.current.value = '';
+    }
+  };
+
+  const downloadSampleEmailTemplate = () => {
+    const sampleData = [
+      { 'STT': 1, 'Họ và tên': 'Nguyễn Văn A', 'Email': 'nguyenvana@example.com', 'Ghi chú': 'Trưởng phòng Kinh doanh' },
+      { 'STT': 2, 'Họ và tên': 'Trần Thị B', 'Email': 'tranthib@example.com', 'Ghi chú': 'Lập trình viên Senior' },
+      { 'STT': 3, 'Họ và tên': 'Lê Văn C', 'Email': 'levanc@example.com', 'Ghi chú': 'Thiết kế UI/UX' },
+    ];
+    const worksheet = XLSX.utils.json_to_sheet(sampleData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'DanhSachEmail');
+    XLSX.writeFile(workbook, 'Mau_Danh_Sach_Email_Homix.xlsx');
   };
 
   const handleAddMember = async (e: React.FormEvent) => {
@@ -829,22 +870,66 @@ export default function WorkspaceDetailPage() {
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    <label className="ui-label text-xs font-semibold block">Tải lên danh sách Email từ Excel</label>
-                    <div className="border-2 border-dashed border-border hover:border-emerald-500/50 bg-surface/50 p-5 rounded-2xl text-center transition-all">
-                      <FileSpreadsheet className="h-8 w-8 text-emerald-400 mx-auto mb-2" />
-                      <p className="text-xs font-bold text-heading">Chọn file .xlsx chứa cột "Email"</p>
-                      <p className="text-[10px] text-muted mt-1">Hệ thống sẽ tự động trích xuất các địa chỉ email</p>
-                      <input
-                        type="file"
-                        accept=".xlsx, .xls"
-                        onChange={handleExcelUpload}
-                        className="mt-3 text-xs file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-emerald-500/20 file:text-emerald-400 hover:file:bg-emerald-500/30 cursor-pointer"
-                      />
+                    <div className="flex items-center justify-between">
+                      <label className="ui-label text-xs font-semibold block">Tải lên danh sách Email từ Excel</label>
+                      <button
+                        type="button"
+                        onClick={downloadSampleEmailTemplate}
+                        className="text-[11px] font-bold text-emerald-400 hover:underline flex items-center gap-1"
+                      >
+                        <Download className="h-3.5 w-3.5" /> Tải file mẫu (.xlsx)
+                      </button>
                     </div>
-                    {excelEmails.length > 0 && (
-                      <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-bold flex items-center justify-between">
-                        <span>✓ Đã trích xuất {excelEmails.length} email hợp lệ</span>
-                        <span className="text-[10px] font-normal text-muted truncate max-w-[150px]">{excelEmails.slice(0, 2).join(', ')}...</span>
+
+                    {!excelFileName ? (
+                      <div className="border-2 border-dashed border-border hover:border-emerald-500/50 bg-surface/50 p-5 rounded-2xl text-center transition-all">
+                        <FileSpreadsheet className="h-8 w-8 text-emerald-400 mx-auto mb-2" />
+                        <p className="text-xs font-bold text-heading">Chọn file .xlsx / .xls chứa danh sách Email</p>
+                        <p className="text-[10px] text-muted mt-1">Hệ thống sẽ tự động quét & trích xuất TẤT CẢ địa chỉ email</p>
+                        <input
+                          ref={excelFileInputRef}
+                          type="file"
+                          accept=".xlsx, .xls"
+                          onChange={handleExcelUpload}
+                          className="mt-3 text-xs file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-emerald-500/20 file:text-emerald-400 hover:file:bg-emerald-500/30 cursor-pointer"
+                        />
+                      </div>
+                    ) : (
+                      <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3 min-w-0 pr-2">
+                            <div className="p-2 rounded-xl bg-emerald-500/20 text-emerald-400 shrink-0">
+                              <FileSpreadsheet className="h-5 w-5" />
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-xs font-bold text-heading truncate">{excelFileName}</p>
+                              <p className="text-[11px] font-semibold text-emerald-400 mt-0.5">
+                                ✓ Đã tìm thấy {excelEmails.length} địa chỉ email hợp lệ
+                              </p>
+                            </div>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={handleClearExcelFile}
+                            className="p-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-400 transition-colors shrink-0 flex items-center gap-1 text-xs font-semibold"
+                            title="Xóa file để chọn file khác"
+                          >
+                            <Trash className="h-3.5 w-3.5" /> Xóa
+                          </button>
+                        </div>
+
+                        {excelEmails.length > 0 && (
+                          <div className="max-h-28 overflow-y-auto space-y-1 p-2 rounded-xl bg-background/50 border border-emerald-500/20 text-[11px]">
+                            <div className="flex flex-wrap gap-1">
+                              {excelEmails.map((email, idx) => (
+                                <span key={idx} className="px-2 py-0.5 rounded-md bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 font-mono text-[10px]">
+                                  {email}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
