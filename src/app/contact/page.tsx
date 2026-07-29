@@ -352,7 +352,7 @@ export default function ContactPage() {
                     />
                   </div>
 
-                  <div>
+                  <div className="w-full">
                     <label className="ui-label text-[11px] font-bold uppercase tracking-wider mb-1.5 block text-heading">
                       {t('message')} <span className="text-rose-500">*</span>
                     </label>
@@ -362,7 +362,7 @@ export default function ContactPage() {
                       value={message}
                       onChange={(e) => setMessage(e.target.value)}
                       placeholder="Nhập nội dung chi tiết yêu cầu hỗ trợ hoặc thắc mắc của bạn..."
-                      className="ui-textarea px-4 py-3 text-xs focus:ring-2 focus:ring-primary/40 resize-none leading-relaxed"
+                      className="w-full ui-textarea px-4 py-3.5 text-xs focus:ring-2 focus:ring-primary/40 resize-y min-h-[140px] leading-relaxed rounded-2xl block"
                     />
                   </div>
 

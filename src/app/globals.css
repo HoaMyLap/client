@@ -362,6 +362,34 @@ main .glass .glass:hover {
   box-shadow: 0 0 0 3px var(--primary-muted);
 }
 
+.ui-textarea {
+  width: 100%;
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  color: var(--foreground);
+  transition: var(--theme-transition);
+}
+
+.ui-textarea::placeholder {
+  color: var(--text-placeholder);
+}
+
+.ui-textarea:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-muted);
+}
+
+.ui-select {
+  width: 100%;
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  color: var(--foreground);
+  transition: var(--theme-transition);
+}
+
 .ui-label {
   display: block;
   color: var(--text-subtitle);
