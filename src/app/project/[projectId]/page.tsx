@@ -12,7 +12,8 @@ import {
   ArrowLeft, Plus, MessageSquare, Calendar, 
   Trash, Send, CheckSquare, X, Clock, AlertCircle, User, Sparkles, FileText, Search,
   Printer, TrendingUp, Activity, CheckCircle2, Users, AlertTriangle, Briefcase, Lightbulb,
-  History, ListChecks, ChevronRight, Check, Heart, Edit2, CornerDownRight, FileSpreadsheet, Upload, Download, FolderArchive, File
+  History, ListChecks, ChevronRight, Check, Heart, Edit2, CornerDownRight, FileSpreadsheet, Upload, Download, FolderArchive, File,
+  Eye, Paperclip, Image as ImageIcon
 } from 'lucide-react';
 import { Client } from '@stomp/stompjs';
 
@@ -75,26 +76,71 @@ export default function ProjectKanbanPage() {
 
   // Project Files tab state
   const [projectTab, setProjectTab] = useState<'KANBAN' | 'FILES'>('KANBAN');
-  const [projectFiles, setProjectFiles] = useState<Array<{ id: string; name: string; url: string; size: number; type: string; uploadedAt: string }>>([
-    {
-      id: '1',
-      name: 'Bản_Mô_Tả_Yêu_Cầu_Dự_Án.pdf',
-      url: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
-      size: 524288,
-      type: 'application/pdf',
-      uploadedAt: new Date().toISOString(),
-    },
-    {
-      id: '2',
-      name: 'Bảng_Phân_Bổ_Tiến_Độ.xlsx',
-      url: '#',
-      size: 1048576,
-      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      uploadedAt: new Date().toISOString(),
-    }
-  ]);
+  const [projectFiles, setProjectFiles] = useState<Array<{ id: string; name: string; url: string; size: number; type: string; uploadedAt: string }>>([]);
   const [fileUploading, setFileUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<{ current: number; total: number } | null>(null);
+  const [previewImage, setPreviewImage] = useState<{ url: string; name: string } | null>(null);
+
+  // Helper file utility functions
+  const isImageFile = (type: string, name: string) => {
+    if (type && type.startsWith('image/')) return true;
+    const ext = name ? name.toLowerCase().split('.').pop() || '' : '';
+    return ['png', 'jpg', 'jpeg', 'webp', 'gif', 'svg'].includes(ext);
+  };
+
+  const formatFileSize = (bytes: number) => {
+    if (!bytes || bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+  };
+
+  const getFileBadgeStyle = (name: string, type: string) => {
+    if (isImageFile(type, name)) {
+      return { color: 'text-violet-400', bg: 'bg-violet-500/10 border-violet-500/20', label: 'IMAGE' };
+    }
+    const ext = name ? name.toLowerCase().split('.').pop() || '' : '';
+    if (ext === 'pdf') return { color: 'text-rose-400', bg: 'bg-rose-500/10 border-rose-500/20', label: 'PDF' };
+    if (['xlsx', 'xls', 'csv'].includes(ext)) return { color: 'text-emerald-400', bg: 'bg-emerald-500/10 border-emerald-500/20', label: 'EXCEL' };
+    if (['docx', 'doc', 'txt'].includes(ext)) return { color: 'text-blue-400', bg: 'bg-blue-500/10 border-blue-500/20', label: 'DOC' };
+    if (['zip', 'rar', '7z', 'tar', 'gz'].includes(ext)) return { color: 'text-amber-400', bg: 'bg-amber-500/10 border-amber-500/20', label: 'ZIP' };
+    return { color: 'text-cyan-400', bg: 'bg-cyan-500/10 border-cyan-500/20', label: ext.toUpperCase() || 'FILE' };
+  };
+
+  // Load persisted project files on mount
+  useEffect(() => {
+    if (!projectId) return;
+    const saved = localStorage.getItem(`homix_project_files_${projectId}`);
+    if (saved) {
+      try {
+        setProjectFiles(JSON.parse(saved));
+      } catch (e) {
+        console.error("Lỗi khi đọc file đã lưu:", e);
+      }
+    } else {
+      const initialFiles = [
+        {
+          id: '1',
+          name: 'Bản_Mô_Tả_Yêu_Cầu_Dự_Án.pdf',
+          url: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
+          size: 524288,
+          type: 'application/pdf',
+          uploadedAt: new Date().toISOString(),
+        },
+        {
+          id: '2',
+          name: 'Bảng_Phân_Bổ_Tiến_Độ.xlsx',
+          url: '#',
+          size: 1048576,
+          type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          uploadedAt: new Date().toISOString(),
+        }
+      ];
+      setProjectFiles(initialFiles);
+      localStorage.setItem(`homix_project_files_${projectId}`, JSON.stringify(initialFiles));
+    }
+  }, [projectId]);
 
   const handleMultipleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -128,7 +174,13 @@ export default function ProjectKanbanPage() {
     }
 
     if (newUploadedFiles.length > 0) {
-      setProjectFiles((prev) => [...newUploadedFiles, ...prev]);
+      setProjectFiles((prev) => {
+        const updated = [...newUploadedFiles, ...prev];
+        if (projectId) {
+          localStorage.setItem(`homix_project_files_${projectId}`, JSON.stringify(updated));
+        }
+        return updated;
+      });
     }
 
     setFileUploading(false);
@@ -138,7 +190,13 @@ export default function ProjectKanbanPage() {
 
   const handleDeleteProjectFile = (fileId: string, fileName: string) => {
     if (!confirm(`Bạn có chắc muốn xóa tệp "${fileName}" khỏi dự án?`)) return;
-    setProjectFiles((prev) => prev.filter((f) => f.id !== fileId));
+    setProjectFiles((prev) => {
+      const updated = prev.filter((f) => f.id !== fileId);
+      if (projectId) {
+        localStorage.setItem(`homix_project_files_${projectId}`, JSON.stringify(updated));
+      }
+      return updated;
+    });
   };
 
   // Drag state
@@ -168,7 +226,9 @@ export default function ProjectKanbanPage() {
   const [editDueDate, setEditDueDate] = useState<string | null>(null);
 
   // Drawer Tab
-  const [drawerTab, setDrawerTab] = useState<'detail' | 'subtasks' | 'logs' | 'comments'>('detail');
+  const [drawerTab, setDrawerTab] = useState<'detail' | 'subtasks' | 'files' | 'logs' | 'comments'>('detail');
+  const [taskFiles, setTaskFiles] = useState<Array<{ id: string; name: string; url: string; size: number; type: string; uploadedAt: string }>>([]);
+  const [taskFileUploading, setTaskFileUploading] = useState(false);
   const [taskLogs, setTaskLogs] = useState<TaskLog[]>([]);
 
   // Comments Reply & Edit States
@@ -389,9 +449,67 @@ export default function ProjectKanbanPage() {
         setEditDueDate(null);
       }
       
+      // Load task files from localStorage
+      const savedTaskFiles = localStorage.getItem(`homix_task_files_${selectedTask.id}`);
+      if (savedTaskFiles) {
+        try {
+          setTaskFiles(JSON.parse(savedTaskFiles));
+        } catch (e) {
+          setTaskFiles([]);
+        }
+      } else {
+        setTaskFiles([]);
+      }
+
       loadTaskDetails(selectedTask.id);
     }
   }, [selectedTask]);
+
+  const handleUploadTaskFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0 || !selectedTask) return;
+
+    setTaskFileUploading(true);
+    const newFiles: any[] = [];
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+        const res = await api.uploadFile(formData);
+        newFiles.push({
+          id: (Date.now() + i + Math.random()).toString(),
+          name: res.name || file.name,
+          url: res.url,
+          size: res.size || file.size,
+          type: res.type || file.type,
+          uploadedAt: new Date().toISOString(),
+        });
+      } catch (err) {
+        console.error('Lỗi tải file cho task:', err);
+      }
+    }
+
+    if (newFiles.length > 0) {
+      setTaskFiles((prev) => {
+        const updated = [...newFiles, ...prev];
+        localStorage.setItem(`homix_task_files_${selectedTask.id}`, JSON.stringify(updated));
+        return updated;
+      });
+    }
+    setTaskFileUploading(false);
+    e.target.value = '';
+  };
+
+  const handleDeleteTaskFile = (fileId: string) => {
+    if (!selectedTask) return;
+    setTaskFiles((prev) => {
+      const updated = prev.filter((f) => f.id !== fileId);
+      localStorage.setItem(`homix_task_files_${selectedTask.id}`, JSON.stringify(updated));
+      return updated;
+    });
+  };
 
   // Load workspace members when workspaceId is fetched
   useEffect(() => {
@@ -1085,42 +1203,102 @@ export default function ProjectKanbanPage() {
                 <div className="flex items-center justify-between mb-3 text-xs font-bold text-heading">
                   <span>Danh sách tệp tin đã lưu ({projectFiles.length} tệp):</span>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {projectFiles.map((file) => (
-                    <div key={file.id} className="bg-surface/60 border border-border p-4 rounded-2xl flex items-center justify-between gap-3 shadow-sm hover:border-primary/40 transition-all group">
-                      <div className="flex items-center gap-3 min-w-0 flex-1">
-                        <div className="p-2.5 rounded-xl bg-primary/10 text-primary shrink-0">
-                          <File className="h-5 w-5" />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <h4 className="text-xs font-bold text-heading truncate" title={file.name}>{file.name}</h4>
-                          <p className="text-[10px] text-muted mt-0.5">
-                            {(file.size / 1024).toFixed(1)} KB · {new Date(file.uploadedAt).toLocaleDateString('vi-VN')}
-                          </p>
-                        </div>
-                      </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                  {projectFiles.map((file) => {
+                    const isImg = isImageFile(file.type, file.name);
+                    const badgeStyle = getFileBadgeStyle(file.name, file.type);
 
-                      <div className="flex items-center gap-1 shrink-0">
-                        <a
-                          href={file.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="p-2 rounded-xl bg-surface border border-border text-secondary hover:text-primary transition-colors"
-                          title="Tải về / Xem"
-                        >
-                          <Download className="h-4 w-4" />
-                        </a>
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteProjectFile(file.id, file.name)}
-                          className="p-2 rounded-xl bg-surface border border-border text-muted hover:text-rose-400 hover:border-rose-500/30 transition-colors"
-                          title="Xóa tệp tin"
-                        >
-                          <Trash className="h-4 w-4" />
-                        </button>
+                    return (
+                      <div
+                        key={file.id}
+                        className="bg-surface/80 border border-border hover:border-primary/50 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all group flex flex-col justify-between"
+                      >
+                        {/* Image Preview Container or File Header */}
+                        {isImg ? (
+                          <div
+                            className="relative h-44 w-full bg-black/40 overflow-hidden cursor-pointer flex items-center justify-center border-b border-border/50 group/img"
+                            onClick={() => setPreviewImage({ url: file.url, name: file.name })}
+                          >
+                            <img
+                              src={file.url}
+                              alt={file.name}
+                              className="w-full h-full object-cover transition-transform duration-300 group-hover/img:scale-105"
+                              onError={(e) => {
+                                (e.target as HTMLElement).style.display = 'none';
+                              }}
+                            />
+                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                              <span className="px-3 py-1.5 rounded-xl bg-black/70 text-white text-xs font-bold flex items-center gap-1.5 backdrop-blur-sm border border-white/20">
+                                <Eye className="h-4 w-4" /> Xem ảnh phóng to
+                              </span>
+                            </div>
+                            <span className="absolute top-2.5 right-2.5 px-2 py-0.5 rounded-md bg-violet-600/90 text-white text-[10px] font-bold shadow-md">
+                              IMAGE
+                            </span>
+                          </div>
+                        ) : (
+                          <div className="p-4 border-b border-border/40 bg-card/40 flex items-center gap-3">
+                            <div className={`p-3 rounded-2xl border ${badgeStyle.bg} ${badgeStyle.color} shrink-0`}>
+                              <FileText className="h-6 w-6" />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <span className={`inline-block text-[10px] font-bold px-2 py-0.5 rounded border ${badgeStyle.bg} ${badgeStyle.color} mb-1`}>
+                                {badgeStyle.label}
+                              </span>
+                              <h4 className="text-xs font-bold text-heading truncate" title={file.name}>
+                                {file.name}
+                              </h4>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* File Details & Actions Footer */}
+                        <div className="p-4 flex items-center justify-between gap-2">
+                          <div className="min-w-0 flex-1">
+                            {isImg && (
+                              <h4 className="text-xs font-bold text-heading truncate mb-0.5" title={file.name}>
+                                {file.name}
+                              </h4>
+                            )}
+                            <p className="text-[10px] text-muted">
+                              {formatFileSize(file.size)} · {new Date(file.uploadedAt).toLocaleDateString('vi-VN')}
+                            </p>
+                          </div>
+
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            {isImg && (
+                              <button
+                                type="button"
+                                onClick={() => setPreviewImage({ url: file.url, name: file.name })}
+                                className="p-2 rounded-xl bg-surface border border-border text-secondary hover:text-primary transition-colors"
+                                title="Xem ảnh phóng to"
+                              >
+                                <Eye className="h-4 w-4" />
+                              </button>
+                            )}
+                            <a
+                              href={file.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              download
+                              className="p-2 rounded-xl bg-surface border border-border text-secondary hover:text-primary transition-colors"
+                              title="Tải về tệp tin"
+                            >
+                              <Download className="h-4 w-4" />
+                            </a>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteProjectFile(file.id, file.name)}
+                              className="p-2 rounded-xl bg-surface border border-border text-muted hover:text-rose-400 hover:border-rose-500/30 transition-colors"
+                              title="Xóa tệp tin"
+                            >
+                              <Trash className="h-4 w-4" />
+                            </button>
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -1281,16 +1459,17 @@ export default function ProjectKanbanPage() {
           </div>
 
           {/* Tab Navigation */}
-          <div className="flex border-b border-border shrink-0 px-2">
+          <div className="flex border-b border-border shrink-0 px-2 overflow-x-auto">
             {([
               { id: 'detail', label: 'Chi tiết', icon: <FileText className="h-3.5 w-3.5" /> },
               { id: 'subtasks', label: `Subtasks (${subtasks.length})`, icon: <ListChecks className="h-3.5 w-3.5" /> },
+              { id: 'files', label: `Tệp (${taskFiles.length})`, icon: <Paperclip className="h-3.5 w-3.5" /> },
               { id: 'logs', label: 'Lịch sử', icon: <History className="h-3.5 w-3.5" /> },
               { id: 'comments', label: `Thảo luận (${comments.length})`, icon: <MessageSquare className="h-3.5 w-3.5" /> },
             ] as const).map((tab) => (
               <button
                 key={tab.id}
-                onClick={() => setDrawerTab(tab.id)}
+                onClick={() => setDrawerTab(tab.id as any)}
                 className={`flex items-center gap-1.5 px-3 py-3 text-[11px] font-semibold border-b-2 transition-colors whitespace-nowrap ${
                   drawerTab === tab.id
                     ? 'border-primary text-primary'
@@ -1485,6 +1664,86 @@ export default function ProjectKanbanPage() {
                   </button>
                 </form>
               </>
+            )}
+
+            {/* ===== TAB: Tệp đính kèm ===== */}
+            {drawerTab === 'files' && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-bold text-heading">Tệp đính kèm công việc ({taskFiles.length})</h4>
+                  <label className="ui-btn-primary px-3 py-1.5 text-[11px] font-bold flex items-center gap-1.5 cursor-pointer shrink-0">
+                    <Upload className="h-3.5 w-3.5" />
+                    {taskFileUploading ? 'Đang tải...' : '+ Tải tệp lên'}
+                    <input type="file" multiple onChange={handleUploadTaskFile} disabled={taskFileUploading} className="hidden" />
+                  </label>
+                </div>
+
+                {taskFiles.length === 0 ? (
+                  <div className="text-center py-10 border border-dashed border-border rounded-xl text-secondary text-xs">
+                    <Paperclip className="h-8 w-8 mx-auto mb-2 text-muted opacity-60" />
+                    Chưa có tệp đính kèm nào cho công việc này.
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {taskFiles.map((file) => {
+                      const isImg = isImageFile(file.type, file.name);
+                      return (
+                        <div key={file.id} className="bg-surface border border-border rounded-xl p-3 flex items-center justify-between gap-3 shadow-sm hover:border-primary/40 transition-all">
+                          <div className="flex items-center gap-3 min-w-0 flex-1">
+                            {isImg ? (
+                              <div
+                                className="w-12 h-12 rounded-lg bg-black/40 border border-border overflow-hidden shrink-0 cursor-pointer hover:opacity-80 transition-opacity"
+                                onClick={() => setPreviewImage({ url: file.url, name: file.name })}
+                              >
+                                <img src={file.url} alt={file.name} className="w-full h-full object-cover" />
+                              </div>
+                            ) : (
+                              <div className="p-2.5 rounded-lg bg-primary/10 text-primary shrink-0">
+                                <FileText className="h-5 w-5" />
+                              </div>
+                            )}
+                            <div className="min-w-0 flex-1">
+                              <h5 className="text-xs font-bold text-heading truncate" title={file.name}>{file.name}</h5>
+                              <p className="text-[10px] text-muted mt-0.5">{formatFileSize(file.size)} · {new Date(file.uploadedAt).toLocaleDateString('vi-VN')}</p>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-1 shrink-0">
+                            {isImg && (
+                              <button
+                                type="button"
+                                onClick={() => setPreviewImage({ url: file.url, name: file.name })}
+                                className="p-1.5 rounded-lg bg-card border border-border text-secondary hover:text-primary transition-colors"
+                                title="Xem ảnh"
+                              >
+                                <Eye className="h-3.5 w-3.5" />
+                              </button>
+                            )}
+                            <a
+                              href={file.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              download
+                              className="p-1.5 rounded-lg bg-card border border-border text-secondary hover:text-primary transition-colors"
+                              title="Tải về"
+                            >
+                              <Download className="h-3.5 w-3.5" />
+                            </a>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteTaskFile(file.id)}
+                              className="p-1.5 rounded-lg bg-card border border-border text-muted hover:text-rose-400 transition-colors"
+                              title="Xóa tệp"
+                            >
+                              <Trash className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             )}
 
             {/* ===== TAB: Lịch sử hoạt động ===== */}
@@ -2293,7 +2552,47 @@ export default function ProjectKanbanPage() {
                   )}
                 </button>
               </div>
-            </form>
+      {/* Image Lightbox Modal */}
+      {previewImage && (
+        <div
+          className="fixed inset-0 bg-black/80 backdrop-blur-md z-[100] flex items-center justify-center p-4 animate-fadeIn"
+          onClick={() => setPreviewImage(null)}
+        >
+          <div
+            className="relative max-w-4xl w-full max-h-[90vh] flex flex-col items-center justify-center p-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="w-full flex items-center justify-between mb-3 text-white">
+              <span className="text-sm font-bold truncate max-w-md">{previewImage.name}</span>
+              <div className="flex items-center gap-3">
+                <a
+                  href={previewImage.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  download
+                  className="px-3.5 py-2 rounded-xl bg-primary text-white text-xs font-bold flex items-center gap-1.5 shadow-lg hover:bg-primary/90 transition-all"
+                >
+                  <Download className="h-4 w-4" /> Tải về tệp tin
+                </a>
+                <button
+                  type="button"
+                  onClick={() => setPreviewImage(null)}
+                  className="p-2 rounded-xl bg-surface border border-border text-secondary hover:text-white transition-colors"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Image Container */}
+            <div className="rounded-2xl overflow-hidden border border-border/40 shadow-2xl bg-black/40 flex items-center justify-center max-h-[80vh] w-full p-2">
+              <img
+                src={previewImage.url}
+                alt={previewImage.name}
+                className="max-h-[75vh] max-w-full object-contain rounded-xl"
+              />
+            </div>
           </div>
         </div>
       )}

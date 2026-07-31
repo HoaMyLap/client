@@ -65,13 +65,13 @@ export default function ProfilePage() {
       const res = await api.uploadImage(formData);
       if (res && res.url) {
         setAvatarUrl(res.url);
-        setMessage('Đã tải ảnh lên Cloudinary thành công! Nhớ bấm "Lưu thay đổi".');
+        setMessage('Đã tải ảnh lên hệ thống MinIO thành công! Nhớ bấm "Lưu thay đổi".');
       } else {
         throw new Error('Tải ảnh thất bại');
       }
     } catch (err: any) {
       console.error(err);
-      setError(err.message || 'Lỗi khi tải ảnh lên Cloudinary.');
+      setError(err.message || 'Lỗi khi tải ảnh lên hệ thống lưu trữ.');
     } finally {
       setUploading(false);
     }
