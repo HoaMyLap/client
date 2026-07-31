@@ -2524,6 +2524,11 @@ export default function ProjectKanbanPage() {
                   )}
                 </button>
               </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* Image Lightbox Modal */}
       {previewImage && (
         <div
