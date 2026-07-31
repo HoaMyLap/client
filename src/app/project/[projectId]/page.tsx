@@ -74,6 +74,18 @@ export default function ProjectKanbanPage() {
   // WebSocket Client Ref
   const stompClientRef = useRef<Client | null>(null);
 
+  // One-time cleanup: remove ALL stale localStorage file caches from old code version
+  useEffect(() => {
+    const keysToDelete: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && (key.startsWith('homix_project_files_') || key.startsWith('homix_task_files_'))) {
+        keysToDelete.push(key);
+      }
+    }
+    keysToDelete.forEach((key) => localStorage.removeItem(key));
+  }, []); // runs once on component mount
+
   // Project Files tab state
   const [projectTab, setProjectTab] = useState<'KANBAN' | 'FILES'>('KANBAN');
   const [projectFiles, setProjectFiles] = useState<Array<{ id: string; name: string; url: string; size: number; type: string; uploadedAt: string }>>([]);
