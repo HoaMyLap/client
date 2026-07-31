@@ -67,3 +67,33 @@ export function createNotificationStompClient(userId: string, onNotificationRece
   
   return client;
 }
+
+export function createWorkspaceStompClient(workspaceId: string, onMessageReceived: (message: any) => void) {
+  const socketUrl = 'http://localhost:8000/ws';
+  
+  const client = new Client({
+    webSocketFactory: () => new SockJS(socketUrl),
+    debug: (str) => {
+      console.log('STOMP WS DEBUG:', str);
+    },
+    reconnectDelay: 5000,
+  });
+
+  client.onConnect = (frame) => {
+    console.log('STOMP Workspace Connected:', frame);
+    client.subscribe(`/topic/workspaces/${workspaceId}`, (message) => {
+      if (message.body) {
+        try {
+          const parsed = JSON.parse(message.body);
+          onMessageReceived(parsed);
+        } catch (e) {
+          console.error('Failed to parse workspace socket message:', e);
+        }
+      }
+    });
+  };
+
+  client.activate();
+  
+  return client;
+}

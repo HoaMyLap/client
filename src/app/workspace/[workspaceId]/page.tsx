@@ -6,6 +6,8 @@ import Link from 'next/link';
 import { api } from '@/lib/api';
 import Sidebar from '@/components/Sidebar';
 import { useLanguage } from '@/lib/i18n';
+import { createWorkspaceStompClient } from '@/lib/socket';
+import { Client } from '@stomp/stompjs';
 import * as XLSX from 'xlsx';
 import { 
   ArrowLeft, Plus, Folder, Users, Trash, PlusCircle, 
@@ -73,6 +75,33 @@ export default function WorkspaceDetailPage() {
   const excelFileInputRef = useRef<HTMLInputElement | null>(null);
 
   const [pageError, setPageError] = useState('');
+  const stompClientRef = useRef<Client | null>(null);
+
+  const handleSocketMessage = (msg: any) => {
+    const { action, payload } = msg;
+    if (action === 'ADD_MEMBER') {
+      setMembers((prev) => {
+        if (prev.some((m) => m.userId === payload.userId)) return prev;
+        return [...prev, payload];
+      });
+    } else if (action === 'REMOVE_MEMBER') {
+      setMembers((prev) => prev.filter((m) => m.userId !== payload.userId));
+    } else if (action === 'UPDATE_MEMBER') {
+      setMembers((prev) =>
+        prev.map((m) => (m.userId === payload.userId ? { ...m, role: payload.role } : m))
+      );
+    }
+  };
+
+  useEffect(() => {
+    if (workspaceId) {
+      const client = createWorkspaceStompClient(workspaceId, handleSocketMessage);
+      stompClientRef.current = client;
+      return () => {
+        if (client) client.deactivate();
+      };
+    }
+  }, [workspaceId]);
 
   useEffect(() => {
     const token = localStorage.getItem('token');

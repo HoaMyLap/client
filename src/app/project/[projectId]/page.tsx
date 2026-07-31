@@ -72,6 +72,7 @@ export default function ProjectKanbanPage() {
   const [currentUserId, setCurrentUserId] = useState('');
   const [workspaceId, setWorkspaceId] = useState('');
   const [members, setMembers] = useState<Member[]>([]);
+  const [project, setProject] = useState<any>(null);
 
   // WebSocket Client Ref
   const stompClientRef = useRef<Client | null>(null);
@@ -485,20 +486,23 @@ export default function ProjectKanbanPage() {
     }
   };
 
-  // Load workspace members when workspaceId is fetched
+  // Load project members when projectId is loaded
   useEffect(() => {
-    if (workspaceId) {
-      api.workspaces.getMembers(workspaceId).then((data) => {
+    if (projectId) {
+      api.projects.getMembers(projectId).then((data) => {
         setMembers(data || []);
       }).catch(console.error);
     }
-  }, [workspaceId]);
+  }, [projectId]);
 
   const requestProjectDetails = async () => {
     try {
       const proj = await api.projects.get(projectId);
-      if (proj && proj.workspaceId) {
-        setWorkspaceId(proj.workspaceId);
+      if (proj) {
+        setProject(proj);
+        if (proj.workspaceId) {
+          setWorkspaceId(proj.workspaceId);
+        }
       }
     } catch (err) {
       console.error("Failed to load project details:", err);
@@ -549,6 +553,23 @@ export default function ProjectKanbanPage() {
 
         case 'DELETE':
           return prevTasks.filter((t) => t.id !== taskId);
+
+        case 'ADD_MEMBER':
+          setMembers((prev) => {
+            if (prev.some((m) => m.userId === payload.userId)) return prev;
+            return [...prev, payload];
+          });
+          return prevTasks;
+
+        case 'REMOVE_MEMBER':
+          setMembers((prev) => prev.filter((m) => m.userId !== payload.userId));
+          return prevTasks;
+
+        case 'UPDATE_MEMBER':
+          setMembers((prev) =>
+            prev.map((m) => (m.userId === payload.userId ? { ...m, role: payload.role } : m))
+          );
+          return prevTasks;
 
         default:
           return prevTasks;
@@ -1043,7 +1064,7 @@ export default function ProjectKanbanPage() {
         <div className="max-w-7xl w-full mx-auto px-6 mt-6 flex flex-col md:flex-row md:items-center justify-between no-print gap-4">
           <button onClick={() => router.back()} className="flex items-center gap-2 text-secondary hover:text-foreground transition-colors text-xs font-semibold shrink-0">
             <ArrowLeft className="h-4.5 w-4.5" />
-            {t('backToProject')}
+            {t('backToWorkspace')}
           </button>
 
           {/* AI Smart Search Bar */}
@@ -1098,6 +1119,47 @@ export default function ProjectKanbanPage() {
             >
               {t('requestLeaveProjBtn')}
             </button>
+          </div>
+        </div>
+
+        {/* Project Title, Description & Members Avatar Group */}
+        <div className="max-w-7xl w-full mx-auto px-6 mt-4 mb-2 flex flex-col sm:flex-row sm:items-center justify-between gap-4 no-print">
+          <div>
+            <h1 className="text-xl md:text-2xl font-black font-display text-heading tracking-tight flex items-center gap-2">
+              <FolderArchive className="h-6 w-6 text-primary shrink-0" />
+              {project ? project.name : '...'}
+            </h1>
+            <p className="text-secondary text-xs mt-0.5 max-w-xl">
+              {project ? project.description : '...'}
+            </p>
+          </div>
+
+          {/* Project Members List / Avatar Group */}
+          <div className="flex items-center gap-2.5 bg-surface/50 border border-border px-3.5 py-1.5 rounded-2xl shadow-sm max-w-xs ring-1 ring-border shrink-0">
+            <div className="flex -space-x-2.5 overflow-hidden">
+              {members.slice(0, 4).map((m, idx) => (
+                <div
+                  key={m.userId || idx}
+                  className="inline-block h-7 w-7 rounded-full bg-primary/10 border-2 border-card flex items-center justify-center font-bold text-[10px] text-primary shrink-0 ring-1 ring-border"
+                  title={`${m.fullname} (${m.role})`}
+                >
+                  {m.fullname ? m.fullname.charAt(0).toUpperCase() : 'U'}
+                </div>
+              ))}
+              {members.length > 4 && (
+                <div className="flex items-center justify-center h-7 w-7 rounded-full bg-zinc-800 border-2 border-card text-[9px] font-black text-zinc-300 ring-1 ring-border shrink-0">
+                  +{members.length - 4}
+                </div>
+              )}
+            </div>
+            <div className="text-left">
+              <div className="text-[10px] font-bold text-zinc-300">
+                {language === 'vi' ? 'Thành viên dự án' : 'Project Members'}
+              </div>
+              <div className="text-[9px] text-muted">
+                {members.length} {language === 'vi' ? 'nhân sự' : 'members'}
+              </div>
+            </div>
           </div>
         </div>
 

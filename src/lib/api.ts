@@ -75,6 +75,7 @@ export const api = {
       request(`/projects/${projectId}/files`, { method: 'POST', body: JSON.stringify(data) }),
     deleteFile: (projectId: string, fileId: string) =>
       request(`/projects/${projectId}/files/${fileId}`, { method: 'DELETE' }),
+    getMembers: (projectId: string) => request(`/projects/${projectId}/members`),
   },
   tasks: {
     list: (projectId: string) => request(`/tasks/project/${projectId}`),
