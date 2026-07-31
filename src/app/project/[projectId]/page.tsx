@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { api } from '@/lib/api';
 import { createStompClient } from '@/lib/socket';
 import Sidebar from '@/components/Sidebar';
+import { useLanguage } from '@/lib/i18n';
 import { jsonrepair } from 'jsonrepair';
 import * as XLSX from 'xlsx';
 import { 
@@ -64,6 +65,7 @@ interface TaskLog {
 export default function ProjectKanbanPage() {
   const router = useRouter();
   const { projectId } = useParams() as { projectId: string };
+  const { t, language } = useLanguage();
   
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
@@ -1026,9 +1028,9 @@ export default function ProjectKanbanPage() {
   };
 
   const columns = [
-    { id: 'TODO', title: 'Cần làm (Todo)', color: 'border-violet-500/40 text-violet-400' },
-    { id: 'IN_PROGRESS', title: 'Đang làm (In Progress)', color: 'border-cyan-500/40 text-cyan-400' },
-    { id: 'DONE', title: 'Đã xong (Done)', color: 'border-emerald-500/40 text-emerald-400' },
+    { id: 'TODO', title: language === 'vi' ? 'Cần làm (Todo)' : 'To Do', color: 'border-violet-500/40 text-violet-400' },
+    { id: 'IN_PROGRESS', title: language === 'vi' ? 'Đang làm (In Progress)' : 'In Progress', color: 'border-cyan-500/40 text-cyan-400' },
+    { id: 'DONE', title: language === 'vi' ? 'Đã xong (Done)' : 'Done', color: 'border-emerald-500/40 text-emerald-400' },
   ];
 
   return (
@@ -1041,7 +1043,7 @@ export default function ProjectKanbanPage() {
         <div className="max-w-7xl w-full mx-auto px-6 mt-6 flex flex-col md:flex-row md:items-center justify-between no-print gap-4">
           <button onClick={() => router.back()} className="flex items-center gap-2 text-secondary hover:text-foreground transition-colors text-xs font-semibold shrink-0">
             <ArrowLeft className="h-4.5 w-4.5" />
-            QUAY LẠI DỰ ÁN
+            {t('backToProject')}
           </button>
 
           {/* AI Smart Search Bar */}
@@ -1053,7 +1055,7 @@ export default function ProjectKanbanPage() {
                 value={aiSearchQuery}
                 onChange={(e) => setAiSearchQuery(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleAiSmartSearch()}
-                placeholder="✨ AI Smart Search (VD: task gấp cần làm ngay, việc thuộc thiết kế, công việc chưa phân công...)"
+                placeholder={t('aiSearchPlaceholderFull')}
                 className="bg-transparent border-none text-xs text-foreground placeholder:text-muted focus:outline-none flex-1 font-sans"
               />
               <button
@@ -1080,21 +1082,21 @@ export default function ProjectKanbanPage() {
               title="Nhập hàng loạt công việc từ file Excel (.xlsx)"
             >
               <FileSpreadsheet className="h-4 w-4 text-emerald-400" />
-              Thêm từ Excel
+              {t('addBatchExcel')}
             </button>
             <button
               onClick={handleFetchAiSummary}
               className="flex items-center gap-2 bg-primary-muted hover:bg-primary/25 border border-primary/30 px-4 py-2 rounded-xl text-xs font-semibold text-primary transition-all active:scale-[0.98]"
             >
               <FileText className="h-4 w-4 text-primary animate-pulse" />
-              Báo cáo tiến độ AI 📊
+              {t('aiReport')}
             </button>
             <button
               onClick={handleRequestLeaveProject}
               className="flex items-center gap-1.5 bg-rose-50 dark:bg-rose-500/10 hover:bg-rose-100 dark:hover:bg-rose-500/20 border border-rose-200 dark:border-rose-500/30 px-3.5 py-2 rounded-xl text-xs font-bold text-rose-700 dark:text-rose-400 transition-all active:scale-[0.98] shadow-sm"
               title="Gửi yêu cầu rời khỏi dự án này tới Admin"
             >
-              Yêu cầu rời dự án
+              {t('requestLeaveProjBtn')}
             </button>
           </div>
         </div>
@@ -1110,7 +1112,7 @@ export default function ProjectKanbanPage() {
                   : 'bg-surface border border-border text-secondary hover:text-foreground'
               }`}
             >
-              <CheckSquare className="h-4 w-4" /> Bảng Kanban
+              <CheckSquare className="h-4 w-4" /> {t('kanbanBoardTab')}
             </button>
 
             <button
@@ -1121,7 +1123,7 @@ export default function ProjectKanbanPage() {
                   : 'bg-surface border border-border text-secondary hover:text-foreground'
               }`}
             >
-              <FolderArchive className="h-4 w-4" /> Tài liệu & Tệp tin ({projectFiles.length})
+              <FolderArchive className="h-4 w-4" /> {t('filesAndDocsTab')} ({projectFiles.length})
             </button>
           </div>
         </div>
@@ -1134,10 +1136,10 @@ export default function ProjectKanbanPage() {
               <div>
                 <h3 className="text-xl font-bold font-display text-heading flex items-center gap-2">
                   <FolderArchive className="h-5 w-5 text-primary" />
-                  Kho Lưu Trữ Tài Liệu Dự Án
+                  {t('projectDocArchiveTitle')}
                 </h3>
                 <p className="text-xs text-secondary mt-1">
-                  Quản lý, tải lên nhiều tệp tin cùng lúc (PDF, Word, Excel, Hình ảnh, Zip) và bổ sung tệp bất kỳ lúc nào
+                  {t('projectDocArchiveSubtitle')}
                 </p>
               </div>
 
@@ -1146,10 +1148,10 @@ export default function ProjectKanbanPage() {
                 {fileUploading ? (
                   <>
                     <div className="animate-spin rounded-full h-3.5 w-3.5 border-2 border-white/20 border-t-white" />
-                    {uploadProgress ? `Đang tải: ${uploadProgress.current}/${uploadProgress.total}` : 'Đang tải lên...'}
+                    {uploadProgress ? `Uploading: ${uploadProgress.current}/${uploadProgress.total}` : 'Uploading...'}
                   </>
                 ) : (
-                  '+ Tải nhiều tệp tin mới lên'
+                  t('uploadMultipleFilesBtn')
                 )}
                 <input type="file" multiple onChange={handleMultipleFileUpload} disabled={fileUploading} className="hidden" />
               </label>
@@ -1158,8 +1160,8 @@ export default function ProjectKanbanPage() {
             {/* Quick Upload Drop Area */}
             <label className="block border-2 border-dashed border-border hover:border-primary/50 bg-surface/30 p-6 rounded-2xl text-center cursor-pointer transition-all">
               <Upload className="h-8 w-8 text-primary mx-auto mb-2 opacity-80" />
-              <p className="text-xs font-bold text-heading">Bấm hoặc kéo thả nhiều tệp tin vào đây để thêm vào dự án</p>
-              <p className="text-[10px] text-muted mt-1">Hỗ trợ chọn nhiều file cùng lúc (.pdf, .docx, .xlsx, .png, .jpg, .zip)</p>
+              <p className="text-xs font-bold text-heading">{t('dragDropMultipleFiles')}</p>
+              <p className="text-[10px] text-muted mt-1">{t('supportedFileTypes')}</p>
               <input type="file" multiple onChange={handleMultipleFileUpload} disabled={fileUploading} className="hidden" />
             </label>
 
@@ -1167,13 +1169,13 @@ export default function ProjectKanbanPage() {
             {projectFiles.length === 0 ? (
               <div className="p-12 text-center border border-border rounded-2xl">
                 <File className="h-10 w-10 text-muted mx-auto mb-3" />
-                <h4 className="text-sm font-bold text-heading">Chưa có tệp tin nào trong dự án</h4>
-                <p className="text-xs text-secondary mt-1 mb-4">Hãy tải lên các tệp tin đầu tiên để chia sẻ với mọi người!</p>
+                <h4 className="text-sm font-bold text-heading">{t('noFilesUploadedYet')}</h4>
+                <p className="text-xs text-secondary mt-1 mb-4">{t('uploadFirstFilesPrompt')}</p>
               </div>
             ) : (
               <div>
                 <div className="flex items-center justify-between mb-3 text-xs font-bold text-heading">
-                  <span>Danh sách tệp tin đã lưu ({projectFiles.length} tệp):</span>
+                  <span>{t('savedFilesListTitle')} ({projectFiles.length}):</span>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                   {projectFiles.map((file) => {

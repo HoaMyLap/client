@@ -371,7 +371,7 @@ export default function WorkspaceDetailPage() {
         <div className="max-w-6xl w-full mx-auto px-6 mt-6">
           <Link href="/" className="flex items-center gap-2 text-secondary hover:text-foreground transition-colors text-xs font-semibold">
             <ArrowLeft className="h-4.5 w-4.5" />
-            QUAY LẠI DANH SÁCH WORKSPACE
+            {t('backToWorkspaceList')}
           </Link>
         </div>
 
@@ -385,14 +385,14 @@ export default function WorkspaceDetailPage() {
                     Homix Workspace
                   </span>
                   <span className="text-[10px] font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-0.5 rounded-full flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" /> Hoạt động
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" /> {t('activeStatus')}
                   </span>
                 </div>
                 <h1 className="text-2xl md:text-3xl font-black font-display text-heading tracking-tight">
-                  Không Gian Làm Việc
+                  {t('workspaceDetailsTitle')}
                 </h1>
                 <p className="text-secondary text-xs md:text-sm mt-1 max-w-xl leading-relaxed">
-                  Theo dõi tiến độ, quản lý dự án và phân công công việc cộng tác thời gian thực
+                  {t('workspaceDetailsDesc')}
                 </p>
               </div>
 
@@ -403,7 +403,7 @@ export default function WorkspaceDetailPage() {
                   className="ui-btn-primary px-4 py-2.5 text-xs font-bold flex items-center gap-2 shadow-md hover:scale-[1.02] transition-transform"
                 >
                   <Plus className="h-4 w-4" />
-                  Tạo Dự án Mới
+                  {t('createProject')}
                 </button>
                 {isAdmin && (
                   <button
@@ -411,7 +411,7 @@ export default function WorkspaceDetailPage() {
                     className="ui-btn-secondary px-4 py-2.5 text-xs font-bold flex items-center gap-2 border-primary/30 text-primary hover:bg-primary/10"
                   >
                     <Users className="h-4 w-4" />
-                    Mời thành viên
+                    {t('addMember')}
                   </button>
                 )}
               </div>
@@ -421,44 +421,44 @@ export default function WorkspaceDetailPage() {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-8 pt-6 border-t border-border-subtle">
               <div className="bg-surface/50 border border-border p-4 rounded-xl">
                 <div className="flex items-center justify-between text-muted mb-1">
-                  <span className="text-[10px] font-bold uppercase tracking-wider">Tổng số Dự án</span>
+                  <span className="text-[10px] font-bold uppercase tracking-wider">{t('totalProjectsCount')}</span>
                   <Layers className="h-4 w-4 text-primary" />
                 </div>
                 <div className="text-xl font-extrabold text-heading">{projects.length}</div>
                 <div className="text-[10px] text-secondary mt-1">
-                  {projects.filter(p => p.status === 'COMPLETED').length} đã hoàn thành
+                  {projects.filter(p => p.status === 'COMPLETED').length} {t('completedCount')}
                 </div>
               </div>
 
               <div className="bg-surface/50 border border-border p-4 rounded-xl">
                 <div className="flex items-center justify-between text-muted mb-1">
-                  <span className="text-[10px] font-bold uppercase tracking-wider">Thành viên</span>
+                  <span className="text-[10px] font-bold uppercase tracking-wider">{t('membersCount')}</span>
                   <Users className="h-4 w-4 text-blue-400" />
                 </div>
                 <div className="text-xl font-extrabold text-heading">{members.length}</div>
                 <div className="text-[10px] text-secondary mt-1">
-                  {members.filter(m => m.role === 'ADMIN').length} Admin quản trị
+                  {members.filter(m => m.role === 'ADMIN').length} {t('adminCount')}
                 </div>
               </div>
 
               <div className="bg-surface/50 border border-border p-4 rounded-xl">
                 <div className="flex items-center justify-between text-muted mb-1">
-                  <span className="text-[10px] font-bold uppercase tracking-wider">Mức độ Hoạt động</span>
+                  <span className="text-[10px] font-bold uppercase tracking-wider">{t('activityLevel')}</span>
                   <Activity className="h-4 w-4 text-emerald-400" />
                 </div>
-                <div className="text-xl font-extrabold text-emerald-400">Ổn định</div>
-                <div className="text-[9px] text-secondary mt-1">Đã đồng bộ WebSocket</div>
+                <div className="text-xl font-extrabold text-emerald-400">{t('stableStatus')}</div>
+                <div className="text-[9px] text-secondary mt-1">{t('syncedWebSocket')}</div>
               </div>
 
               <div className="bg-surface/50 border border-border p-4 rounded-xl">
                 <div className="flex items-center justify-between text-muted mb-1">
-                  <span className="text-[10px] font-bold uppercase tracking-wider">Quyền hạn của bạn</span>
+                  <span className="text-[10px] font-bold uppercase tracking-wider">{t('yourRole')}</span>
                   <Shield className="h-4 w-4 text-amber-400" />
                 </div>
                 <div className="text-xl font-extrabold text-heading">
                   {isAdmin ? 'ADMIN' : (currentUserMember?.role || 'MEMBER')}
                 </div>
-                <div className="text-[10px] text-secondary mt-1">Quyền hạn hệ thống</div>
+                <div className="text-[10px] text-secondary mt-1">{t('systemPermission')}</div>
               </div>
             </div>
           </div>
@@ -471,28 +471,28 @@ export default function WorkspaceDetailPage() {
               <div>
                 <h2 className="text-xl font-bold tracking-tight font-display text-heading flex items-center gap-2">
                   <Folder className="h-5 w-5 text-primary" />
-                  Danh sách Dự án ({projects.length})
+                  {t('projectsListTitle')} ({projects.length})
                 </h2>
                 <p className="text-secondary text-xs mt-0.5">
-                  Lựa chọn dự án để theo dõi bảng Kanban và báo cáo tiến độ AI
+                  {t('selectProjectToTrack')}
                 </p>
               </div>
 
               <button onClick={() => setShowProjModal(true)} className="ui-btn-ghost text-xs font-semibold text-primary flex items-center gap-1 hover:underline">
                 <Plus className="h-3.5 w-3.5" />
-                Tạo mới
+                {t('create')}
               </button>
             </div>
 
             {projects.length === 0 ? (
               <div className="glass rounded-2xl p-12 text-center border border-border">
                 <Folder className="h-12 w-12 text-muted mx-auto mb-4" />
-                <h3 className="text-lg font-semibold mb-2 text-heading">Chưa có dự án nào</h3>
+                <h3 className="text-lg font-semibold mb-2 text-heading">{t('noProjectYetTitle')}</h3>
                 <p className="text-secondary text-sm mb-6">
-                  Workspace này chưa khởi tạo dự án. Hãy bắt đầu ngay bây giờ!
+                  {t('noProjectYetDesc')}
                 </p>
                 <button onClick={() => setShowProjModal(true)} className="ui-btn-primary px-5 py-2.5 text-sm">
-                  Tạo dự án mới
+                  {t('createNewProjectBtn')}
                 </button>
               </div>
             ) : (
@@ -510,7 +510,7 @@ export default function WorkspaceDetailPage() {
                             proj.status === 'ARCHIVED' ? 'bg-zinc-800 text-zinc-400 border-zinc-700' :
                             'bg-primary/10 text-primary border-primary/20'
                           }`}>
-                            {proj.status === 'COMPLETED' ? 'Đã xong' : proj.status === 'ARCHIVED' ? 'Lưu trữ' : 'Đang chạy'}
+                            {proj.status === 'COMPLETED' ? t('done') : proj.status === 'ARCHIVED' ? 'Archived' : t('inProgress')}
                           </span>
                         </div>
                         <p className="text-secondary text-xs mt-2 line-clamp-2 leading-relaxed">

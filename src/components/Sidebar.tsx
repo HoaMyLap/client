@@ -356,7 +356,7 @@ export default function Sidebar() {
               </Link>
             ))}
             {workspaces.length === 0 && !loading && !isCollapsed && (
-              <span className="text-[10px] text-muted px-3 block">Chưa có Workspace</span>
+              <span className="text-[10px] text-muted px-3 block">{t('noWorkspace')}</span>
             )}
           </div>
 
@@ -364,7 +364,7 @@ export default function Sidebar() {
           {currentWorkspace && !isCollapsed && (
             <div className="mt-4 pt-3 border-t border-border-subtle">
               <div className="flex items-center justify-between text-[9px] font-bold text-muted uppercase tracking-wider px-3 mb-2">
-                <span className="truncate">Dự án con: {currentWorkspace.name}</span>
+                <span className="truncate">{t('subProjectsHeader')} {currentWorkspace.name}</span>
               </div>
               <div className="space-y-1 max-h-36 overflow-y-auto">
                 {projects.map((proj) => (
@@ -382,7 +382,7 @@ export default function Sidebar() {
                   </Link>
                 ))}
                 {projects.length === 0 && !loading && (
-                  <span className="text-[10px] text-muted px-3 block">Chưa có dự án</span>
+                  <span className="text-[10px] text-muted px-3 block">{t('noProjectsInWs')}</span>
                 )}
               </div>
             </div>
@@ -435,13 +435,13 @@ export default function Sidebar() {
                 isCollapsed ? 'left-6' : 'left-0'
               }`}>
                 <div className="flex items-center justify-between border-b border-border-subtle pb-3.5 mb-3">
-                  <span className="font-bold text-xs text-heading">Thông báo</span>
+                  <span className="font-bold text-xs text-heading">{t('notifications')}</span>
                   {unreadCount > 0 && (
                     <button
                       onClick={handleMarkAllAsRead}
                       className="text-[9px] text-primary hover:underline font-bold bg-primary/10 px-2 py-0.5 rounded-full border border-primary/20"
                     >
-                      Đã đọc tất cả ({unreadCount})
+                      {t('markAllRead')} ({unreadCount})
                     </button>
                   )}
                 </div>
@@ -465,16 +465,16 @@ export default function Sidebar() {
                       {n.invitationStatus && n.invitationStatus !== 'PENDING' ? (
                         <div className="mt-2 pt-1.5 border-t border-border-subtle">
                           {n.invitationStatus === 'ACCEPTED' && (
-                            <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20 inline-block">✓ Đã đồng ý</span>
+                            <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20 inline-block">{t('agreedStatus')}</span>
                           )}
                           {n.invitationStatus === 'REJECTED' && (
-                            <span className="text-[10px] font-bold text-rose-400 bg-rose-500/10 px-2 py-0.5 rounded-full border border-rose-500/20 inline-block">✕ Đã từ chối</span>
+                            <span className="text-[10px] font-bold text-rose-400 bg-rose-500/10 px-2 py-0.5 rounded-full border border-rose-500/20 inline-block">{t('rejectedStatus')}</span>
                           )}
                           {n.invitationStatus === 'APPROVED' && (
-                            <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20 inline-block">✓ Đã duyệt rời</span>
+                            <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20 inline-block">{t('approvedLeaveStatus')}</span>
                           )}
                           {n.invitationStatus === 'REJECTED_LEAVE' && (
-                            <span className="text-[10px] font-bold text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20 inline-block">✕ Từ chối rời</span>
+                            <span className="text-[10px] font-bold text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20 inline-block">{t('rejectedLeaveStatus')}</span>
                           )}
                         </div>
                       ) : (
@@ -487,14 +487,14 @@ export default function Sidebar() {
                                 onClick={() => handleRespondInvitation(n.id, 'ACCEPT')}
                                 className="flex-1 py-1 px-2 rounded-lg bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 border border-emerald-500/30 text-[10px] font-bold flex items-center justify-center gap-1 transition-all"
                               >
-                                <Check className="h-3 w-3" /> Đồng ý
+                                <Check className="h-3 w-3" /> {t('acceptBtn')}
                               </button>
                               <button
                                 type="button"
                                 onClick={() => handleRespondInvitation(n.id, 'DECLINE')}
                                 className="flex-1 py-1 px-2 rounded-lg bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 border border-rose-500/20 text-[10px] font-bold flex items-center justify-center gap-1 transition-all"
                               >
-                                <X className="h-3 w-3" /> Từ chối
+                                <X className="h-3 w-3" /> {t('declineBtn')}
                               </button>
                             </div>
                           )}
@@ -507,14 +507,14 @@ export default function Sidebar() {
                                 onClick={() => handleRespondLeave(n.id, 'APPROVE')}
                                 className="flex-1 py-1 px-2 rounded-lg bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 border border-emerald-500/30 text-[10px] font-bold flex items-center justify-center gap-1 transition-all"
                               >
-                                <Check className="h-3 w-3" /> Duyệt rời
+                                <Check className="h-3 w-3" /> {t('approveLeaveBtn')}
                               </button>
                               <button
                                 type="button"
                                 onClick={() => handleRespondLeave(n.id, 'REJECT')}
                                 className="flex-1 py-1 px-2 rounded-lg bg-surface border border-border text-secondary hover:text-foreground text-[10px] font-bold flex items-center justify-center gap-1 transition-all"
                               >
-                                <X className="h-3 w-3" /> Từ chối
+                                <X className="h-3 w-3" /> {t('declineBtn')}
                               </button>
                             </div>
                           )}
@@ -528,7 +528,7 @@ export default function Sidebar() {
                   ))}
 
                   {notifications.length === 0 && (
-                    <p className="text-center text-muted text-[10px] py-8">Bạn không có thông báo nào.</p>
+                    <p className="text-center text-muted text-[10px] py-8">{t('noNotificationsYet')}</p>
                   )}
                 </div>
 
@@ -538,7 +538,7 @@ export default function Sidebar() {
                     onClick={() => setShowNotifDropdown(false)}
                     className="text-xs font-semibold text-primary hover:underline block"
                   >
-                    Xem tất cả thông báo ➔
+                    {t('viewAllNotificationsLink')}
                   </Link>
                 </div>
               </div>
@@ -587,14 +587,14 @@ export default function Sidebar() {
                   className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-hover rounded-lg text-left text-body"
                 >
                   <User className="h-4.5 w-4.5 text-secondary" />
-                  Hồ sơ cá nhân
+                  {t('myProfile')}
                 </Link>
                 <button
                   onClick={handleLogout}
                   className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-error-muted text-error rounded-lg text-left mt-1 font-semibold"
                 >
                   <LogOut className="h-4.5 w-4.5" />
-                  Đăng xuất
+                  {t('logoutBtn')}
                 </button>
               </div>
             )}
