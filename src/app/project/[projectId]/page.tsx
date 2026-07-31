@@ -108,20 +108,18 @@ export default function ProjectKanbanPage() {
     return { color: 'text-cyan-400', bg: 'bg-cyan-500/10 border-cyan-500/20', label: ext.toUpperCase() || 'FILE' };
   };
 
-  // Load project files from Backend API on mount
+  // Load project files from Backend API
   const loadProjectFiles = async () => {
     if (!projectId) return;
     try {
+      // Clean up old localStorage cache if exists
+      localStorage.removeItem(`homix_project_files_${projectId}`);
       const files = await api.projects.getFiles(projectId);
       setProjectFiles(files || []);
     } catch (e) {
       console.error("Lỗi khi tải danh sách file từ backend:", e);
     }
   };
-
-  useEffect(() => {
-    loadProjectFiles();
-  }, [projectId]);
 
   const handleMultipleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -384,7 +382,10 @@ export default function ProjectKanbanPage() {
     // 1. Tải danh sách công việc ban đầu
     loadTasks();
 
-    // 2. Thiết lập kết nối WebSocket Realtime
+    // 2. Tải danh sách tệp tin dự án từ backend (sau khi token đã sẵn sàng)
+    loadProjectFiles();
+
+    // 3. Thiết lập kết nối WebSocket Realtime
     const client = createStompClient(projectId, handleSocketMessage);
     stompClientRef.current = client;
 
