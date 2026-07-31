@@ -73,6 +73,12 @@ export default function ProjectKanbanPage() {
   const [workspaceId, setWorkspaceId] = useState('');
   const [members, setMembers] = useState<Member[]>([]);
   const [project, setProject] = useState<any>(null);
+  const [showProjectMembersModal, setShowProjectMembersModal] = useState(false);
+  const [projectInviteEmail, setProjectInviteEmail] = useState('');
+  const [projectInviteRole, setProjectInviteRole] = useState('MEMBER');
+  const [projectInviteLoading, setProjectInviteLoading] = useState(false);
+  const [projectInviteMessage, setProjectInviteMessage] = useState('');
+  const [projectInviteError, setProjectInviteError] = useState('');
 
   // WebSocket Client Ref
   const stompClientRef = useRef<Client | null>(null);
@@ -541,6 +547,26 @@ export default function ProjectKanbanPage() {
     const { action, payload, taskId } = msg;
     setIsReportStale(true);
 
+    if (action === 'ADD_MEMBER') {
+      setMembers((prev) => {
+        if (prev.some((m) => m.userId === payload.userId)) return prev;
+        return [...prev, payload];
+      });
+      return;
+    }
+
+    if (action === 'REMOVE_MEMBER') {
+      setMembers((prev) => prev.filter((m) => m.userId !== payload.userId));
+      return;
+    }
+
+    if (action === 'UPDATE_MEMBER') {
+      setMembers((prev) =>
+        prev.map((m) => (m.userId === payload.userId ? { ...m, role: payload.role } : m))
+      );
+      return;
+    }
+
     setTasks((prevTasks) => {
       switch (action) {
         case 'CREATE':
@@ -553,23 +579,6 @@ export default function ProjectKanbanPage() {
 
         case 'DELETE':
           return prevTasks.filter((t) => t.id !== taskId);
-
-        case 'ADD_MEMBER':
-          setMembers((prev) => {
-            if (prev.some((m) => m.userId === payload.userId)) return prev;
-            return [...prev, payload];
-          });
-          return prevTasks;
-
-        case 'REMOVE_MEMBER':
-          setMembers((prev) => prev.filter((m) => m.userId !== payload.userId));
-          return prevTasks;
-
-        case 'UPDATE_MEMBER':
-          setMembers((prev) =>
-            prev.map((m) => (m.userId === payload.userId ? { ...m, role: payload.role } : m))
-          );
-          return prevTasks;
 
         default:
           return prevTasks;
@@ -603,6 +612,32 @@ export default function ProjectKanbanPage() {
           setSubtasks((prev) => prev.filter((s) => s.id !== taskId));
         }
       }
+    }
+  };
+
+  const handleInviteToProject = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setProjectInviteError('');
+    setProjectInviteMessage('');
+    setProjectInviteLoading(true);
+
+    try {
+      await api.notifications.invite({
+        email: projectInviteEmail,
+        targetType: 'PROJECT',
+        targetId: projectId,
+        role: projectInviteRole,
+      });
+      setProjectInviteMessage(
+        language === 'vi' 
+          ? 'Đã gửi lời mời tham gia dự án thành công!' 
+          : 'Project invitation sent successfully!'
+      );
+      setProjectInviteEmail('');
+    } catch (err: any) {
+      setProjectInviteError(err.message || 'Lỗi khi gửi lời mời.');
+    } finally {
+      setProjectInviteLoading(false);
     }
   };
 
@@ -1135,7 +1170,10 @@ export default function ProjectKanbanPage() {
           </div>
 
           {/* Project Members List / Avatar Group */}
-          <div className="flex items-center gap-2.5 bg-surface/50 border border-border px-3.5 py-1.5 rounded-2xl shadow-sm max-w-xs ring-1 ring-border shrink-0">
+          <div 
+            onClick={() => setShowProjectMembersModal(true)}
+            className="flex items-center gap-2.5 bg-surface/50 border border-border px-3.5 py-1.5 rounded-2xl shadow-sm max-w-xs ring-1 ring-border shrink-0 hover:bg-surface/85 transition-colors cursor-pointer"
+          >
             <div className="flex -space-x-2.5 overflow-hidden">
               {members.slice(0, 4).map((m, idx) => (
                 <div
@@ -2589,6 +2627,145 @@ export default function ProjectKanbanPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Project Members List & Invite Modal */}
+      {showProjectMembersModal && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/60 backdrop-blur-sm no-print p-4">
+          <div className="glass w-full max-w-lg rounded-3xl border border-border shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-border-subtle bg-surface/30">
+              <h3 className="text-base font-bold font-display text-heading flex items-center gap-2">
+                <Users className="h-5 w-5 text-primary" />
+                {language === 'vi' ? 'Thành viên dự án' : 'Project Members'}
+              </h3>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowProjectMembersModal(false);
+                  setProjectInviteError('');
+                  setProjectInviteMessage('');
+                }}
+                className="text-secondary hover:text-foreground hover:bg-surface/50 p-1.5 rounded-xl transition-colors"
+              >
+                <X className="h-4.5 w-4.5" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-6 max-h-[75vh] overflow-y-auto">
+              {/* Member List */}
+              <div className="space-y-3">
+                <h4 className="text-xs font-bold text-muted uppercase tracking-wider">
+                  {language === 'vi' ? 'Danh sách thành viên' : 'Member List'} ({members.length})
+                </h4>
+                <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                  {members.map((m) => (
+                    <div
+                      key={m.userId}
+                      className="flex items-center justify-between p-2.5 rounded-2xl bg-surface/40 border border-border-subtle hover:bg-surface/60 transition-colors"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="h-8 w-8 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center font-bold text-xs text-primary">
+                          {m.fullname ? m.fullname.charAt(0).toUpperCase() : 'U'}
+                        </div>
+                        <div>
+                          <div className="text-xs font-bold text-zinc-100">{m.fullname}</div>
+                          <div className="text-[10px] text-muted">{m.email}</div>
+                        </div>
+                      </div>
+                      <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${
+                        m.role === 'ADMIN' 
+                          ? 'bg-red-500/10 text-red-400 border border-red-500/20' 
+                          : m.role === 'MEMBER' 
+                          ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' 
+                          : 'bg-zinc-500/10 text-zinc-400 border border-zinc-500/20'
+                      }`}>
+                        {m.role}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Invite Form */}
+              <form onSubmit={handleInviteToProject} className="pt-4 border-t border-border-subtle space-y-4">
+                <h4 className="text-xs font-bold text-muted uppercase tracking-wider">
+                  {language === 'vi' ? 'Mời thành viên mới vào dự án' : 'Invite New Member to Project'}
+                </h4>
+                
+                {projectInviteMessage && (
+                  <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-xs font-semibold text-emerald-400 animate-fadeIn">
+                    {projectInviteMessage}
+                  </div>
+                )}
+                {projectInviteError && (
+                  <div className="p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl text-xs font-semibold text-rose-400 animate-fadeIn">
+                    {projectInviteError}
+                  </div>
+                )}
+
+                <div className="space-y-3.5">
+                  <div>
+                    <label className="block text-[10px] font-bold text-secondary uppercase tracking-wider mb-1.5">
+                      Email
+                    </label>
+                    <input
+                      type="email"
+                      required
+                      value={projectInviteEmail}
+                      onChange={(e) => setProjectInviteEmail(e.target.value)}
+                      placeholder="email@example.com"
+                      className="ui-input w-full px-3.5 py-2 text-xs"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-bold text-secondary uppercase tracking-wider mb-1.5">
+                      {language === 'vi' ? 'Vai trò dự án' : 'Project Role'}
+                    </label>
+                    <select
+                      value={projectInviteRole}
+                      onChange={(e) => setProjectInviteRole(e.target.value)}
+                      className="ui-select w-full px-3 py-2 text-xs bg-card border border-border text-foreground rounded-xl focus:outline-none"
+                    >
+                      <option value="MEMBER">MEMBER ({language === 'vi' ? 'Thành viên đóng góp' : 'Collaborator'})</option>
+                      <option value="VIEWER">VIEWER ({language === 'vi' ? 'Người quan sát' : 'Observer'})</option>
+                      <option value="ADMIN">ADMIN ({language === 'vi' ? 'Quản trị viên dự án' : 'Project Admin'})</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="flex gap-2.5 justify-end pt-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowProjectMembersModal(false);
+                      setProjectInviteError('');
+                      setProjectInviteMessage('');
+                    }}
+                    className="ui-btn-secondary px-4 py-2 text-xs font-semibold"
+                  >
+                    {language === 'vi' ? 'Đóng' : 'Close'}
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={projectInviteLoading}
+                    className="ui-btn-primary px-5 py-2 text-xs font-bold flex items-center gap-1.5"
+                  >
+                    {projectInviteLoading ? (
+                      <div className="animate-spin rounded-full h-3 w-3 border-2 border-white/20 border-t-white" />
+                    ) : (
+                      <>
+                        <Plus className="h-4 w-4" />
+                        {language === 'vi' ? 'Gửi lời mời' : 'Send Invitation'}
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
         </div>
       )}
