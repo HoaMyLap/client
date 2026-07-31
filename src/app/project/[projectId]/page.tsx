@@ -108,38 +108,19 @@ export default function ProjectKanbanPage() {
     return { color: 'text-cyan-400', bg: 'bg-cyan-500/10 border-cyan-500/20', label: ext.toUpperCase() || 'FILE' };
   };
 
-  // Load persisted project files on mount
-  useEffect(() => {
+  // Load project files from Backend API on mount
+  const loadProjectFiles = async () => {
     if (!projectId) return;
-    const saved = localStorage.getItem(`homix_project_files_${projectId}`);
-    if (saved) {
-      try {
-        setProjectFiles(JSON.parse(saved));
-      } catch (e) {
-        console.error("Lỗi khi đọc file đã lưu:", e);
-      }
-    } else {
-      const initialFiles = [
-        {
-          id: '1',
-          name: 'Bản_Mô_Tả_Yêu_Cầu_Dự_Án.pdf',
-          url: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
-          size: 524288,
-          type: 'application/pdf',
-          uploadedAt: new Date().toISOString(),
-        },
-        {
-          id: '2',
-          name: 'Bảng_Phân_Bổ_Tiến_Độ.xlsx',
-          url: '#',
-          size: 1048576,
-          type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-          uploadedAt: new Date().toISOString(),
-        }
-      ];
-      setProjectFiles(initialFiles);
-      localStorage.setItem(`homix_project_files_${projectId}`, JSON.stringify(initialFiles));
+    try {
+      const files = await api.projects.getFiles(projectId);
+      setProjectFiles(files || []);
+    } catch (e) {
+      console.error("Lỗi khi tải danh sách file từ backend:", e);
     }
+  };
+
+  useEffect(() => {
+    loadProjectFiles();
   }, [projectId]);
 
   const handleMultipleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -150,8 +131,6 @@ export default function ProjectKanbanPage() {
     setFileUploading(true);
     setUploadProgress({ current: 0, total: fileList.length });
 
-    const newUploadedFiles: any[] = [];
-
     for (let i = 0; i < fileList.length; i++) {
       const file = fileList[i];
       try {
@@ -159,44 +138,34 @@ export default function ProjectKanbanPage() {
         formData.append('file', file);
         const res = await api.uploadFile(formData);
 
-        newUploadedFiles.push({
-          id: (Date.now() + i + Math.random()).toString(),
+        // Save file record to PostgreSQL Database
+        await api.projects.addFile(projectId, {
           name: res.name || file.name,
           url: res.url,
           size: res.size || file.size,
           type: res.type || file.type,
-          uploadedAt: new Date().toISOString(),
         });
+
         setUploadProgress({ current: i + 1, total: fileList.length });
       } catch (err: any) {
         console.error(`Lỗi tải tệp ${file.name}:`, err);
       }
     }
 
-    if (newUploadedFiles.length > 0) {
-      setProjectFiles((prev) => {
-        const updated = [...newUploadedFiles, ...prev];
-        if (projectId) {
-          localStorage.setItem(`homix_project_files_${projectId}`, JSON.stringify(updated));
-        }
-        return updated;
-      });
-    }
-
+    await loadProjectFiles();
     setFileUploading(false);
     setUploadProgress(null);
     e.target.value = ''; // Reset input to allow adding more files anytime
   };
 
-  const handleDeleteProjectFile = (fileId: string, fileName: string) => {
+  const handleDeleteProjectFile = async (fileId: string, fileName: string) => {
     if (!confirm(`Bạn có chắc muốn xóa tệp "${fileName}" khỏi dự án?`)) return;
-    setProjectFiles((prev) => {
-      const updated = prev.filter((f) => f.id !== fileId);
-      if (projectId) {
-        localStorage.setItem(`homix_project_files_${projectId}`, JSON.stringify(updated));
-      }
-      return updated;
-    });
+    try {
+      await api.projects.deleteFile(projectId, fileId);
+      await loadProjectFiles();
+    } catch (err: any) {
+      alert(err.message || "Không thể xóa tệp tin khỏi dự án.");
+    }
   };
 
   // Drag state
@@ -427,7 +396,16 @@ export default function ProjectKanbanPage() {
     };
   }, [projectId]);
 
-  // Load comments & subtasks when task is selected
+  const loadTaskFiles = async (taskId: string) => {
+    try {
+      const files = await api.tasks.getFiles(taskId);
+      setTaskFiles(files || []);
+    } catch (e) {
+      console.error("Lỗi khi tải file task từ backend:", e);
+    }
+  };
+
+  // Load comments, subtasks, logs, and files when task is selected
   useEffect(() => {
     if (selectedTask) {
       setEditTitle(selectedTask.title);
@@ -435,8 +413,7 @@ export default function ProjectKanbanPage() {
       setEditPriority(selectedTask.priority);
       setEditAssigneeId(selectedTask.assigneeId);
       setDrawerTab('detail');
-      
-      // Định dạng ngày giờ cho input datetime-local (yyyy-MM-ddThh:mm)
+
       if (selectedTask.dueDate) {
         try {
           const date = new Date(selectedTask.dueDate);
@@ -448,19 +425,8 @@ export default function ProjectKanbanPage() {
       } else {
         setEditDueDate(null);
       }
-      
-      // Load task files from localStorage
-      const savedTaskFiles = localStorage.getItem(`homix_task_files_${selectedTask.id}`);
-      if (savedTaskFiles) {
-        try {
-          setTaskFiles(JSON.parse(savedTaskFiles));
-        } catch (e) {
-          setTaskFiles([]);
-        }
-      } else {
-        setTaskFiles([]);
-      }
 
+      loadTaskFiles(selectedTask.id);
       loadTaskDetails(selectedTask.id);
     }
   }, [selectedTask]);
@@ -470,7 +436,6 @@ export default function ProjectKanbanPage() {
     if (!files || files.length === 0 || !selectedTask) return;
 
     setTaskFileUploading(true);
-    const newFiles: any[] = [];
 
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
@@ -478,37 +443,31 @@ export default function ProjectKanbanPage() {
         const formData = new FormData();
         formData.append('file', file);
         const res = await api.uploadFile(formData);
-        newFiles.push({
-          id: (Date.now() + i + Math.random()).toString(),
+
+        await api.tasks.addFile(selectedTask.id, {
           name: res.name || file.name,
           url: res.url,
           size: res.size || file.size,
           type: res.type || file.type,
-          uploadedAt: new Date().toISOString(),
         });
       } catch (err) {
         console.error('Lỗi tải file cho task:', err);
       }
     }
 
-    if (newFiles.length > 0) {
-      setTaskFiles((prev) => {
-        const updated = [...newFiles, ...prev];
-        localStorage.setItem(`homix_task_files_${selectedTask.id}`, JSON.stringify(updated));
-        return updated;
-      });
-    }
+    await loadTaskFiles(selectedTask.id);
     setTaskFileUploading(false);
     e.target.value = '';
   };
 
-  const handleDeleteTaskFile = (fileId: string) => {
+  const handleDeleteTaskFile = async (fileId: string) => {
     if (!selectedTask) return;
-    setTaskFiles((prev) => {
-      const updated = prev.filter((f) => f.id !== fileId);
-      localStorage.setItem(`homix_task_files_${selectedTask.id}`, JSON.stringify(updated));
-      return updated;
-    });
+    try {
+      await api.tasks.deleteFile(selectedTask.id, fileId);
+      await loadTaskFiles(selectedTask.id);
+    } catch (err: any) {
+      alert(err.message || "Không thể xóa tệp tin công việc.");
+    }
   };
 
   // Load workspace members when workspaceId is fetched

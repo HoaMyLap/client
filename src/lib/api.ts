@@ -70,6 +70,11 @@ export const api = {
     update: (projectId: string, data: any) =>
       request(`/projects/${projectId}`, { method: 'PUT', body: JSON.stringify(data) }),
     delete: (projectId: string) => request(`/projects/${projectId}`, { method: 'DELETE' }),
+    getFiles: (projectId: string) => request(`/projects/${projectId}/files`),
+    addFile: (projectId: string, data: any) =>
+      request(`/projects/${projectId}/files`, { method: 'POST', body: JSON.stringify(data) }),
+    deleteFile: (projectId: string, fileId: string) =>
+      request(`/projects/${projectId}/files/${fileId}`, { method: 'DELETE' }),
   },
   tasks: {
     list: (projectId: string) => request(`/tasks/project/${projectId}`),
@@ -87,6 +92,11 @@ export const api = {
       request(`/tasks/${taskId}/batch-subtasks`, { method: 'POST', body: JSON.stringify({ subtasks }) }),
     getLogs: (taskId: string) => request(`/tasks/${taskId}/logs`),
     toggleDone: (taskId: string) => request(`/tasks/${taskId}/toggle-done`, { method: 'PATCH' }),
+    getFiles: (taskId: string) => request(`/tasks/${taskId}/files`),
+    addFile: (taskId: string, data: any) =>
+      request(`/tasks/${taskId}/files`, { method: 'POST', body: JSON.stringify(data) }),
+    deleteFile: (taskId: string, fileId: string) =>
+      request(`/tasks/${taskId}/files/${fileId}`, { method: 'DELETE' }),
   },
   comments: {
     list: (taskId: string) => request(`/comments/task/${taskId}`),
