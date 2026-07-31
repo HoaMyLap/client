@@ -550,7 +550,7 @@ export default function WorkspaceDetailPage() {
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-base font-bold font-display flex items-center gap-2 text-heading">
                   <Users className="h-5 w-5 text-primary" />
-                  Thành viên ({members.length})
+                  {t('membersCount')} ({members.length})
                 </h3>
                 <button
                   type="button"
@@ -558,7 +558,7 @@ export default function WorkspaceDetailPage() {
                   className="text-[11px] font-bold text-rose-700 dark:text-rose-400 bg-rose-50 dark:bg-rose-500/10 hover:bg-rose-100 dark:hover:bg-rose-500/20 border border-rose-200 dark:border-rose-500/30 px-2.5 py-1 rounded-lg transition-all shadow-sm"
                   title="Gửi yêu cầu rời Workspace tới Admin"
                 >
-                  Yêu cầu rời
+                  {language === 'vi' ? 'Yêu cầu rời' : 'Request Leave'}
                 </button>
               </div>
 
@@ -573,18 +573,18 @@ export default function WorkspaceDetailPage() {
                   className="ui-btn-primary w-full py-3 flex items-center justify-center gap-2 text-xs font-bold tracking-wider mb-6 shadow-md hover:scale-[1.01] transition-transform"
                 >
                   <PlusCircle className="h-4 w-4" />
-                  Mời thành viên mới
+                  {t('inviteMemberModalTitle')}
                 </button>
               ) : (
                 <div className="p-3.5 rounded-xl bg-surface border border-border text-xs text-secondary text-center mb-6">
-                  🔒 Chỉ <strong>Admin</strong> mới có quyền mời thành viên mới.
+                  {language === 'vi' ? '🔒 Chỉ Admin mới có quyền mời thành viên mới.' : '🔒 Only Admins can invite new members.'}
                 </div>
               )}
 
               {/* Members List */}
               <div className="border-t border-border-subtle pt-4 space-y-3">
                 <h4 className="text-xs font-bold text-heading uppercase tracking-wider mb-3">
-                  Danh sách thành viên hiện tại
+                  {language === 'vi' ? 'Danh sách thành viên hiện tại' : 'Current Members List'}
                 </h4>
 
                 <div className="space-y-2.5 max-h-72 overflow-y-auto no-scrollbar">
