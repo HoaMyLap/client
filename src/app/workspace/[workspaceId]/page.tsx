@@ -763,10 +763,10 @@ export default function WorkspaceDetailPage() {
                   </div>
                   <div>
                     <h3 className="text-lg font-bold font-display text-heading">
-                      Mời thành viên mới
+                      {t('inviteMemberModalTitle')}
                     </h3>
                     <p className="text-xs text-secondary mt-0.5">
-                      Gửi lời mời tham gia Workspace hoặc Dự án cụ thể
+                      {t('inviteMemberModalSubtitle')}
                     </p>
                   </div>
                 </div>
@@ -794,7 +794,7 @@ export default function WorkspaceDetailPage() {
                         : 'text-secondary hover:text-foreground'
                     }`}
                   >
-                    📧 Mời đơn lẻ
+                    {t('singleInviteTab')}
                   </button>
                   <button
                     type="button"
@@ -805,13 +805,13 @@ export default function WorkspaceDetailPage() {
                         : 'text-secondary hover:text-foreground'
                     }`}
                   >
-                    <FileSpreadsheet className="h-3.5 w-3.5" /> Mời hàng loạt (.xlsx)
+                    <FileSpreadsheet className="h-3.5 w-3.5" /> {t('excelInviteTab')}
                   </button>
                 </div>
 
                 {/* Target Type Selector */}
                 <div>
-                  <label className="ui-label text-xs font-semibold mb-1.5 block">Hình thức mời gia nhập</label>
+                  <label className="ui-label text-xs font-semibold mb-1.5 block">{t('inviteJoinType')}</label>
                   <div className="grid grid-cols-2 gap-3">
                     <button
                       type="button"
@@ -822,7 +822,7 @@ export default function WorkspaceDetailPage() {
                           : 'bg-surface border-border text-secondary hover:text-foreground'
                       }`}
                     >
-                      🏢 Vào Workspace
+                      {t('intoWorkspaceOption')}
                     </button>
                     <button
                       type="button"
@@ -833,7 +833,7 @@ export default function WorkspaceDetailPage() {
                           : 'bg-surface border-border text-secondary hover:text-foreground'
                       }`}
                     >
-                      📁 Vào Dự án cụ thể
+                      {t('intoProjectOption')}
                     </button>
                   </div>
                 </div>
@@ -841,14 +841,14 @@ export default function WorkspaceDetailPage() {
                 {/* Project Selector if targetType is PROJECT */}
                 {inviteTargetType === 'PROJECT' && (
                   <div>
-                    <label className="ui-label text-xs font-semibold mb-1.5 block">Chọn dự án chỉ định</label>
+                    <label className="ui-label text-xs font-semibold mb-1.5 block">{t('selectSpecificProject')}</label>
                     <select
                       required
                       value={inviteProjectId}
                       onChange={(e) => setInviteProjectId(e.target.value)}
                       className="ui-input px-4 py-3 text-xs w-full rounded-xl"
                     >
-                      <option value="">-- Chọn dự án --</option>
+                      <option value="">{t('selectProjectPlaceholder')}</option>
                       {projects.map((p) => (
                         <option key={p.id} value={p.id}>
                           {p.name}
@@ -860,7 +860,7 @@ export default function WorkspaceDetailPage() {
 
                 {inviteMode === 'SINGLE' ? (
                   <div>
-                    <label className="ui-label text-xs font-semibold mb-1.5 block">Email người nhận lời mời</label>
+                    <label className="ui-label text-xs font-semibold mb-1.5 block">{t('recipientEmailLabel')}</label>
                     <input
                       type="email"
                       required={inviteMode === 'SINGLE'}
@@ -873,21 +873,21 @@ export default function WorkspaceDetailPage() {
                 ) : (
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
-                      <label className="ui-label text-xs font-semibold block">Tải lên danh sách Email từ Excel</label>
+                      <label className="ui-label text-xs font-semibold block">{t('uploadExcelEmailLabel')}</label>
                       <button
                         type="button"
                         onClick={downloadSampleEmailTemplate}
                         className="text-[11px] font-bold text-emerald-400 hover:underline flex items-center gap-1"
                       >
-                        <Download className="h-3.5 w-3.5" /> Tải file mẫu (.xlsx)
+                        <Download className="h-3.5 w-3.5" /> {language === 'vi' ? 'Tải file mẫu (.xlsx)' : 'Download sample (.xlsx)'}
                       </button>
                     </div>
 
                     {!excelFileName ? (
                       <div className="border-2 border-dashed border-border hover:border-emerald-500/50 bg-surface/50 p-5 rounded-2xl text-center transition-all">
                         <FileSpreadsheet className="h-8 w-8 text-emerald-400 mx-auto mb-2" />
-                        <p className="text-xs font-bold text-heading">Chọn file .xlsx / .xls chứa danh sách Email</p>
-                        <p className="text-[10px] text-muted mt-1">Hệ thống sẽ tự động quét & trích xuất TẤT CẢ địa chỉ email</p>
+                        <p className="text-xs font-bold text-heading">{t('selectExcelEmailPrompt')}</p>
+                        <p className="text-[10px] text-muted mt-1">{t('excelScanNotice')}</p>
                         <input
                           ref={excelFileInputRef}
                           type="file"
@@ -906,7 +906,7 @@ export default function WorkspaceDetailPage() {
                             <div className="min-w-0">
                               <p className="text-xs font-bold text-heading truncate">{excelFileName}</p>
                               <p className="text-[11px] font-semibold text-emerald-400 mt-0.5">
-                                ✓ Đã tìm thấy {excelEmails.length} địa chỉ email hợp lệ
+                                {t('foundValidEmails')} ({excelEmails.length})
                               </p>
                             </div>
                           </div>
@@ -915,9 +915,9 @@ export default function WorkspaceDetailPage() {
                             type="button"
                             onClick={handleClearExcelFile}
                             className="p-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-400 transition-colors shrink-0 flex items-center gap-1 text-xs font-semibold"
-                            title="Xóa file để chọn file khác"
+                            title="Xóa file"
                           >
-                            <Trash className="h-3.5 w-3.5" /> Xóa
+                            <Trash className="h-3.5 w-3.5" /> {t('delete')}
                           </button>
                         </div>
 
@@ -938,15 +938,15 @@ export default function WorkspaceDetailPage() {
                 )}
 
                 <div>
-                  <label className="ui-label text-xs font-semibold mb-1.5 block">Vai trò (Permission Role)</label>
+                  <label className="ui-label text-xs font-semibold mb-1.5 block">{t('permissionRoleLabel')}</label>
                   <select
                     value={memberRole}
                     onChange={(e) => setMemberRole(e.target.value)}
                     className="ui-input px-4 py-3 text-xs w-full rounded-xl"
                   >
-                    <option value="MEMBER">MEMBER (Có quyền Tạo & Sửa công việc)</option>
-                    <option value="VIEWER">VIEWER (Chỉ có quyền xem thông tin)</option>
-                    <option value="ADMIN">ADMIN (Toàn quyền quản lý)</option>
+                    <option value="MEMBER">{t('roleMemberOption')}</option>
+                    <option value="VIEWER">{t('roleViewerOption')}</option>
+                    <option value="ADMIN">{t('roleAdminOption')}</option>
                   </select>
                 </div>
 
@@ -957,7 +957,7 @@ export default function WorkspaceDetailPage() {
                     onClick={() => setShowInviteModal(false)}
                     className="ui-btn-secondary px-5 py-2.5 text-xs font-semibold"
                   >
-                    Hủy
+                    {t('cancel')}
                   </button>
                   <button
                     type="submit"
@@ -967,10 +967,10 @@ export default function WorkspaceDetailPage() {
                     {memberLoading ? (
                       <>
                         <div className="animate-spin rounded-full h-3.5 w-3.5 border-2 border-white/20 border-t-white" />
-                        Đang gửi...
+                        {t('sendingBtn')}
                       </>
                     ) : (
-                      '✨ Gửi lời mời ngay'
+                      t('sendInviteNowBtn')
                     )}
                   </button>
                 </div>

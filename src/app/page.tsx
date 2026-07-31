@@ -482,14 +482,14 @@ export default function WorkspacesPage() {
 
                         {/* Fixed height description guarantees 100% equal card height */}
                         <p className="text-secondary text-xs mt-3.5 h-10 leading-relaxed line-clamp-2 overflow-hidden">
-                          {ws.description || 'Chưa có mô tả chi tiết cho không gian làm việc này.'}
+                          {ws.description || t('noDescProvided')}
                         </p>
                       </div>
 
                       {/* Footer Info & Action */}
                       <div className="flex items-center justify-between text-xs text-muted pt-3 border-t border-border-subtle mt-auto">
                         <span className="flex items-center gap-1 text-secondary group-hover:text-primary font-bold text-xs transition-colors">
-                          Vào Workspace <ArrowUpRight className="h-4 w-4 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+                          {t('enterWorkspace')} <ArrowUpRight className="h-4 w-4 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
                         </span>
                         <span className="flex items-center gap-1 text-[10px] text-muted">
                           <Clock className="h-3 w-3" />
