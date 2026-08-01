@@ -671,6 +671,7 @@ export default function Sidebar() {
                 </button>
               </div>
             </form>
+          </div>
         </div>
       )}
 
