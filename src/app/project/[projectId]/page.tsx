@@ -390,8 +390,6 @@ export default function ProjectKanbanPage() {
     XLSX.writeFile(workbook, 'Mau_File_Cong_Viec_Homix.xlsx');
   };
 
-  handleSocketMessageRef.current = handleSocketMessage;
-
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (!token) {
@@ -410,6 +408,7 @@ export default function ProjectKanbanPage() {
     loadProjectFiles();
 
     // 3. Thiết lập kết nối WebSocket Realtime
+    handleSocketMessageRef.current = handleSocketMessage;
     const client = createStompClient(projectId, (msg) => {
       handleSocketMessageRef.current?.(msg);
     });
@@ -641,6 +640,7 @@ export default function ProjectKanbanPage() {
       }
     }
   };
+  handleSocketMessageRef.current = handleSocketMessage;
 
   const handleInviteToProject = async (e: React.FormEvent) => {
     e.preventDefault();
