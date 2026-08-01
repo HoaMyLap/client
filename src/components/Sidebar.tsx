@@ -121,9 +121,12 @@ export default function Sidebar() {
 
     loadSidebarData();
     loadNotifications();
+  }, [workspaceId, projectId]);
 
-    if (storedUserId) {
-      const client = createNotificationStompClient(storedUserId, (notif) => {
+  // Connect Stomp client for notifications stably based on userId
+  useEffect(() => {
+    if (userId) {
+      const client = createNotificationStompClient(userId, (notif) => {
         setNotifications((prev) => [notif, ...prev]);
         
         // Show toast notification
@@ -150,7 +153,7 @@ export default function Sidebar() {
         notifClientRef.current.deactivate();
       }
     };
-  }, [workspaceId, projectId]);
+  }, [userId]);
 
   const toggleCollapse = () => {
     const newState = !isCollapsed;
