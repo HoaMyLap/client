@@ -310,11 +310,12 @@ export default function Sidebar() {
   ];
 
   return (
-    <aside 
-      className={`h-screen sticky top-0 bg-header backdrop-blur-md border-r border-border flex flex-col justify-between shrink-0 font-sans z-30 select-none transition-all duration-300 ease-in-out relative ${
-        isCollapsed ? 'w-16' : 'w-64'
-      }`}
-    >
+    <>
+      <aside 
+        className={`h-screen sticky top-0 bg-header backdrop-blur-md border-r border-border flex flex-col justify-between shrink-0 font-sans z-30 select-none transition-all duration-300 ease-in-out relative ${
+          isCollapsed ? 'w-16' : 'w-64'
+        }`}
+      >
       {/* Collapse/Expand Toggle Button */}
       <button
         onClick={toggleCollapse}
@@ -789,8 +790,10 @@ export default function Sidebar() {
         </div>
       )}
 
-      {/* Toast notifications stack */}
-      <div className="fixed top-6 right-6 z-[200] flex flex-col gap-3 max-w-sm w-full pointer-events-none">
+      </aside>
+
+      {/* Toast notifications stack - placed outside aside containing block for viewport calculation */}
+      <div className="fixed top-6 right-6 z-[200] flex flex-col gap-3.5 max-w-[420px] w-full pointer-events-none">
         {activeToasts.map((toast) => (
           <div
             key={toast.id}
@@ -798,14 +801,14 @@ export default function Sidebar() {
               handleNotificationClick(toast.notification);
               setActiveToasts((prev) => prev.filter((t) => t.id !== toast.id));
             }}
-            className="pointer-events-auto glass border border-primary/20 hover:border-primary/40 bg-card/95 backdrop-blur-sm shadow-2xl p-4 rounded-2xl flex items-start gap-3 cursor-pointer transform transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] animate-in slide-in-from-right-10 fade-in duration-300 text-foreground"
+            className="pointer-events-auto glass border border-primary/25 hover:border-primary/45 bg-card/95 backdrop-blur-sm shadow-2xl p-5 rounded-2xl flex items-start gap-4 cursor-pointer transform transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] animate-in slide-in-from-right-10 fade-in duration-300 text-foreground"
           >
-            <div className="p-2 bg-primary/10 border border-primary/20 rounded-xl text-primary shrink-0">
-              <Bell className="h-4 w-4" />
+            <div className="p-2.5 bg-primary/10 border border-primary/20 rounded-xl text-primary shrink-0">
+              <Bell className="h-5 w-5" />
             </div>
             <div className="flex-1 min-w-0">
-              <h4 className="text-xs font-bold font-display text-heading truncate">{toast.title}</h4>
-              <p className="text-[10px] text-secondary mt-1 line-clamp-2 leading-relaxed">{toast.content}</p>
+              <h4 className="text-xs font-black font-display text-heading leading-tight">{toast.title}</h4>
+              <p className="text-[10px] text-secondary mt-1.5 leading-relaxed">{toast.content}</p>
             </div>
             <button
               onClick={(e) => {
@@ -819,6 +822,6 @@ export default function Sidebar() {
           </div>
         ))}
       </div>
-    </aside>
+    </>
   );
 }
