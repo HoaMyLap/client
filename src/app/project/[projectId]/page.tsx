@@ -1972,51 +1972,54 @@ export default function ProjectKanbanPage() {
 
             {/* ===== TAB: Thảo luận ===== */}
             {drawerTab === 'comments' && (
-              <>
-                <div className="space-y-4">
-                  {comments.length === 0 && (
-                    <div className="text-center py-10 text-secondary text-xs">
-                      <MessageSquare className="h-8 w-8 mx-auto mb-2 text-muted" />
-                      Chưa có bình luận nào. Hãy là người đầu tiên trao đổi!
-                    </div>
-                  )}
+              <div className="space-y-4 pb-4">
+                {comments.length === 0 && (
+                  <div className="text-center py-10 text-secondary text-xs">
+                    <MessageSquare className="h-8 w-8 mx-auto mb-2 text-muted" />
+                    Chưa có bình luận nào. Hãy là người đầu tiên trao đổi!
+                  </div>
+                )}
 
-                  {comments
-                    .filter((c) => !c.parentCommentId)
-                    .map((comment) => {
-                      const replies = comments.filter((c) => c.parentCommentId === comment.id);
-                      return (
-                        <div key={comment.id} className="space-y-2">
-                          {renderCommentItem(comment)}
+                {comments
+                  .filter((c) => !c.parentCommentId)
+                  .map((comment) => {
+                    const replies = comments.filter((c) => c.parentCommentId === comment.id);
+                    return (
+                      <div key={comment.id} className="space-y-2">
+                        {renderCommentItem(comment)}
 
-                          {/* Nested Replies */}
-                          {replies.length > 0 && (
-                            <div className="ml-5 pl-3 border-l-2 border-primary/20 space-y-2">
-                              {replies.map((reply) => renderCommentItem(reply, true))}
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                </div>
-
-                <form onSubmit={(e) => handleAddComment(e, null)} className="flex gap-2 pt-3 border-t border-border mt-4">
-                  <input
-                    type="text"
-                    required
-                    value={newCommentContent}
-                    onChange={(e) => setNewCommentContent(e.target.value)}
-                    placeholder="Viết bình luận mới..."
-                    className="ui-input flex-1 px-3.5 py-2 text-xs"
-                  />
-                  <button type="submit" className="ui-btn-primary px-3.5 py-2 text-xs font-semibold flex items-center gap-1.5 shrink-0">
-                    <Send className="h-3.5 w-3.5" />
-                    Gửi
-                  </button>
-                </form>
-              </>
+                        {/* Nested Replies */}
+                        {replies.length > 0 && (
+                          <div className="ml-5 pl-3 border-l-2 border-primary/20 space-y-2">
+                            {replies.map((reply) => renderCommentItem(reply, true))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+              </div>
             )}
           </div>
+
+          {/* Fixed Footer for Comments Input */}
+          {drawerTab === 'comments' && (
+            <div className="shrink-0 border-t border-border px-6 py-4 bg-card/95 backdrop-blur-sm z-10">
+              <form onSubmit={(e) => handleAddComment(e, null)} className="flex gap-2">
+                <input
+                  type="text"
+                  required
+                  value={newCommentContent}
+                  onChange={(e) => setNewCommentContent(e.target.value)}
+                  placeholder="Viết bình luận mới..."
+                  className="ui-input flex-1 px-3.5 py-2.5 text-xs bg-surface border border-border"
+                />
+                <button type="submit" className="ui-btn-primary px-4 py-2.5 text-xs font-bold flex items-center gap-1.5 shrink-0">
+                  <Send className="h-3.5 w-3.5" />
+                  Gửi
+                </button>
+              </form>
+            </div>
+          )}
         </div>
       )}
 
