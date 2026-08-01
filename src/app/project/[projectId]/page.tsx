@@ -82,6 +82,7 @@ export default function ProjectKanbanPage() {
 
   // WebSocket Client Ref
   const stompClientRef = useRef<Client | null>(null);
+  const handleSocketMessageRef = useRef<any>(null);
 
   // One-time cleanup: remove ALL stale localStorage file caches from old code version
   useEffect(() => {
@@ -389,6 +390,8 @@ export default function ProjectKanbanPage() {
     XLSX.writeFile(workbook, 'Mau_File_Cong_Viec_Homix.xlsx');
   };
 
+  handleSocketMessageRef.current = handleSocketMessage;
+
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (!token) {
@@ -407,7 +410,9 @@ export default function ProjectKanbanPage() {
     loadProjectFiles();
 
     // 3. Thiết lập kết nối WebSocket Realtime
-    const client = createStompClient(projectId, handleSocketMessage);
+    const client = createStompClient(projectId, (msg) => {
+      handleSocketMessageRef.current?.(msg);
+    });
     stompClientRef.current = client;
 
     // Clean up kết nối khi rời khỏi trang
@@ -500,6 +505,28 @@ export default function ProjectKanbanPage() {
       }).catch(console.error);
     }
   }, [projectId]);
+
+  // Manage active discussion viewing status and heartbeat
+  useEffect(() => {
+    if (!selectedTask || drawerTab !== 'comments') {
+      return;
+    }
+
+    const taskId = selectedTask.id;
+    
+    // 1. Send viewing = true immediately
+    api.comments.setViewing(taskId, true).catch(console.error);
+
+    // 2. Set interval to send heartbeat
+    const interval = setInterval(() => {
+      api.comments.setViewing(taskId, true).catch(console.error);
+    }, 10000); // 10 seconds heartbeat
+
+    return () => {
+      clearInterval(interval);
+      api.comments.setViewing(taskId, false).catch(console.error);
+    };
+  }, [selectedTask?.id, drawerTab]);
 
   const requestProjectDetails = async () => {
     try {

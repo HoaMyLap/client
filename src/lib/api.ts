@@ -107,6 +107,8 @@ export const api = {
       request(`/comments/${id}`, { method: 'PUT', body: JSON.stringify({ content }) }),
     delete: (id: string) => request(`/comments/${id}`, { method: 'DELETE' }),
     like: (id: string) => request(`/comments/${id}/like`, { method: 'PATCH' }),
+    setViewing: (taskId: string, viewing: boolean) =>
+      request(`/comments/task/${taskId}/viewing?viewing=${viewing}`, { method: 'POST' }),
   },
   notifications: {
     list: () => request('/notifications'),
