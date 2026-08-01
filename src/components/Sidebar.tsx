@@ -67,6 +67,7 @@ export default function Sidebar() {
   // Notification states
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [selectedConfirmNotif, setSelectedConfirmNotif] = useState<Notification | null>(null);
+  const [activeToasts, setActiveToasts] = useState<Array<{ id: string; title: string; content: string; notification: any }>>([]);
   const [showNotifDropdown, setShowNotifDropdown] = useState(false);
   const notifClientRef = useRef<Client | null>(null);
 
@@ -124,6 +125,22 @@ export default function Sidebar() {
     if (storedUserId) {
       const client = createNotificationStompClient(storedUserId, (notif) => {
         setNotifications((prev) => [notif, ...prev]);
+        
+        // Show toast notification
+        setActiveToasts((prev) => [
+          ...prev,
+          {
+            id: notif.id,
+            title: notif.title,
+            content: notif.content,
+            notification: notif,
+          },
+        ]);
+
+        // Auto remove after 5 seconds
+        setTimeout(() => {
+          setActiveToasts((prev) => prev.filter((t) => t.id !== notif.id));
+        }, 5000);
       });
       notifClientRef.current = client;
     }
@@ -768,6 +785,37 @@ export default function Sidebar() {
           </div>
         </div>
       )}
+
+      {/* Toast notifications stack */}
+      <div className="fixed top-6 right-6 z-[200] flex flex-col gap-3 max-w-sm w-full pointer-events-none">
+        {activeToasts.map((toast) => (
+          <div
+            key={toast.id}
+            onClick={() => {
+              handleNotificationClick(toast.notification);
+              setActiveToasts((prev) => prev.filter((t) => t.id !== toast.id));
+            }}
+            className="pointer-events-auto glass border border-primary/20 hover:border-primary/40 bg-card/95 backdrop-blur-sm shadow-2xl p-4 rounded-2xl flex items-start gap-3 cursor-pointer transform transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] animate-in slide-in-from-right-10 fade-in duration-300 text-foreground"
+          >
+            <div className="p-2 bg-primary/10 border border-primary/20 rounded-xl text-primary shrink-0">
+              <Bell className="h-4 w-4" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h4 className="text-xs font-bold font-display text-heading truncate">{toast.title}</h4>
+              <p className="text-[10px] text-secondary mt-1 line-clamp-2 leading-relaxed">{toast.content}</p>
+            </div>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setActiveToasts((prev) => prev.filter((t) => t.id !== toast.id));
+              }}
+              className="text-secondary hover:text-foreground shrink-0 p-0.5 rounded-lg hover:bg-surface/50 transition-colors"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        ))}
+      </div>
     </aside>
   );
 }
