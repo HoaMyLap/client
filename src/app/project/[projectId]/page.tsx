@@ -439,7 +439,13 @@ export default function ProjectKanbanPage() {
       setEditDesc(selectedTask.description || '');
       setEditPriority(selectedTask.priority);
       setEditAssigneeId(selectedTask.assigneeId);
-      setDrawerTab('detail');
+      
+      const searchCommentId = searchParams.get('commentId');
+      if (searchCommentId) {
+        setDrawerTab('comments');
+      } else {
+        setDrawerTab('detail');
+      }
 
       if (selectedTask.dueDate) {
         try {
@@ -544,6 +550,12 @@ export default function ProjectKanbanPage() {
         } else {
           setDrawerTab('detail');
         }
+
+        // Clean up URL parameters dynamically so they don't persist on subsequent operations
+        const url = new URL(window.location.href);
+        url.searchParams.delete('taskId');
+        url.searchParams.delete('commentId');
+        window.history.replaceState({}, '', url.pathname + url.search);
       }
     }
   }, [tasks, searchParams]);
