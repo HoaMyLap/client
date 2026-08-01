@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState, useRef } from 'react';
-import { useRouter, useParams } from 'next/navigation';
+import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { api } from '@/lib/api';
 import { createStompClient } from '@/lib/socket';
@@ -65,6 +65,7 @@ interface TaskLog {
 export default function ProjectKanbanPage() {
   const router = useRouter();
   const { projectId } = useParams() as { projectId: string };
+  const searchParams = useSearchParams();
   const { t, language } = useLanguage();
   
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -526,6 +527,44 @@ export default function ProjectKanbanPage() {
       api.comments.setViewing(taskId, false).catch(console.error);
     };
   }, [selectedTask?.id, drawerTab]);
+
+  // Handle task & comment opening from search parameters (notifications navigation)
+  useEffect(() => {
+    const searchTaskId = searchParams.get('taskId');
+    const searchCommentId = searchParams.get('commentId');
+
+    if (tasks.length > 0 && searchTaskId) {
+      const task = tasks.find((t) => t.id === searchTaskId);
+      if (task) {
+        setSelectedTask(task);
+        loadTaskDetails(task.id);
+        
+        if (searchCommentId) {
+          setDrawerTab('comments');
+        } else {
+          setDrawerTab('detail');
+        }
+      }
+    }
+  }, [tasks, searchParams]);
+
+  // Handle comment highlighting & smooth scrolling
+  useEffect(() => {
+    const searchCommentId = searchParams.get('commentId');
+    if (drawerTab === 'comments' && searchCommentId && comments.length > 0) {
+      const timer = setTimeout(() => {
+        const element = document.getElementById(`comment-${searchCommentId}`);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          element.classList.add('bg-primary/20', 'ring-2', 'ring-primary/40');
+          setTimeout(() => {
+            element.classList.remove('bg-primary/20', 'ring-2', 'ring-primary/40');
+          }, 3500);
+        }
+      }, 600);
+      return () => clearTimeout(timer);
+    }
+  }, [drawerTab, comments, searchParams]);
 
   const requestProjectDetails = async () => {
     try {
@@ -992,7 +1031,11 @@ export default function ProjectKanbanPage() {
     const authorName = getMemberName(comment.userId);
 
     return (
-      <div key={comment.id} className="p-3.5 bg-surface border border-border rounded-xl flex flex-col gap-2 shadow-sm">
+      <div 
+        id={`comment-${comment.id}`}
+        key={comment.id} 
+        className="p-3.5 bg-surface border border-border rounded-xl flex flex-col gap-2 shadow-sm transition-all duration-300"
+      >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="w-6 h-6 rounded-full bg-primary/20 text-primary flex items-center justify-center text-[10px] font-bold shrink-0">

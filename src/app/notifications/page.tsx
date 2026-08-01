@@ -21,12 +21,16 @@ interface NotificationItem {
   type: string;
   invitationId?: string | null;
   invitationStatus?: string | null;
+  projectId?: string | null;
+  taskId?: string | null;
+  commentId?: string | null;
   createdAt: string;
 }
 
 export default function NotificationsPage() {
   const router = useRouter();
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+  const [selectedConfirmNotif, setSelectedConfirmNotif] = useState<NotificationItem | null>(null);
   const [loading, setLoading] = useState(true);
   const [filterType, setFilterType] = useState<string>('ALL');
   const notifClientRef = useRef<Client | null>(null);
@@ -93,6 +97,21 @@ export default function NotificationsPage() {
       );
     } catch (err) {
       console.error(err);
+    }
+  };
+
+  const handleNotificationClick = async (n: NotificationItem) => {
+    if (!n.isRead) {
+      await handleMarkAsRead(n.id);
+    }
+    if (n.type === 'INVITATION' || n.type === 'LEAVE_REQUEST') {
+      setSelectedConfirmNotif(n);
+    } else if (n.projectId && n.taskId) {
+      let url = `/project/${n.projectId}?taskId=${n.taskId}`;
+      if (n.commentId) {
+        url += `&commentId=${n.commentId}`;
+      }
+      router.push(url);
     }
   };
 
@@ -215,7 +234,7 @@ export default function NotificationsPage() {
               {filteredNotifications.map((n) => (
                 <div
                   key={n.id}
-                  onClick={() => !n.isRead && handleMarkAsRead(n.id)}
+                  onClick={() => handleNotificationClick(n)}
                   className={`glass p-5 rounded-2xl border transition-all cursor-pointer flex items-start gap-4 hover:scale-[1.005] ${
                     n.isRead
                       ? 'border-border/60 opacity-80'
@@ -320,6 +339,94 @@ export default function NotificationsPage() {
           )}
         </main>
       </div>
+
+      {/* Center confirmation modal */}
+      {selectedConfirmNotif && (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fadeIn">
+          <div className="glass w-full max-w-md rounded-3xl border border-border shadow-2xl overflow-hidden p-6 space-y-5 animate-in fade-in zoom-in-95 duration-200 text-foreground">
+            {/* Header */}
+            <div className="flex items-center gap-3 border-b border-border-subtle pb-3">
+              <div className="p-2.5 bg-primary/10 border border-primary/20 rounded-xl">
+                {getTypeIcon(selectedConfirmNotif.type)}
+              </div>
+              <div>
+                <h3 className="text-sm font-black font-display text-heading">{selectedConfirmNotif.title}</h3>
+                <span className="text-[9px] text-muted uppercase font-bold tracking-wider">{selectedConfirmNotif.type}</span>
+              </div>
+            </div>
+
+            {/* Content */}
+            <p className="text-xs text-secondary leading-relaxed bg-surface/30 border border-border-subtle p-4 rounded-2xl">
+              {selectedConfirmNotif.content}
+            </p>
+
+            {/* Actions */}
+            <div className="flex gap-3 justify-end pt-2">
+              <button
+                type="button"
+                onClick={() => setSelectedConfirmNotif(null)}
+                className="ui-btn-secondary px-4 py-2 text-xs font-semibold"
+              >
+                Đóng
+              </button>
+              
+              {(!selectedConfirmNotif.invitationStatus || selectedConfirmNotif.invitationStatus === 'PENDING') && (
+                <>
+                  {selectedConfirmNotif.type === 'INVITATION' && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          await handleRespondInvitation(selectedConfirmNotif.id, 'DECLINE');
+                          setSelectedConfirmNotif(null);
+                        }}
+                        className="px-4 py-2 rounded-xl bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 border border-rose-500/20 text-xs font-bold transition-all"
+                      >
+                        Từ chối
+                      </button>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          await handleRespondInvitation(selectedConfirmNotif.id, 'ACCEPT');
+                          setSelectedConfirmNotif(null);
+                        }}
+                        className="px-4 py-2 rounded-xl bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 border border-emerald-500/30 text-xs font-bold transition-all shadow-sm"
+                      >
+                        Chấp nhận
+                      </button>
+                    </>
+                  )}
+
+                  {selectedConfirmNotif.type === 'LEAVE_REQUEST' && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          await handleRespondLeave(selectedConfirmNotif.id, 'REJECT');
+                          setSelectedConfirmNotif(null);
+                        }}
+                        className="px-4 py-2 rounded-xl bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 border border-rose-500/20 text-xs font-bold transition-all"
+                      >
+                        Từ chối
+                      </button>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          await handleRespondLeave(selectedConfirmNotif.id, 'APPROVE');
+                          setSelectedConfirmNotif(null);
+                        }}
+                        className="px-4 py-2 rounded-xl bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 border border-emerald-500/30 text-xs font-bold transition-all shadow-sm"
+                      >
+                        Duyệt rời
+                      </button>
+                    </>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -35,6 +35,9 @@ interface Notification {
   type: string;
   invitationId?: string | null;
   invitationStatus?: string | null;
+  projectId?: string | null;
+  taskId?: string | null;
+  commentId?: string | null;
   createdAt: string;
 }
 
@@ -63,6 +66,7 @@ export default function Sidebar() {
 
   // Notification states
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [selectedConfirmNotif, setSelectedConfirmNotif] = useState<Notification | null>(null);
   const [showNotifDropdown, setShowNotifDropdown] = useState(false);
   const notifClientRef = useRef<Client | null>(null);
 
@@ -200,6 +204,23 @@ export default function Sidebar() {
       );
     } catch (err) {
       console.error(err);
+    }
+  };
+
+  const handleNotificationClick = async (n: Notification) => {
+    if (!n.isRead) {
+      await handleMarkAsRead(n.id);
+    }
+    if (n.type === 'INVITATION' || n.type === 'LEAVE_REQUEST') {
+      setSelectedConfirmNotif(n);
+      setShowNotifDropdown(false);
+    } else if (n.projectId && n.taskId) {
+      let url = `/project/${n.projectId}?taskId=${n.taskId}`;
+      if (n.commentId) {
+        url += `&commentId=${n.commentId}`;
+      }
+      setShowNotifDropdown(false);
+      router.push(url);
     }
   };
 
@@ -450,7 +471,7 @@ export default function Sidebar() {
                   {notifications.map((n) => (
                     <div
                       key={n.id}
-                      onClick={() => handleMarkAsRead(n.id)}
+                      onClick={() => handleNotificationClick(n)}
                       className={`p-2.5 rounded-xl text-left cursor-pointer transition-all border text-xs ${
                         n.isRead ? 'notif-read' : 'notif-unread hover:border-primary/20'
                       }`}
@@ -650,6 +671,99 @@ export default function Sidebar() {
                 </button>
               </div>
             </form>
+        </div>
+      )}
+
+      {/* Center confirmation modal */}
+      {selectedConfirmNotif && (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fadeIn">
+          <div className="glass w-full max-w-md rounded-3xl border border-border shadow-2xl overflow-hidden p-6 space-y-5 animate-in fade-in zoom-in-95 duration-200 text-foreground">
+            {/* Header */}
+            <div className="flex items-center gap-3 border-b border-border-subtle pb-3">
+              <div className="p-2.5 bg-primary/10 border border-primary/20 rounded-xl">
+                {selectedConfirmNotif.type === 'INVITATION' ? (
+                  <Users className="h-5 w-5 text-violet-400" />
+                ) : selectedConfirmNotif.type === 'LEAVE_REQUEST' ? (
+                  <LogOut className="h-5 w-5 text-rose-400" />
+                ) : (
+                  <Bell className="h-5 w-5 text-primary" />
+                )}
+              </div>
+              <div>
+                <h3 className="text-sm font-black font-display text-heading">{selectedConfirmNotif.title}</h3>
+                <span className="text-[9px] text-muted uppercase font-bold tracking-wider">{selectedConfirmNotif.type}</span>
+              </div>
+            </div>
+
+            {/* Content */}
+            <p className="text-xs text-secondary leading-relaxed bg-surface/30 border border-border-subtle p-4 rounded-2xl">
+              {selectedConfirmNotif.content}
+            </p>
+
+            {/* Actions */}
+            <div className="flex gap-3 justify-end pt-2">
+              <button
+                type="button"
+                onClick={() => setSelectedConfirmNotif(null)}
+                className="ui-btn-secondary px-4 py-2 text-xs font-semibold"
+              >
+                {language === 'vi' ? 'Đóng' : 'Close'}
+              </button>
+              
+              {(!selectedConfirmNotif.invitationStatus || selectedConfirmNotif.invitationStatus === 'PENDING') && (
+                <>
+                  {selectedConfirmNotif.type === 'INVITATION' && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          await handleRespondInvitation(selectedConfirmNotif.id, 'DECLINE');
+                          setSelectedConfirmNotif(null);
+                        }}
+                        className="px-4 py-2 rounded-xl bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 border border-rose-500/20 text-xs font-bold transition-all"
+                      >
+                        {language === 'vi' ? 'Từ chối' : 'Decline'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          await handleRespondInvitation(selectedConfirmNotif.id, 'ACCEPT');
+                          setSelectedConfirmNotif(null);
+                        }}
+                        className="px-4 py-2 rounded-xl bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 border border-emerald-500/30 text-xs font-bold transition-all shadow-sm"
+                      >
+                        {language === 'vi' ? 'Chấp nhận' : 'Accept'}
+                      </button>
+                    </>
+                  )}
+
+                  {selectedConfirmNotif.type === 'LEAVE_REQUEST' && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          await handleRespondLeave(selectedConfirmNotif.id, 'REJECT');
+                          setSelectedConfirmNotif(null);
+                        }}
+                        className="px-4 py-2 rounded-xl bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 border border-rose-500/20 text-xs font-bold transition-all"
+                      >
+                        {language === 'vi' ? 'Từ chối' : 'Reject'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          await handleRespondLeave(selectedConfirmNotif.id, 'APPROVE');
+                          setSelectedConfirmNotif(null);
+                        }}
+                        className="px-4 py-2 rounded-xl bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 border border-emerald-500/30 text-xs font-bold transition-all shadow-sm"
+                      >
+                        {language === 'vi' ? 'Duyệt rời' : 'Approve'}
+                      </button>
+                    </>
+                  )}
+                </>
+              )}
+            </div>
           </div>
         </div>
       )}
