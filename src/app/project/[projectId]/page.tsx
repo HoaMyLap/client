@@ -74,6 +74,7 @@ export default function ProjectKanbanPage() {
   const [workspaceId, setWorkspaceId] = useState('');
   const [members, setMembers] = useState<Member[]>([]);
   const [project, setProject] = useState<any>(null);
+  const [highlightCommentId, setHighlightCommentId] = useState<string | null>(null);
   const [showProjectMembersModal, setShowProjectMembersModal] = useState(false);
   const [projectInviteEmail, setProjectInviteEmail] = useState('');
   const [projectInviteRole, setProjectInviteRole] = useState('MEMBER');
@@ -440,7 +441,7 @@ export default function ProjectKanbanPage() {
       setEditPriority(selectedTask.priority);
       setEditAssigneeId(selectedTask.assigneeId);
       
-      const searchCommentId = searchParams.get('commentId');
+      const searchCommentId = searchParams.get('commentId') || highlightCommentId;
       if (searchCommentId) {
         setDrawerTab('comments');
       } else {
@@ -546,6 +547,7 @@ export default function ProjectKanbanPage() {
         loadTaskDetails(task.id);
         
         if (searchCommentId) {
+          setHighlightCommentId(searchCommentId);
           setDrawerTab('comments');
         } else {
           setDrawerTab('detail');
@@ -562,13 +564,16 @@ export default function ProjectKanbanPage() {
 
   // Handle comment highlighting & smooth scrolling
   useEffect(() => {
-    const searchCommentId = searchParams.get('commentId');
-    if (drawerTab === 'comments' && searchCommentId && comments.length > 0) {
+    if (drawerTab === 'comments' && highlightCommentId && comments.length > 0) {
       const timer = setTimeout(() => {
-        const element = document.getElementById(`comment-${searchCommentId}`);
+        const element = document.getElementById(`comment-${highlightCommentId}`);
         if (element) {
           element.scrollIntoView({ behavior: 'smooth', block: 'center' });
           element.classList.add('bg-primary/20', 'ring-2', 'ring-primary/40');
+          
+          // Clear highlight ID after successful scroll trigger
+          setHighlightCommentId(null);
+          
           setTimeout(() => {
             element.classList.remove('bg-primary/20', 'ring-2', 'ring-primary/40');
           }, 3500);
@@ -576,7 +581,7 @@ export default function ProjectKanbanPage() {
       }, 600);
       return () => clearTimeout(timer);
     }
-  }, [drawerTab, comments, searchParams]);
+  }, [drawerTab, comments, highlightCommentId]);
 
   const requestProjectDetails = async () => {
     try {
