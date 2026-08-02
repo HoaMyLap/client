@@ -12,7 +12,7 @@ import * as XLSX from 'xlsx';
 import { 
   ArrowLeft, Plus, Folder, Users, Trash, PlusCircle, 
   Pencil, Shield, User, X, CheckCircle2, Activity, BarChart3, Sparkles, Layers,
-  FileSpreadsheet, Upload, Download
+  FileSpreadsheet, Upload, Download, Bell
 } from 'lucide-react';
 
 interface Project {
