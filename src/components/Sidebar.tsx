@@ -695,6 +695,7 @@ export default function Sidebar() {
           </div>
         </div>
       )}
+    </aside>
 
       {/* Center confirmation modal */}
       {selectedConfirmNotif && (
@@ -789,8 +790,6 @@ export default function Sidebar() {
           </div>
         </div>
       )}
-
-      </aside>
 
       {/* Toast notifications stack - placed outside aside containing block for viewport calculation */}
       <div className="fixed top-6 right-6 z-[200] flex flex-col gap-3.5 max-w-[420px] w-full pointer-events-none">

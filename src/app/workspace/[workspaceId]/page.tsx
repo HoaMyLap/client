@@ -75,6 +75,41 @@ export default function WorkspaceDetailPage() {
   const excelFileInputRef = useRef<HTMLInputElement | null>(null);
 
   const [pageError, setPageError] = useState('');
+  
+  // Custom dialog modal states
+  const [dialogConfig, setDialogConfig] = useState<{
+    show: boolean;
+    title: string;
+    message: string;
+    type: 'alert' | 'confirm';
+    onConfirm?: () => void;
+    onCancel?: () => void;
+  } | null>(null);
+
+  const showCustomConfirm = (message: string, onConfirm: () => void) => {
+    setDialogConfig({
+      show: true,
+      title: 'Xác nhận',
+      message,
+      type: 'confirm',
+      onConfirm: () => {
+        onConfirm();
+        setDialogConfig(null);
+      },
+      onCancel: () => setDialogConfig(null),
+    });
+  };
+
+  const showCustomAlert = (message: string) => {
+    setDialogConfig({
+      show: true,
+      title: 'Thông báo',
+      message,
+      type: 'alert',
+      onConfirm: () => setDialogConfig(null),
+    });
+  };
+
   const stompClientRef = useRef<Client | null>(null);
 
   const handleSocketMessage = (msg: any) => {
@@ -184,19 +219,17 @@ export default function WorkspaceDetailPage() {
     }
   };
 
-  const handleDeleteProject = async (e: React.MouseEvent, projectId: string) => {
+  const handleDeleteProject = (e: React.MouseEvent, projectId: string) => {
     e.preventDefault();
     e.stopPropagation();
-    if (!confirm('Bạn có chắc chắn muốn xóa dự án này? Toàn bộ thẻ công việc sẽ bị xóa theo.')) {
-      return;
-    }
-
-    try {
-      await api.projects.delete(projectId);
-      loadData();
-    } catch (err: any) {
-      alert(err.message || 'Lỗi khi xóa dự án (chỉ Admin của Workspace mới được xóa).');
-    }
+    showCustomConfirm('Bạn có chắc chắn muốn xóa dự án này? Toàn bộ thẻ công việc sẽ bị xóa theo.', async () => {
+      try {
+        await api.projects.delete(projectId);
+        loadData();
+      } catch (err: any) {
+        showCustomAlert(err.message || 'Lỗi khi xóa dự án (chỉ Admin của Workspace mới được xóa).');
+      }
+    });
   };
 
   const handleExcelUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -328,25 +361,26 @@ export default function WorkspaceDetailPage() {
     }
   };
 
-  const handleRequestLeave = async () => {
-    if (!confirm('Bạn có chắc chắn muốn gửi yêu cầu rời khỏi Workspace này? Yêu cầu sẽ được gửi tới Admin để phê duyệt.')) return;
-    try {
-      await api.notifications.requestLeave({ targetType: 'WORKSPACE', targetId: workspaceId });
-      alert('Yêu cầu rời Workspace đã được gửi thành công tới Admin. Vui lòng chờ phê duyệt.');
-    } catch (err: any) {
-      alert(err.message || 'Không thể gửi yêu cầu rời.');
-    }
+  const handleRequestLeave = () => {
+    showCustomConfirm('Bạn có chắc chắn muốn gửi yêu cầu rời khỏi Workspace này? Yêu cầu sẽ được gửi tới Admin để phê duyệt.', async () => {
+      try {
+        await api.notifications.requestLeave({ targetType: 'WORKSPACE', targetId: workspaceId });
+        showCustomAlert('Yêu cầu rời Workspace đã được gửi thành công tới Admin. Vui lòng chờ phê duyệt.');
+      } catch (err: any) {
+        showCustomAlert(err.message || 'Không thể gửi yêu cầu rời.');
+      }
+    });
   };
 
-  const handleRemoveMember = async (userId: string, fullname: string) => {
-    if (!confirm(`Bạn có chắc muốn xóa "${fullname}" khỏi workspace này?`)) return;
-
-    try {
-      await api.workspaces.removeMember(workspaceId, userId);
-      loadData();
-    } catch (err: any) {
-      alert(err.message || 'Không thể xóa thành viên (chỉ Admin mới có quyền).');
-    }
+  const handleRemoveMember = (userId: string, fullname: string) => {
+    showCustomConfirm(`Bạn có chắc muốn xóa "${fullname}" khỏi workspace này?`, async () => {
+      try {
+        await api.workspaces.removeMember(workspaceId, userId);
+        loadData();
+      } catch (err: any) {
+        showCustomAlert(err.message || 'Không thể xóa thành viên (chỉ Admin mới có quyền).');
+      }
+    });
   };
 
   const handleChangeMemberRole = async (userId: string, newRole: string) => {
@@ -354,7 +388,7 @@ export default function WorkspaceDetailPage() {
       await api.workspaces.updateMemberRole(workspaceId, userId, newRole);
       loadData();
     } catch (err: any) {
-      alert(err.message || 'Không thể cập nhật vai trò thành viên.');
+      showCustomAlert(err.message || 'Không thể cập nhật vai trò thành viên.');
     }
   };
 
@@ -1007,6 +1041,58 @@ export default function WorkspaceDetailPage() {
             </div>
           </div>
         )}
+
+      {/* Custom Alert/Confirm Modal Dialog */}
+      {dialogConfig && dialogConfig.show && (
+        <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fadeIn no-print">
+          <div className="glass w-full max-w-md rounded-3xl border border-border shadow-2xl overflow-hidden p-6 space-y-5 animate-in fade-in zoom-in-95 duration-200 text-foreground">
+            {/* Header */}
+            <div className="flex items-center gap-3 border-b border-border-subtle pb-3">
+              <div className="p-2.5 bg-primary/10 border border-primary/20 rounded-xl">
+                <Bell className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <h3 className="text-sm font-black font-display text-heading">{dialogConfig.title}</h3>
+              </div>
+            </div>
+
+            {/* Message */}
+            <p className="text-xs text-secondary leading-relaxed bg-surface/30 border border-border-subtle p-4 rounded-2xl">
+              {dialogConfig.message}
+            </p>
+
+            {/* Footer Buttons */}
+            <div className="flex gap-3 justify-end pt-2">
+              {dialogConfig.type === 'confirm' ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={dialogConfig.onCancel}
+                    className="ui-btn-secondary px-4 py-2 text-xs font-semibold"
+                  >
+                    Hủy
+                  </button>
+                  <button
+                    type="button"
+                    onClick={dialogConfig.onConfirm}
+                    className="px-4 py-2 rounded-xl bg-primary text-white hover:bg-primary-hover text-xs font-bold transition-all shadow-sm shadow-primary/25"
+                  >
+                    Xác nhận
+                  </button>
+                </>
+              ) : (
+                <button
+                  type="button"
+                  onClick={dialogConfig.onConfirm}
+                  className="px-5 py-2 rounded-xl bg-primary text-white hover:bg-primary-hover text-xs font-bold transition-all shadow-sm shadow-primary/25"
+                >
+                  OK
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
       </div>
     </div>
   );

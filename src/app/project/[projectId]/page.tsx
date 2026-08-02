@@ -75,6 +75,41 @@ export default function ProjectKanbanPage() {
   const [members, setMembers] = useState<Member[]>([]);
   const [project, setProject] = useState<any>(null);
   const [highlightCommentId, setHighlightCommentId] = useState<string | null>(null);
+  
+  // Custom dialog modal states
+  const [dialogConfig, setDialogConfig] = useState<{
+    show: boolean;
+    title: string;
+    message: string;
+    type: 'alert' | 'confirm';
+    onConfirm?: () => void;
+    onCancel?: () => void;
+  } | null>(null);
+
+  const showCustomConfirm = (message: string, onConfirm: () => void) => {
+    setDialogConfig({
+      show: true,
+      title: 'Xác nhận',
+      message,
+      type: 'confirm',
+      onConfirm: () => {
+        onConfirm();
+        setDialogConfig(null);
+      },
+      onCancel: () => setDialogConfig(null),
+    });
+  };
+
+  const showCustomAlert = (message: string) => {
+    setDialogConfig({
+      show: true,
+      title: 'Thông báo',
+      message,
+      type: 'alert',
+      onConfirm: () => setDialogConfig(null),
+    });
+  };
+
   const [showProjectMembersModal, setShowProjectMembersModal] = useState(false);
   const [projectInviteEmail, setProjectInviteEmail] = useState('');
   const [projectInviteRole, setProjectInviteRole] = useState('MEMBER');
@@ -180,14 +215,15 @@ export default function ProjectKanbanPage() {
     e.target.value = ''; // Reset input to allow adding more files anytime
   };
 
-  const handleDeleteProjectFile = async (fileId: string, fileName: string) => {
-    if (!confirm(`Bạn có chắc muốn xóa tệp "${fileName}" khỏi dự án?`)) return;
-    try {
-      await api.projects.deleteFile(projectId, fileId);
-      await loadProjectFiles();
-    } catch (err: any) {
-      alert(err.message || "Không thể xóa tệp tin khỏi dự án.");
-    }
+  const handleDeleteProjectFile = (fileId: string, fileName: string) => {
+    showCustomConfirm(`Bạn có chắc muốn xóa tệp "${fileName}" khỏi dự án?`, async () => {
+      try {
+        await api.projects.deleteFile(projectId, fileId);
+        await loadProjectFiles();
+      } catch (err: any) {
+        showCustomAlert(err.message || "Không thể xóa tệp tin khỏi dự án.");
+      }
+    });
   };
 
   // Drag state
@@ -776,29 +812,31 @@ export default function ProjectKanbanPage() {
     }
   };
 
-  const handleDeleteTask = async (taskId: string) => {
-    if (!confirm('Bạn có chắc chắn muốn xóa công việc này?')) return;
-    try {
-      await api.tasks.delete(taskId);
-      if (selectedTask && selectedTask.id === taskId) {
-        setSelectedTask(null);
+  const handleDeleteTask = (taskId: string) => {
+    showCustomConfirm('Bạn có chắc chắn muốn xóa công việc này?', async () => {
+      try {
+        await api.tasks.delete(taskId);
+        if (selectedTask && selectedTask.id === taskId) {
+          setSelectedTask(null);
+        }
+      } catch (err: any) {
+        showCustomAlert(err.message || 'Lỗi khi xóa công việc.');
       }
-    } catch (err: any) {
-      alert(err.message || 'Lỗi khi xóa công việc.');
-    }
+    });
   };
 
-  const handleDeleteSubtask = async (subtaskId: string) => {
-    if (!confirm('Bạn có chắc chắn muốn xóa công việc con này?')) return;
-    try {
-      await api.tasks.delete(subtaskId);
-      setSubtasks((prev) => prev.filter((s) => s.id !== subtaskId));
-      if (selectedTask) {
-        api.tasks.getLogs(selectedTask.id).then((data) => setTaskLogs(data || []));
+  const handleDeleteSubtask = (subtaskId: string) => {
+    showCustomConfirm('Bạn có chắc chắn muốn xóa công việc con này?', async () => {
+      try {
+        await api.tasks.delete(subtaskId);
+        setSubtasks((prev) => prev.filter((s) => s.id !== subtaskId));
+        if (selectedTask) {
+          api.tasks.getLogs(selectedTask.id).then((data) => setTaskLogs(data || []));
+        }
+      } catch (err: any) {
+        showCustomAlert(err.message || 'Lỗi khi xóa công việc con.');
       }
-    } catch (err: any) {
-      alert(err.message || 'Lỗi khi xóa công việc con.');
-    }
+    });
   };
 
   const handleAddComment = async (e: React.FormEvent, parentId: string | null = null) => {
@@ -823,7 +861,7 @@ export default function ProjectKanbanPage() {
         return [...prev, created];
       });
     } catch (err: any) {
-      alert(err.message || 'Lỗi khi gửi bình luận.');
+      showCustomAlert(err.message || 'Lỗi khi gửi bình luận.');
     }
   };
 
@@ -834,18 +872,19 @@ export default function ProjectKanbanPage() {
       setComments((prev) => prev.map((c) => (c.id === commentId ? updated : c)));
       setEditingCommentId(null);
     } catch (err: any) {
-      alert(err.message || 'Lỗi khi cập nhật bình luận.');
+      showCustomAlert(err.message || 'Lỗi khi cập nhật bình luận.');
     }
   };
 
-  const handleDeleteComment = async (commentId: string) => {
-    if (!confirm('Bạn có chắc chắn muốn xóa bình luận này?')) return;
-    try {
-      await api.comments.delete(commentId);
-      setComments((prev) => prev.filter((c) => c.id !== commentId && c.parentCommentId !== commentId));
-    } catch (err: any) {
-      alert(err.message || 'Lỗi khi xóa bình luận.');
-    }
+  const handleDeleteComment = (commentId: string) => {
+    showCustomConfirm('Bạn có chắc chắn muốn xóa bình luận này?', async () => {
+      try {
+        await api.comments.delete(commentId);
+        setComments((prev) => prev.filter((c) => c.id !== commentId && c.parentCommentId !== commentId));
+      } catch (err: any) {
+        showCustomAlert(err.message || 'Lỗi khi xóa bình luận.');
+      }
+    });
   };
 
   const handleToggleLikeComment = async (commentId: string) => {
@@ -853,18 +892,19 @@ export default function ProjectKanbanPage() {
       const updated = await api.comments.like(commentId);
       setComments((prev) => prev.map((c) => (c.id === commentId ? updated : c)));
     } catch (err: any) {
-      alert(err.message || 'Lỗi khi tương tác bình luận.');
+      showCustomAlert(err.message || 'Lỗi khi tương tác bình luận.');
     }
   };
 
-  const handleRequestLeaveProject = async () => {
-    if (!confirm('Bạn có chắc chắn muốn gửi yêu cầu rời khỏi dự án này? Yêu cầu sẽ được gửi tới Admin để phê duyệt.')) return;
-    try {
-      await api.notifications.requestLeave({ targetType: 'PROJECT', targetId: projectId });
-      alert('Yêu cầu rời dự án đã được gửi thành công tới Admin. Vui lòng chờ phê duyệt.');
-    } catch (err: any) {
-      alert(err.message || 'Không thể gửi yêu cầu rời dự án.');
-    }
+  const handleRequestLeaveProject = () => {
+    showCustomConfirm('Bạn có chắc chắn muốn gửi yêu cầu rời khỏi dự án này? Yêu cầu sẽ được gửi tới Admin để phê duyệt.', async () => {
+      try {
+        await api.notifications.requestLeave({ targetType: 'PROJECT', targetId: projectId });
+        showCustomAlert('Yêu cầu rời dự án đã được gửi thành công tới Admin. Vui lòng chờ phê duyệt.');
+      } catch (err: any) {
+        showCustomAlert(err.message || 'Không thể gửi yêu cầu rời dự án.');
+      }
+    });
   };
 
   const handleAddSubtask = async (e: React.FormEvent) => {
@@ -2900,6 +2940,58 @@ export default function ProjectKanbanPage() {
                 alt={previewImage.name}
                 className="max-h-[75vh] max-w-full object-contain rounded-xl"
               />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Custom Alert/Confirm Modal Dialog */}
+      {dialogConfig && dialogConfig.show && (
+        <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fadeIn no-print">
+          <div className="glass w-full max-w-md rounded-3xl border border-border shadow-2xl overflow-hidden p-6 space-y-5 animate-in fade-in zoom-in-95 duration-200 text-foreground">
+            {/* Header */}
+            <div className="flex items-center gap-3 border-b border-border-subtle pb-3">
+              <div className="p-2.5 bg-primary/10 border border-primary/20 rounded-xl">
+                <Bell className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <h3 className="text-sm font-black font-display text-heading">{dialogConfig.title}</h3>
+              </div>
+            </div>
+
+            {/* Message */}
+            <p className="text-xs text-secondary leading-relaxed bg-surface/30 border border-border-subtle p-4 rounded-2xl">
+              {dialogConfig.message}
+            </p>
+
+            {/* Footer Buttons */}
+            <div className="flex gap-3 justify-end pt-2">
+              {dialogConfig.type === 'confirm' ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={dialogConfig.onCancel}
+                    className="ui-btn-secondary px-4 py-2 text-xs font-semibold"
+                  >
+                    Hủy
+                  </button>
+                  <button
+                    type="button"
+                    onClick={dialogConfig.onConfirm}
+                    className="px-4 py-2 rounded-xl bg-primary text-white hover:bg-primary-hover text-xs font-bold transition-all shadow-sm shadow-primary/25"
+                  >
+                    Xác nhận
+                  </button>
+                </>
+              ) : (
+                <button
+                  type="button"
+                  onClick={dialogConfig.onConfirm}
+                  className="px-5 py-2 rounded-xl bg-primary text-white hover:bg-primary-hover text-xs font-bold transition-all shadow-sm shadow-primary/25"
+                >
+                  OK
+                </button>
+              )}
             </div>
           </div>
         </div>
