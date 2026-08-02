@@ -2947,20 +2947,20 @@ export default function ProjectKanbanPage() {
 
       {/* Custom Alert/Confirm Modal Dialog */}
       {dialogConfig && dialogConfig.show && (
-        <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fadeIn no-print">
-          <div className="glass w-full max-w-md rounded-3xl border border-border shadow-2xl overflow-hidden p-6 space-y-5 animate-in fade-in zoom-in-95 duration-200 text-foreground">
+        <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/75 backdrop-blur-md p-4 animate-fadeIn no-print">
+          <div className="bg-zinc-950/90 border border-zinc-800 shadow-[0_20px_50px_rgba(0,0,0,0.7)] backdrop-blur-xl w-full max-w-lg rounded-3xl overflow-hidden p-7 space-y-6 animate-in fade-in zoom-in-95 duration-200 text-foreground">
             {/* Header */}
-            <div className="flex items-center gap-3 border-b border-border-subtle pb-3">
-              <div className="p-2.5 bg-primary/10 border border-primary/20 rounded-xl">
-                <Bell className="h-5 w-5 text-primary" />
+            <div className="flex items-center gap-4 border-b border-zinc-800/80 pb-4.5">
+              <div className="p-3 bg-primary/15 border border-primary/25 rounded-2xl text-primary shrink-0">
+                <Bell className="h-6 w-6" />
               </div>
               <div>
-                <h3 className="text-sm font-black font-display text-heading">{dialogConfig.title}</h3>
+                <h3 className="text-base font-extrabold text-white tracking-wide font-display leading-snug">{dialogConfig.title}</h3>
               </div>
             </div>
 
             {/* Message */}
-            <p className="text-xs text-secondary leading-relaxed bg-surface/30 border border-border-subtle p-4 rounded-2xl">
+            <p className="text-sm font-medium text-zinc-200 leading-relaxed bg-zinc-900/60 border border-zinc-800/80 p-5 rounded-2xl">
               {dialogConfig.message}
             </p>
 
@@ -2971,14 +2971,14 @@ export default function ProjectKanbanPage() {
                   <button
                     type="button"
                     onClick={dialogConfig.onCancel}
-                    className="ui-btn-secondary px-4 py-2 text-xs font-semibold"
+                    className="px-5 py-2.5 rounded-xl border border-zinc-800 hover:bg-zinc-900 text-zinc-300 text-xs font-bold transition-all"
                   >
                     Hủy
                   </button>
                   <button
                     type="button"
                     onClick={dialogConfig.onConfirm}
-                    className="px-4 py-2 rounded-xl bg-primary text-white hover:bg-primary-hover text-xs font-bold transition-all shadow-sm shadow-primary/25"
+                    className="px-5 py-2.5 rounded-xl bg-primary text-white hover:bg-primary-hover text-xs font-bold transition-all shadow-lg shadow-primary/25"
                   >
                     Xác nhận
                   </button>
@@ -2987,7 +2987,7 @@ export default function ProjectKanbanPage() {
                 <button
                   type="button"
                   onClick={dialogConfig.onConfirm}
-                  className="px-5 py-2 rounded-xl bg-primary text-white hover:bg-primary-hover text-xs font-bold transition-all shadow-sm shadow-primary/25"
+                  className="px-6 py-2.5 rounded-xl bg-primary text-white hover:bg-primary-hover text-xs font-bold transition-all shadow-lg shadow-primary/25"
                 >
                   OK
                 </button>
