@@ -57,10 +57,32 @@ export const api = {
     getMembers: (workspaceId: string) => request(`/workspaces/${workspaceId}/members`),
     removeMember: (workspaceId: string, userId: string) =>
       request(`/workspaces/${workspaceId}/members/${userId}`, { method: 'DELETE' }),
-    updateMemberRole: (workspaceId: string, userId: string, role: string) =>
-      request(`/workspaces/${workspaceId}/members/${userId}/role`, {
-        method: 'PATCH',
-        body: JSON.stringify({ role }),
+    updateMemberRole: (workspaceId: string, userId: string, roleOrData: string | { role?: string; roleId?: string | null }) => {
+      const isString = typeof roleOrData === 'string';
+      return request(`/workspaces/${workspaceId}/members/${userId}/role`, {
+        method: isString ? 'PATCH' : 'PUT',
+        body: JSON.stringify(isString ? { role: roleOrData } : roleOrData),
+      });
+    },
+    getRoles: (workspaceId: string) => request(`/workspaces/${workspaceId}/roles`),
+    createRole: (workspaceId: string, data: { name: string; description: string; permissions: string[] }) =>
+      request(`/workspaces/${workspaceId}/roles`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    updateRole: (workspaceId: string, roleId: string, data: { name: string; description: string; permissions: string[] }) =>
+      request(`/workspaces/${workspaceId}/roles/${roleId}`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      }),
+    deleteRole: (workspaceId: string, roleId: string) =>
+      request(`/workspaces/${workspaceId}/roles/${roleId}`, { method: 'DELETE' }),
+    getMemberPermissions: (workspaceId: string, userId: string) =>
+      request(`/workspaces/${workspaceId}/members/${userId}/permissions`),
+    saveMemberPermissions: (workspaceId: string, userId: string, permissions: Array<{ permission: string; allowed: boolean }>) =>
+      request(`/workspaces/${workspaceId}/members/${userId}/permissions`, {
+        method: 'POST',
+        body: JSON.stringify(permissions),
       }),
   },
   projects: {
