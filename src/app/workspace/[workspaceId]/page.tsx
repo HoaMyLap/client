@@ -30,7 +30,36 @@ interface WorkspaceMember {
   fullname: string;
   avatarUrl: string | null;
   role: string;
+  roleId?: string | null;
+  customRoleName?: string | null;
 }
+
+interface CustomRole {
+  id: string;
+  workspaceId: string;
+  name: string;
+  description: string;
+  permissions: string[];
+}
+
+const ALL_PERMISSIONS = [
+  { key: 'WORKSPACE_VIEW', label: 'Xem Workspace', desc: 'Quyền xem thông tin cơ bản của không gian làm việc.' },
+  { key: 'WORKSPACE_UPDATE', label: 'Cập nhật Workspace', desc: 'Chỉnh sửa thông tin, đổi tên, đổi ảnh đại diện không gian.' },
+  { key: 'WORKSPACE_DELETE', label: 'Xóa Workspace', desc: 'Quyền xóa hoàn toàn không gian làm việc này.' },
+  { key: 'WORKSPACE_MEMBER_INVITE', label: 'Mời thành viên', desc: 'Gửi lời mời tham gia không gian làm việc.' },
+  { key: 'WORKSPACE_MEMBER_REMOVE', label: 'Xóa thành viên', desc: 'Trục xuất thành viên khỏi không gian làm việc.' },
+  { key: 'WORKSPACE_ROLE_MANAGE', label: 'Quản lý vai trò', desc: 'Tạo, sửa, xóa các vai trò tùy chỉnh và phân quyền.' },
+  { key: 'PROJECT_CREATE', label: 'Tạo dự án con', desc: 'Tạo mới dự án trực thuộc không gian này.' },
+  { key: 'PROJECT_VIEW', label: 'Xem dự án con', desc: 'Xem danh sách và chi tiết các dự án.' },
+  { key: 'PROJECT_UPDATE', label: 'Cập nhật dự án', desc: 'Chỉnh sửa thông tin, cấu hình cài đặt của dự án.' },
+  { key: 'PROJECT_DELETE', label: 'Xóa dự án', desc: 'Xóa dự án khỏi không gian làm việc.' },
+  { key: 'TASK_CREATE', label: 'Tạo công việc', desc: 'Quyền tạo công việc mới trong các dự án.' },
+  { key: 'TASK_VIEW', label: 'Xem công việc', desc: 'Xem chi tiết công việc, bình luận và tiến độ.' },
+  { key: 'TASK_UPDATE', label: 'Cập nhật công việc', desc: 'Chỉnh sửa, gán người thực hiện, kéo thả trạng thái công việc.' },
+  { key: 'TASK_DELETE', label: 'Xóa công việc', desc: 'Xóa hoàn toàn công việc khỏi dự án.' },
+  { key: 'TASK_COMMENT_CREATE', label: 'Viết bình luận', desc: 'Thảo luận và gửi bình luận trong công việc.' },
+  { key: 'TASK_COMMENT_DELETE', label: 'Xóa bình luận', desc: 'Quyền xóa bình luận (của chính mình hoặc của người khác).' }
+];
 
 export default function WorkspaceDetailPage() {
   const router = useRouter();
@@ -75,6 +104,22 @@ export default function WorkspaceDetailPage() {
   const excelFileInputRef = useRef<HTMLInputElement | null>(null);
 
   const [pageError, setPageError] = useState('');
+
+  // Custom Roles & Permissions state
+  const [customRoles, setCustomRoles] = useState<CustomRole[]>([]);
+  const [showRoleMgrModal, setShowRoleMgrModal] = useState(false);
+  const [selectedRole, setSelectedRole] = useState<CustomRole | null>(null);
+  const [roleFormName, setRoleFormName] = useState('');
+  const [roleFormDesc, setRoleFormDesc] = useState('');
+  const [roleFormPermissions, setRoleFormPermissions] = useState<string[]>([]);
+  const [roleFormLoading, setRoleFormLoading] = useState(false);
+  const [roleFormError, setRoleFormError] = useState('');
+
+  // Member overrides state
+  const [showOverrideModal, setShowOverrideModal] = useState(false);
+  const [overrideUser, setOverrideUser] = useState<WorkspaceMember | null>(null);
+  const [overridePermissions, setOverridePermissions] = useState<Array<{ permission: string; allowed: boolean }>>([]);
+  const [overrideLoading, setOverrideLoading] = useState(false);
   
   // Custom dialog modal states
   const [dialogConfig, setDialogConfig] = useState<{
@@ -151,12 +196,14 @@ export default function WorkspaceDetailPage() {
     try {
       setLoading(true);
       setPageError('');
-      const [projData, memberData] = await Promise.all([
+      const [projData, memberData, rolesData] = await Promise.all([
         api.projects.list(workspaceId),
         api.workspaces.getMembers(workspaceId),
+        api.workspaces.getRoles(workspaceId).catch(() => []),
       ]);
       setProjects(projData || []);
       setMembers(memberData || []);
+      setCustomRoles(rolesData || []);
     } catch (err: any) {
       console.error(err);
       setPageError(err.message || 'Bạn không có quyền truy cập Workspace này hoặc đã rời khỏi Workspace.');
@@ -383,12 +430,109 @@ export default function WorkspaceDetailPage() {
     });
   };
 
-  const handleChangeMemberRole = async (userId: string, newRole: string) => {
+  const handleChangeMemberRoleWithCustom = async (userId: string, targetValue: string) => {
     try {
-      await api.workspaces.updateMemberRole(workspaceId, userId, newRole);
+      const isCustomRole = !['ADMIN', 'MEMBER', 'VIEWER'].includes(targetValue);
+      const updateData = isCustomRole 
+        ? { role: 'MEMBER', roleId: targetValue } 
+        : { role: targetValue, roleId: null };
+      await api.workspaces.updateMemberRole(workspaceId, userId, updateData);
       loadData();
     } catch (err: any) {
       showCustomAlert(err.message || 'Không thể cập nhật vai trò thành viên.');
+    }
+  };
+
+  const handleSelectRole = (role: CustomRole | null) => {
+    setSelectedRole(role);
+    if (role) {
+      setRoleFormName(role.name);
+      setRoleFormDesc(role.description || '');
+      setRoleFormPermissions(role.permissions || []);
+    } else {
+      setRoleFormName('');
+      setRoleFormDesc('');
+      setRoleFormPermissions([]);
+    }
+    setRoleFormError('');
+  };
+
+  const handleSaveRole = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setRoleFormError('');
+    setRoleFormLoading(true);
+    try {
+      const payload = {
+        name: roleFormName,
+        description: roleFormDesc,
+        permissions: roleFormPermissions
+      };
+      if (selectedRole) {
+        await api.workspaces.updateRole(workspaceId, selectedRole.id, payload);
+      } else {
+        await api.workspaces.createRole(workspaceId, payload);
+      }
+      loadData();
+      handleSelectRole(null);
+    } catch (err: any) {
+      setRoleFormError(err.message || 'Không thể lưu vai trò.');
+    } finally {
+      setRoleFormLoading(false);
+    }
+  };
+
+  const handleDeleteRole = (roleId: string) => {
+    showCustomConfirm('Bạn có chắc muốn xóa vai trò này? Các thành viên thuộc vai trò này sẽ trở về vai trò mặc định.', async () => {
+      try {
+        await api.workspaces.deleteRole(workspaceId, roleId);
+        loadData();
+        handleSelectRole(null);
+      } catch (err: any) {
+        showCustomAlert(err.message || 'Không thể xóa vai trò.');
+      }
+    });
+  };
+
+  const handleOpenOverrideModal = async (member: WorkspaceMember) => {
+    setOverrideUser(member);
+    setShowOverrideModal(true);
+    setOverrideLoading(true);
+    try {
+      const existing = await api.workspaces.getMemberPermissions(workspaceId, member.userId);
+      const mapped = ALL_PERMISSIONS.map(p => {
+        const found = existing?.find((e: any) => e.permission === p.key);
+        return {
+          permission: p.key,
+          allowed: found ? found.allowed : false,
+          inherited: !found
+        };
+      });
+      setOverridePermissions(mapped);
+    } catch (err: any) {
+      console.error(err);
+    } finally {
+      setOverrideLoading(false);
+    }
+  };
+
+  const handleSaveOverrides = async () => {
+    if (!overrideUser) return;
+    setOverrideLoading(true);
+    try {
+      const overridesToSave = overridePermissions
+        .filter(p => !p.inherited)
+        .map(p => ({
+          permission: p.permission,
+          allowed: p.allowed
+        }));
+      await api.workspaces.saveMemberPermissions(workspaceId, overrideUser.userId, overridesToSave);
+      setShowOverrideModal(false);
+      showCustomAlert(`Đã cập nhật quyền chi tiết cho thành viên ${overrideUser.fullname}.`);
+      loadData();
+    } catch (err: any) {
+      showCustomAlert(err.message || 'Không thể lưu quyền chi tiết.');
+    } finally {
+      setOverrideLoading(false);
     }
   };
 
@@ -646,9 +790,20 @@ export default function WorkspaceDetailPage() {
 
               {/* Members List */}
               <div className="border-t border-border-subtle pt-4 space-y-3">
-                <h4 className="text-xs font-bold text-heading uppercase tracking-wider mb-3">
-                  {language === 'vi' ? 'Danh sách thành viên hiện tại' : 'Current Members List'}
-                </h4>
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="text-xs font-bold text-heading uppercase tracking-wider">
+                    {language === 'vi' ? 'Danh sách thành viên hiện tại' : 'Current Members List'}
+                  </h4>
+                  {isAdmin && (
+                    <button
+                      onClick={() => setShowRoleMgrModal(true)}
+                      className="text-[10px] font-bold text-primary hover:underline flex items-center gap-1 cursor-pointer bg-transparent border-0"
+                    >
+                      <Layers className="h-3 w-3" />
+                      {language === 'vi' ? 'Quản lý vai trò' : 'Manage Roles'}
+                    </button>
+                  )}
+                </div>
 
                 <div className="space-y-2.5 max-h-72 overflow-y-auto no-scrollbar">
                   {members.map((m) => (
@@ -668,18 +823,39 @@ export default function WorkspaceDetailPage() {
 
                       <div className="flex items-center gap-1.5 shrink-0">
                         <select
-                          value={m.role}
-                          onChange={(e) => handleChangeMemberRole(m.userId, e.target.value)}
-                          className="bg-zinc-900 border border-zinc-800 text-[10px] font-bold text-primary rounded-lg px-2 py-1 focus:outline-none"
+                          value={m.roleId || m.role}
+                          disabled={!isAdmin}
+                          onChange={(e) => handleChangeMemberRoleWithCustom(m.userId, e.target.value)}
+                          className="bg-zinc-900 border border-zinc-800 text-[10px] font-bold text-primary rounded-lg px-2 py-1 focus:outline-none disabled:opacity-75 disabled:cursor-not-allowed"
                         >
-                          <option value="ADMIN">ADMIN</option>
-                          <option value="MEMBER">MEMBER</option>
-                          <option value="VIEWER">VIEWER</option>
+                          <optgroup label="Hệ thống (Default)">
+                            <option value="ADMIN">ADMIN</option>
+                            <option value="MEMBER">MEMBER</option>
+                            <option value="VIEWER">VIEWER</option>
+                          </optgroup>
+                          {customRoles.length > 0 && (
+                            <optgroup label="Tùy chỉnh (Custom Roles)">
+                              {customRoles.map((cr) => (
+                                <option key={cr.id} value={cr.id}>{cr.name}</option>
+                              ))}
+                            </optgroup>
+                          )}
                         </select>
+                        
+                        {isAdmin && (
+                          <button
+                            onClick={() => handleOpenOverrideModal(m)}
+                            className="p-1 rounded text-muted hover:text-primary hover:bg-primary-muted transition-colors cursor-pointer"
+                            title="Cấu hình quyền chi tiết cho thành viên"
+                          >
+                            <Shield className="h-3.5 w-3.5" />
+                          </button>
+                        )}
                         
                         <button
                           onClick={() => handleRemoveMember(m.userId, m.fullname)}
-                          className="p-1 rounded text-muted hover:text-error hover:bg-error-muted transition-colors"
+                          disabled={!isAdmin}
+                          className="p-1 rounded text-muted hover:text-error hover:bg-error-muted transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                           title="Xóa thành viên khỏi workspace"
                         >
                           <Trash className="h-3.5 w-3.5" />
@@ -1089,6 +1265,336 @@ export default function WorkspaceDetailPage() {
                   OK
                 </button>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Workspace Custom Roles Management Modal */}
+      {showRoleMgrModal && (
+        <div className="fixed inset-0 z-[250] flex items-center justify-center bg-black/40 dark:bg-black/75 backdrop-blur-md p-4 animate-fadeIn no-print">
+          <div className="bg-card/95 border border-border shadow-2xl backdrop-blur-xl w-full max-w-5xl rounded-3xl overflow-hidden flex flex-col max-h-[90vh] animate-in fade-in zoom-in-95 duration-200 text-foreground">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-6 border-b border-border/80">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 bg-primary/10 border border-primary/20 rounded-xl text-primary shrink-0">
+                  <Layers className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-extrabold text-zinc-100 tracking-wide font-display">
+                    {language === 'vi' ? 'Quản lý Vai trò & Phân quyền' : 'Manage Roles & Permissions'}
+                  </h3>
+                  <p className="text-secondary text-xs mt-0.5">
+                    {language === 'vi' ? 'Thiết lập vai trò tùy chỉnh và phân quyền tương ứng cho các thành viên.' : 'Define custom roles and assign respective permissions to members.'}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  setShowRoleMgrModal(false);
+                  handleSelectRole(null);
+                }}
+                className="text-zinc-400 hover:text-zinc-100 p-2 rounded-full hover:bg-hover transition-colors"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Modal Content - Two Panel Layout */}
+            <div className="flex-1 flex overflow-hidden min-h-0">
+              {/* Left Panel: Roles List */}
+              <div className="w-1/3 border-r border-border/80 p-5 flex flex-col gap-4 overflow-y-auto">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-muted">
+                    {language === 'vi' ? 'Danh sách vai trò' : 'Roles List'}
+                  </span>
+                  <button
+                    onClick={() => handleSelectRole(null)}
+                    className="text-xs font-bold text-primary hover:underline flex items-center gap-1 cursor-pointer bg-transparent border-0"
+                  >
+                    <Plus className="h-3 w-3" />
+                    {language === 'vi' ? 'Thêm mới' : 'Add New'}
+                  </button>
+                </div>
+
+                <div className="space-y-2">
+                  {/* System default roles shown as info cards */}
+                  <div className="p-3.5 rounded-2xl bg-surface/30 border border-border/50 text-xs opacity-75">
+                    <div className="font-extrabold text-zinc-300">ADMIN (System)</div>
+                    <div className="text-[10px] text-muted mt-1">Toàn quyền kiểm soát và quản lý Workspace.</div>
+                  </div>
+                  <div className="p-3.5 rounded-2xl bg-surface/30 border border-border/50 text-xs opacity-75">
+                    <div className="font-extrabold text-zinc-300">MEMBER (System)</div>
+                    <div className="text-[10px] text-muted mt-1">Tạo/Xem/Cập nhật công việc và dự án được giao.</div>
+                  </div>
+                  <div className="p-3.5 rounded-2xl bg-surface/30 border border-border/50 text-xs opacity-75">
+                    <div className="font-extrabold text-zinc-300">VIEWER (System)</div>
+                    <div className="text-[10px] text-muted mt-1">Chỉ xem thông tin và nội dung trong Workspace.</div>
+                  </div>
+
+                  {customRoles.map((r) => (
+                    <div
+                      key={r.id}
+                      onClick={() => handleSelectRole(r)}
+                      className={`p-3.5 rounded-2xl border text-xs cursor-pointer transition-all flex items-center justify-between ${
+                        selectedRole?.id === r.id
+                          ? 'bg-primary/10 border-primary text-primary font-bold shadow-sm'
+                          : 'bg-surface hover:bg-hover border-border text-zinc-200'
+                      }`}
+                    >
+                      <div className="min-w-0 flex-1">
+                        <div className="font-extrabold truncate">{r.name}</div>
+                        <div className="text-[10px] text-muted truncate mt-0.5">{r.description || 'Không có mô tả.'}</div>
+                      </div>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteRole(r.id);
+                        }}
+                        className="text-zinc-400 hover:text-rose-400 p-1 hover:bg-rose-500/10 rounded transition-colors"
+                        title="Xóa vai trò"
+                      >
+                        <Trash className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Right Panel: Role Creation / Editing Form */}
+              <div className="w-2/3 p-6 flex flex-col min-h-0 overflow-y-auto">
+                <h4 className="text-sm font-extrabold text-zinc-100 mb-4 tracking-wide font-display border-b border-border/50 pb-2">
+                  {selectedRole 
+                    ? (language === 'vi' ? `Chỉnh sửa vai trò: ${selectedRole.name}` : `Edit Role: ${selectedRole.name}`) 
+                    : (language === 'vi' ? 'Tạo vai trò tùy chỉnh mới' : 'Create New Custom Role')}
+                </h4>
+
+                {roleFormError && <div className="ui-alert-error mb-4 text-xs">{roleFormError}</div>}
+
+                <form onSubmit={handleSaveRole} className="space-y-5 flex-1 flex flex-col">
+                  <div className="space-y-4">
+                    <div>
+                      <label className="ui-label text-xs tracking-wider">Tên vai trò *</label>
+                      <input
+                        type="text"
+                        required
+                        value={roleFormName}
+                        onChange={(e) => setRoleFormName(e.target.value)}
+                        placeholder="Ví dụ: Tech Lead, QA Automation, Product Owner..."
+                        className="ui-input text-xs px-4 py-2.5"
+                      />
+                    </div>
+                    <div>
+                      <label className="ui-label text-xs tracking-wider">Mô tả vai trò</label>
+                      <textarea
+                        value={roleFormDesc}
+                        onChange={(e) => setRoleFormDesc(e.target.value)}
+                        placeholder="Mô tả trách nhiệm hoặc quyền hạn của vai trò này..."
+                        className="ui-input text-xs px-4 py-2.5 h-16 min-h-[64px]"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex-1 flex flex-col min-h-[250px]">
+                    <label className="ui-label text-xs tracking-wider mb-2.5">Thiết lập danh sách quyền</label>
+                    <div className="border border-border/80 rounded-2xl overflow-hidden flex-1 max-h-[300px] overflow-y-auto p-4 space-y-3.5 bg-surface/40">
+                      {ALL_PERMISSIONS.map((perm) => {
+                        const isChecked = roleFormPermissions.includes(perm.key);
+                        return (
+                          <label
+                            key={perm.key}
+                            className="flex items-start gap-3 cursor-pointer hover:bg-hover p-2 rounded-xl transition-all"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={() => {
+                                setRoleFormPermissions((prev) =>
+                                  isChecked
+                                    ? prev.filter((p) => p !== perm.key)
+                                    : [...prev, perm.key]
+                                );
+                              }}
+                              className="mt-0.5 accent-primary h-4 w-4"
+                            />
+                            <div>
+                              <div className="text-xs font-bold text-zinc-200">{perm.label}</div>
+                              <div className="text-[10px] text-muted mt-0.5">{perm.desc}</div>
+                            </div>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end gap-3 pt-4 border-t border-border/80">
+                    <button
+                      type="button"
+                      onClick={() => handleSelectRole(null)}
+                      className="px-5 py-2.5 rounded-xl border border-border hover:bg-hover text-zinc-300 text-xs font-bold transition-all"
+                    >
+                      {language === 'vi' ? 'Hủy' : 'Cancel'}
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={roleFormLoading}
+                      className="px-5 py-2.5 rounded-xl bg-primary text-primary-foreground hover:bg-primary-hover text-xs font-bold transition-all shadow-lg shadow-primary/25"
+                    >
+                      {roleFormLoading ? (
+                        <div className="animate-spin rounded-full h-3.5 w-3.5 border-2 border-white/20 border-t-white" />
+                      ) : (
+                        language === 'vi' ? 'Lưu vai trò' : 'Save Role'
+                      )}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Member Custom Permissions Override Modal */}
+      {showOverrideModal && overrideUser && (
+        <div className="fixed inset-0 z-[260] flex items-center justify-center bg-black/40 dark:bg-black/75 backdrop-blur-md p-4 animate-fadeIn no-print">
+          <div className="bg-card/95 border border-border shadow-2xl backdrop-blur-xl w-full max-w-2xl rounded-3xl overflow-hidden flex flex-col max-h-[85vh] animate-in fade-in zoom-in-95 duration-200 text-foreground">
+            {/* Header */}
+            <div className="flex items-center justify-between p-6 border-b border-border/80">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 bg-primary/10 border border-primary/20 rounded-xl text-primary shrink-0">
+                  <Shield className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-extrabold text-zinc-100 tracking-wide font-display">
+                    {language === 'vi' ? `Quyền chi tiết: ${overrideUser.fullname}` : `Detailed Permissions: ${overrideUser.fullname}`}
+                  </h3>
+                  <p className="text-secondary text-xs mt-0.5">
+                    {language === 'vi' ? `Thiết lập quyền tùy chỉnh (Đè/Bổ sung) cho riêng thành viên ${overrideUser.email}.` : `Set custom Allow/Deny overrides specifically for member ${overrideUser.email}.`}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  setShowOverrideModal(false);
+                  setOverrideUser(null);
+                }}
+                className="text-zinc-400 hover:text-zinc-100 p-2 rounded-full hover:bg-hover transition-colors"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Permissions list */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-4 min-h-0">
+              {overrideLoading ? (
+                <div className="flex h-48 w-full items-center justify-center">
+                  <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
+                </div>
+              ) : (
+                <div className="space-y-3.5">
+                  {overridePermissions.map((perm) => {
+                    const pDef = ALL_PERMISSIONS.find(ap => ap.key === perm.permission);
+                    return (
+                      <div
+                        key={perm.permission}
+                        className="flex items-center justify-between p-3.5 rounded-2xl border border-border/60 bg-surface/40 hover:bg-surface/60 transition-all text-xs gap-4"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <div className="font-extrabold text-zinc-200">{pDef?.label || perm.permission}</div>
+                          <div className="text-[10px] text-muted mt-0.5">{pDef?.desc || ''}</div>
+                        </div>
+
+                        {/* Override Tri-State Switch */}
+                        <div className="flex items-center gap-1.5 bg-zinc-900 border border-zinc-800 p-1 rounded-xl shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setOverridePermissions(prev =>
+                                prev.map(p =>
+                                  p.permission === perm.permission
+                                    ? { ...p, inherited: true }
+                                    : p
+                                )
+                              );
+                            }}
+                            className={`px-2.5 py-1 rounded-lg text-[9px] font-extrabold uppercase transition-all ${
+                              perm.inherited
+                                ? 'bg-zinc-800 text-zinc-300 font-bold'
+                                : 'text-zinc-500 hover:text-zinc-300'
+                            }`}
+                          >
+                            {language === 'vi' ? 'Kế thừa' : 'Inherit'}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setOverridePermissions(prev =>
+                                prev.map(p =>
+                                  p.permission === perm.permission
+                                    ? { ...p, inherited: false, allowed: true }
+                                    : p
+                                )
+                              );
+                            }}
+                            className={`px-2.5 py-1 rounded-lg text-[9px] font-extrabold uppercase transition-all ${
+                              !perm.inherited && perm.allowed
+                                ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 font-bold'
+                                : 'text-zinc-500 hover:text-zinc-300'
+                            }`}
+                          >
+                            {language === 'vi' ? 'Cho phép' : 'Allow'}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setOverridePermissions(prev =>
+                                prev.map(p =>
+                                  p.permission === perm.permission
+                                    ? { ...p, inherited: false, allowed: false }
+                                    : p
+                                )
+                              );
+                            }}
+                            className={`px-2.5 py-1 rounded-lg text-[9px] font-extrabold uppercase transition-all ${
+                              !perm.inherited && !perm.allowed
+                                ? 'bg-rose-500/20 text-rose-400 border border-rose-500/20 font-bold'
+                                : 'text-zinc-500 hover:text-zinc-300'
+                            }`}
+                          >
+                            {language === 'vi' ? 'Từ chối' : 'Deny'}
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Actions */}
+            <div className="p-6 border-t border-border/80 flex justify-end gap-3 bg-surface/20">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowOverrideModal(false);
+                  setOverrideUser(null);
+                }}
+                className="px-5 py-2.5 rounded-xl border border-border hover:bg-hover text-zinc-300 text-xs font-bold transition-all"
+              >
+                {language === 'vi' ? 'Đóng' : 'Close'}
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveOverrides}
+                disabled={overrideLoading}
+                className="px-5 py-2.5 rounded-xl bg-primary text-primary-foreground hover:bg-primary-hover text-xs font-bold transition-all shadow-lg shadow-primary/25"
+              >
+                {overrideLoading ? (
+                  <div className="animate-spin rounded-full h-3.5 w-3.5 border-2 border-white/20 border-t-white" />
+                ) : (
+                  language === 'vi' ? 'Lưu thay đổi' : 'Save Changes'
+                )}
+              </button>
             </div>
           </div>
         </div>
