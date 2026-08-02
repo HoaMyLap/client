@@ -699,10 +699,10 @@ export default function Sidebar() {
 
       {/* Center confirmation modal */}
       {selectedConfirmNotif && (
-        <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/75 backdrop-blur-md p-4 animate-fadeIn">
-          <div className="bg-zinc-950/90 border border-zinc-800 shadow-[0_20px_50px_rgba(0,0,0,0.7)] backdrop-blur-xl w-full max-w-lg rounded-3xl overflow-hidden p-7 space-y-6 animate-in fade-in zoom-in-95 duration-200 text-foreground">
+        <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/40 dark:bg-black/75 backdrop-blur-md p-4 animate-fadeIn">
+          <div className="bg-card/90 border border-border shadow-[0_20px_50px_rgba(0,0,0,0.15)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.7)] backdrop-blur-xl w-full max-w-lg rounded-3xl overflow-hidden p-7 space-y-6 animate-in fade-in zoom-in-95 duration-200 text-foreground">
             {/* Header */}
-            <div className="flex items-center gap-4 border-b border-zinc-800/80 pb-4.5">
+            <div className="flex items-center gap-4 border-b border-border/80 pb-4.5">
               <div className="p-3 bg-primary/10 border border-primary/20 rounded-2xl shrink-0">
                 {selectedConfirmNotif.type === 'INVITATION' ? (
                   <Users className="h-6 w-6 text-violet-400" />
@@ -713,13 +713,13 @@ export default function Sidebar() {
                 )}
               </div>
               <div className="min-w-0">
-                <h3 className="text-base font-extrabold text-white tracking-wide font-display leading-snug">{selectedConfirmNotif.title}</h3>
+                <h3 className="text-base font-extrabold text-zinc-100 tracking-wide font-display leading-snug">{selectedConfirmNotif.title}</h3>
                 <span className="text-[10px] text-violet-400 font-extrabold uppercase tracking-widest mt-1 block">{selectedConfirmNotif.type}</span>
               </div>
             </div>
 
             {/* Content */}
-            <p className="text-sm font-medium text-zinc-200 leading-relaxed bg-zinc-900/60 border border-zinc-800/80 p-5 rounded-2xl">
+            <p className="text-sm font-medium text-zinc-200 leading-relaxed bg-surface/60 border border-border/80 p-5 rounded-2xl">
               {selectedConfirmNotif.content}
             </p>
 
@@ -728,7 +728,7 @@ export default function Sidebar() {
               <button
                 type="button"
                 onClick={() => setSelectedConfirmNotif(null)}
-                className="px-5 py-2.5 rounded-xl border border-zinc-800 hover:bg-zinc-900 text-zinc-300 text-xs font-bold transition-all"
+                className="px-5 py-2.5 rounded-xl border border-border hover:bg-hover text-zinc-300 text-xs font-bold transition-all"
               >
                 {language === 'vi' ? 'Đóng' : 'Close'}
               </button>
@@ -753,7 +753,7 @@ export default function Sidebar() {
                           await handleRespondInvitation(selectedConfirmNotif.id, 'ACCEPT');
                           setSelectedConfirmNotif(null);
                         }}
-                        className="px-5 py-2.5 rounded-xl bg-primary text-white hover:bg-primary-hover text-xs font-bold transition-all shadow-lg shadow-primary/25"
+                        className="px-5 py-2.5 rounded-xl bg-primary text-primary-foreground hover:bg-primary-hover text-xs font-bold transition-all shadow-lg shadow-primary/25"
                       >
                         {language === 'vi' ? 'Chấp nhận' : 'Accept'}
                       </button>
@@ -778,7 +778,7 @@ export default function Sidebar() {
                           await handleRespondLeave(selectedConfirmNotif.id, 'APPROVE');
                           setSelectedConfirmNotif(null);
                         }}
-                        className="px-5 py-2.5 rounded-xl bg-primary text-white hover:bg-primary-hover text-xs font-bold transition-all shadow-lg shadow-primary/25"
+                        className="px-5 py-2.5 rounded-xl bg-primary text-primary-foreground hover:bg-primary-hover text-xs font-bold transition-all shadow-lg shadow-primary/25"
                       >
                         {language === 'vi' ? 'Duyệt rời' : 'Approve'}
                       </button>
@@ -800,13 +800,13 @@ export default function Sidebar() {
               handleNotificationClick(toast.notification);
               setActiveToasts((prev) => prev.filter((t) => t.id !== toast.id));
             }}
-            className="pointer-events-auto bg-zinc-950/95 border border-zinc-800/80 shadow-[0_8px_32px_rgba(0,0,0,0.6)] backdrop-blur-xl p-5.5 rounded-2xl flex items-start gap-4 cursor-pointer transform transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] animate-in slide-in-from-right-10 fade-in duration-300 text-foreground"
+            className="pointer-events-auto bg-card/95 border border-border/80 shadow-[0_8px_32px_rgba(0,0,0,0.15)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.6)] backdrop-blur-xl p-5.5 rounded-2xl flex items-start gap-4 cursor-pointer transform transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] animate-in slide-in-from-right-10 fade-in duration-300 text-foreground"
           >
             <div className="p-3 bg-primary/15 border border-primary/25 rounded-xl text-primary shrink-0">
               <Bell className="h-5.5 w-5.5" />
             </div>
             <div className="flex-1 min-w-0">
-              <h4 className="text-sm font-extrabold text-white leading-snug tracking-wide">{toast.title}</h4>
+              <h4 className="text-sm font-extrabold text-zinc-100 leading-snug tracking-wide">{toast.title}</h4>
               <p className="text-xs text-zinc-300 mt-2 leading-relaxed">{toast.content}</p>
             </div>
             <button
@@ -814,7 +814,7 @@ export default function Sidebar() {
                 e.stopPropagation();
                 setActiveToasts((prev) => prev.filter((t) => t.id !== toast.id));
               }}
-              className="text-zinc-400 hover:text-white shrink-0 p-1.5 rounded-xl hover:bg-zinc-800 transition-colors"
+              className="text-zinc-400 hover:text-zinc-100 shrink-0 p-1.5 rounded-xl hover:bg-hover transition-colors"
             >
               <X className="h-4 w-4" />
             </button>
