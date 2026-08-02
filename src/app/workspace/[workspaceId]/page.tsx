@@ -118,7 +118,7 @@ export default function WorkspaceDetailPage() {
   // Member overrides state
   const [showOverrideModal, setShowOverrideModal] = useState(false);
   const [overrideUser, setOverrideUser] = useState<WorkspaceMember | null>(null);
-  const [overridePermissions, setOverridePermissions] = useState<Array<{ permission: string; allowed: boolean }>>([]);
+  const [overridePermissions, setOverridePermissions] = useState<Array<{ permission: string; allowed: boolean; inherited?: boolean }>>([]);
   const [overrideLoading, setOverrideLoading] = useState(false);
   
   // Custom dialog modal states
@@ -305,7 +305,7 @@ export default function WorkspaceDetailPage() {
                   const cellStr = cell.toString();
                   const matches = cellStr.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g);
                   if (matches) {
-                    allExtractedEmails.push(...matches.map(m => m.trim().toLowerCase()));
+                    allExtractedEmails.push(...matches.map((m: string) => m.trim().toLowerCase()));
                   }
                 }
               });

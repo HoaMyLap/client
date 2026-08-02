@@ -173,7 +173,9 @@ export default function ContactPage() {
               <Clock className="h-5 w-5" />
             </div>
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-wider text-muted">{t('workHours')}</p>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-muted">
+                {language === 'vi' ? 'Giờ làm việc' : 'Working Hours'}
+              </p>
               <p className="text-xs font-bold text-heading mt-0.5">8:00 - 20:00 (T2 - T7)</p>
             </div>
           </div>

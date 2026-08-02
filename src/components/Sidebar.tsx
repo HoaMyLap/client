@@ -92,6 +92,25 @@ export default function Sidebar() {
 
   const [loading, setLoading] = useState(true);
 
+  const [dialogConfig, setDialogConfig] = useState<{
+    show: boolean;
+    title: string;
+    message: string;
+    type: 'alert' | 'confirm';
+    onConfirm?: () => void;
+    onCancel?: () => void;
+  } | null>(null);
+
+  const showCustomAlert = (message: string) => {
+    setDialogConfig({
+      show: true,
+      title: 'Thông báo',
+      message,
+      type: 'alert',
+      onConfirm: () => setDialogConfig(null),
+    });
+  };
+
   const workspaceId = params?.workspaceId as string;
   const projectId = params?.projectId as string;
 
@@ -255,7 +274,7 @@ export default function Sidebar() {
         window.location.reload();
       }
     } catch (err: any) {
-      alert(err.message || 'Lỗi khi xử lý lời mời.');
+      showCustomAlert(err.message || 'Lỗi khi xử lý lời mời.');
     }
   };
 
@@ -267,7 +286,7 @@ export default function Sidebar() {
       );
       loadNotifications();
     } catch (err: any) {
-      alert(err.message || 'Lỗi khi xử lý yêu cầu rời.');
+      showCustomAlert(err.message || 'Lỗi khi xử lý yêu cầu rời.');
     }
   };
 
@@ -821,6 +840,41 @@ export default function Sidebar() {
           </div>
         ))}
       </div>
+
+      {/* Custom dialog modal */}
+      {dialogConfig && dialogConfig.show && (
+        <div className="fixed inset-0 z-[250] flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm animate-fadeIn">
+          <div className="w-full max-w-md glass border border-border shadow-2xl rounded-2xl overflow-hidden p-6 relative">
+            <div className="flex items-center gap-3 border-b border-border-subtle pb-3">
+              <div className="p-2.5 bg-primary/10 border border-primary/20 rounded-xl">
+                <Bell className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <h3 className="text-sm font-black font-display text-heading">{dialogConfig.title}</h3>
+              </div>
+            </div>
+            <div className="mt-4 bg-surface/60 border border-border/80 p-5 rounded-2xl text-xs font-semibold text-zinc-100 leading-relaxed">
+              {dialogConfig.message}
+            </div>
+            <div className="mt-6 flex justify-end gap-3">
+              {dialogConfig.type === 'confirm' && (
+                <button
+                  onClick={dialogConfig.onCancel}
+                  className="ui-btn-secondary px-5 py-2.5 rounded-xl text-xs font-bold"
+                >
+                  Hủy
+                </button>
+              )}
+              <button
+                onClick={dialogConfig.onConfirm}
+                className="ui-btn-primary px-5 py-2.5 rounded-xl text-xs font-bold"
+              >
+                {dialogConfig.type === 'confirm' ? 'Đồng ý' : 'OK'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

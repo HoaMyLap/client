@@ -393,8 +393,9 @@ export default function ProjectKanbanPage() {
 
       setShowExcelTaskModal(false);
       setExcelTasks([]);
-      loadProjectData();
-      alert(`Đã thêm thành công ${excelTasks.length} công việc từ file Excel vào bảng Kanban!`);
+      requestProjectDetails();
+      loadTasks();
+      showCustomAlert(`Đã thêm thành công ${excelTasks.length} công việc từ file Excel vào bảng Kanban!`);
     } catch (err: any) {
       setExcelTaskError(err.message || 'Lỗi khi nhập danh sách công việc từ Excel.');
     } finally {
@@ -538,7 +539,7 @@ export default function ProjectKanbanPage() {
       await api.tasks.deleteFile(selectedTask.id, fileId);
       await loadTaskFiles(selectedTask.id);
     } catch (err: any) {
-      alert(err.message || "Không thể xóa tệp tin công việc.");
+      showCustomAlert(err.message || "Không thể xóa tệp tin công việc.");
     }
   };
 
@@ -819,7 +820,7 @@ export default function ProjectKanbanPage() {
       });
       setSelectedTask(updated);
     } catch (err: any) {
-      alert(err.message || 'Cập nhật thất bại.');
+      showCustomAlert(err.message || 'Cập nhật thất bại.');
     }
   };
 
@@ -936,7 +937,7 @@ export default function ProjectKanbanPage() {
       setNewSubtaskTitle('');
       loadTaskDetails(selectedTask.id);
     } catch (err: any) {
-      alert(err.message || 'Lỗi khi thêm công việc con.');
+      showCustomAlert(err.message || 'Lỗi khi thêm công việc con.');
     }
   };
 
@@ -950,7 +951,7 @@ export default function ProjectKanbanPage() {
         api.tasks.getLogs(selectedTask.id).then((data) => setTaskLogs(data || []));
       }
     } catch (err: any) {
-      alert(err.message || 'Không thể cập nhật trạng thái.');
+      showCustomAlert(err.message || 'Không thể cập nhật trạng thái.');
     }
   };
 
@@ -964,13 +965,13 @@ export default function ProjectKanbanPage() {
         selected: true,
       }));
       if (suggestions.length === 0) {
-        alert('AI không đưa ra gợi ý nào cho công việc này.');
+        showCustomAlert('AI không đưa ra gợi ý nào cho công việc này.');
         return;
       }
       setAiSubtaskSuggestions(suggestions);
       setShowAiSubtaskModal(true);
     } catch (err: any) {
-      alert(err.message || 'AI phân rã việc thất bại.');
+      showCustomAlert(err.message || 'AI phân rã việc thất bại.');
     } finally {
       setAiSubtaskLoading(false);
     }
@@ -983,7 +984,7 @@ export default function ProjectKanbanPage() {
       .map((s) => s.title.trim());
 
     if (selectedTitles.length === 0) {
-      alert('Vui lòng chọn ít nhất 1 subtask để thêm.');
+      showCustomAlert('Vui lòng chọn ít nhất 1 subtask để thêm.');
       return;
     }
 
@@ -993,7 +994,7 @@ export default function ProjectKanbanPage() {
       loadTaskDetails(selectedTask.id);
       setShowAiSubtaskModal(false);
     } catch (err: any) {
-      alert(err.message || 'Lỗi khi thêm danh sách subtask.');
+      showCustomAlert(err.message || 'Lỗi khi thêm danh sách subtask.');
     } finally {
       setAiSubtaskAdding(false);
     }
@@ -1056,7 +1057,7 @@ export default function ProjectKanbanPage() {
         nextPosition: null,
       });
     } catch (err: any) {
-      alert(err.message || 'Không thể di chuyển công việc.');
+      showCustomAlert(err.message || 'Không thể di chuyển công việc.');
     } finally {
       setDraggedTaskId(null);
     }
@@ -1084,7 +1085,7 @@ export default function ProjectKanbanPage() {
         nextPosition,
       });
     } catch (err: any) {
-      alert(err.message || 'Không thể di chuyển công việc.');
+      showCustomAlert(err.message || 'Không thể di chuyển công việc.');
     } finally {
       setDraggedTaskId(null);
     }
