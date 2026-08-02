@@ -74,6 +74,7 @@ export default function ProjectKanbanPage() {
   const [workspaceId, setWorkspaceId] = useState('');
   const [members, setMembers] = useState<Member[]>([]);
   const [project, setProject] = useState<any>(null);
+  const [currentUserWorkspaceMember, setCurrentUserWorkspaceMember] = useState<any>(null);
   const [highlightCommentId, setHighlightCommentId] = useState<string | null>(null);
   
   // Custom dialog modal states
@@ -182,7 +183,7 @@ export default function ProjectKanbanPage() {
 
   const handleMultipleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
-    if (!files || files.length === 0) return;
+    if (!files || files.length === 0 || isViewer) return;
 
     const fileList = Array.from(files);
     setFileUploading(true);
@@ -216,6 +217,7 @@ export default function ProjectKanbanPage() {
   };
 
   const handleDeleteProjectFile = (fileId: string, fileName: string) => {
+    if (isViewer) return;
     showCustomConfirm(`Bạn có chắc muốn xóa tệp "${fileName}" khỏi dự án?`, async () => {
       try {
         await api.projects.deleteFile(projectId, fileId);
@@ -503,7 +505,7 @@ export default function ProjectKanbanPage() {
 
   const handleUploadTaskFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
-    if (!files || files.length === 0 || !selectedTask) return;
+    if (!files || files.length === 0 || !selectedTask || isViewer) return;
 
     setTaskFileUploading(true);
 
@@ -531,7 +533,7 @@ export default function ProjectKanbanPage() {
   };
 
   const handleDeleteTaskFile = async (fileId: string) => {
-    if (!selectedTask) return;
+    if (!selectedTask || isViewer) return;
     try {
       await api.tasks.deleteFile(selectedTask.id, fileId);
       await loadTaskFiles(selectedTask.id);
@@ -626,6 +628,14 @@ export default function ProjectKanbanPage() {
         setProject(proj);
         if (proj.workspaceId) {
           setWorkspaceId(proj.workspaceId);
+          try {
+            const wsMembers = await api.workspaces.getMembers(proj.workspaceId);
+            const myUid = localStorage.getItem('userId') || '';
+            const myWsMem = wsMembers?.find((m: any) => m.userId === myUid);
+            setCurrentUserWorkspaceMember(myWsMem || null);
+          } catch (err) {
+            console.error("Failed to load workspace members for role check:", err);
+          }
         }
       }
     } catch (err) {
@@ -768,6 +778,7 @@ export default function ProjectKanbanPage() {
 
   const handleCreateTask = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isViewer) return;
     setTaskError('');
     setTaskLoading(true);
 
@@ -796,7 +807,7 @@ export default function ProjectKanbanPage() {
     assigneeId?: string | null;
     dueDate?: string | null;
   } = {}) => {
-    if (!selectedTask) return;
+    if (!selectedTask || isViewer) return;
     try {
       const updated = await api.tasks.update({
         ...selectedTask,
@@ -813,6 +824,7 @@ export default function ProjectKanbanPage() {
   };
 
   const handleDeleteTask = (taskId: string) => {
+    if (isViewer) return;
     showCustomConfirm('Bạn có chắc chắn muốn xóa công việc này?', async () => {
       try {
         await api.tasks.delete(taskId);
@@ -826,6 +838,7 @@ export default function ProjectKanbanPage() {
   };
 
   const handleDeleteSubtask = (subtaskId: string) => {
+    if (isViewer) return;
     showCustomConfirm('Bạn có chắc chắn muốn xóa công việc con này?', async () => {
       try {
         await api.tasks.delete(subtaskId);
@@ -841,6 +854,7 @@ export default function ProjectKanbanPage() {
 
   const handleAddComment = async (e: React.FormEvent, parentId: string | null = null) => {
     e.preventDefault();
+    if (isViewer) return;
     const content = parentId ? replyContent : newCommentContent;
     if (!selectedTask || !content.trim()) return;
 
@@ -866,7 +880,7 @@ export default function ProjectKanbanPage() {
   };
 
   const handleSaveEditComment = async (commentId: string) => {
-    if (!editCommentContent.trim()) return;
+    if (isViewer || !editCommentContent.trim()) return;
     try {
       const updated = await api.comments.update(commentId, editCommentContent.trim());
       setComments((prev) => prev.map((c) => (c.id === commentId ? updated : c)));
@@ -877,6 +891,7 @@ export default function ProjectKanbanPage() {
   };
 
   const handleDeleteComment = (commentId: string) => {
+    if (isViewer) return;
     showCustomConfirm('Bạn có chắc chắn muốn xóa bình luận này?', async () => {
       try {
         await api.comments.delete(commentId);
@@ -888,6 +903,7 @@ export default function ProjectKanbanPage() {
   };
 
   const handleToggleLikeComment = async (commentId: string) => {
+    if (isViewer) return;
     try {
       const updated = await api.comments.like(commentId);
       setComments((prev) => prev.map((c) => (c.id === commentId ? updated : c)));
@@ -909,7 +925,7 @@ export default function ProjectKanbanPage() {
 
   const handleAddSubtask = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedTask || !newSubtaskTitle.trim()) return;
+    if (isViewer || !selectedTask || !newSubtaskTitle.trim()) return;
 
     try {
       await api.tasks.create({
@@ -925,6 +941,7 @@ export default function ProjectKanbanPage() {
   };
 
   const handleToggleSubtask = async (subtaskId: string) => {
+    if (isViewer) return;
     try {
       const updated = await api.tasks.toggleDone(subtaskId);
       setSubtasks((prev) => prev.map((s) => (s.id === subtaskId ? updated : s)));
@@ -938,7 +955,7 @@ export default function ProjectKanbanPage() {
   };
 
   const handleGenerateAiSubtasks = async () => {
-    if (!selectedTask) return;
+    if (!selectedTask || isViewer) return;
     setAiSubtaskLoading(true);
     try {
       const res = await api.tasks.suggestSubtasks(selectedTask.id);
@@ -1003,15 +1020,21 @@ export default function ProjectKanbanPage() {
 
   // --- KÉO THẢ NATIVE HTML5 ---
   const handleDragStart = (e: React.DragEvent, taskId: string) => {
+    if (isViewer) {
+      e.preventDefault();
+      return;
+    }
     setDraggedTaskId(taskId);
     e.dataTransfer.setData('text/plain', taskId);
   };
 
   const handleDragOver = (e: React.DragEvent) => {
+    if (isViewer) return;
     e.preventDefault();
   };
 
   const handleDropOnColumn = async (e: React.DragEvent, targetStatus: string) => {
+    if (isViewer) return;
     e.preventDefault();
     const taskId = draggedTaskId || e.dataTransfer.getData('text/plain');
     if (!taskId) return;
@@ -1040,6 +1063,7 @@ export default function ProjectKanbanPage() {
   };
 
   const handleDropOnCard = async (e: React.DragEvent, targetStatus: string, targetCardId: string) => {
+    if (isViewer) return;
     e.preventDefault();
     e.stopPropagation();
     
@@ -1106,7 +1130,7 @@ export default function ProjectKanbanPage() {
           </div>
 
           {/* Action icons for owner */}
-          {isOwner && editingCommentId !== comment.id && (
+          {isOwner && !isViewer && editingCommentId !== comment.id && (
             <div className="flex items-center gap-1">
               <button
                 type="button"
@@ -1174,7 +1198,7 @@ export default function ProjectKanbanPage() {
             <span>{likesCount > 0 ? likesCount : 'Thích'}</span>
           </button>
 
-          {!isReply && (
+          {!isReply && !isViewer && (
             <button
               type="button"
               onClick={() => {
@@ -1209,6 +1233,15 @@ export default function ProjectKanbanPage() {
       </div>
     );
   };
+
+  const isWorkspaceAdmin = currentUserWorkspaceMember?.role === 'ADMIN';
+  const myProjectMember = members.find((m) => m.userId === currentUserId);
+  const projectRole = myProjectMember?.role;
+  const isViewer = !isWorkspaceAdmin && (
+    projectRole === 'VIEWER' || 
+    (currentUserWorkspaceMember?.role === 'VIEWER' && !projectRole) ||
+    (!projectRole && currentUserWorkspaceMember?.role !== 'ADMIN' && currentUserWorkspaceMember?.role !== 'MEMBER')
+  );
 
   const columns = [
     { id: 'TODO', title: language === 'vi' ? 'Cần làm (Todo)' : 'To Do', color: 'border-violet-500/40 text-violet-400' },
@@ -1370,27 +1403,31 @@ export default function ProjectKanbanPage() {
                 </p>
               </div>
 
-              <label className="ui-btn-primary px-5 py-2.5 text-xs font-bold flex items-center gap-2 cursor-pointer shadow-md hover:scale-[1.02] transition-transform shrink-0">
-                <Upload className="h-4 w-4" />
-                {fileUploading ? (
-                  <>
-                    <div className="animate-spin rounded-full h-3.5 w-3.5 border-2 border-white/20 border-t-white" />
-                    {uploadProgress ? `Uploading: ${uploadProgress.current}/${uploadProgress.total}` : 'Uploading...'}
-                  </>
-                ) : (
-                  t('uploadMultipleFilesBtn')
-                )}
-                <input type="file" multiple onChange={handleMultipleFileUpload} disabled={fileUploading} className="hidden" />
-              </label>
+              {!isViewer && (
+                <label className="ui-btn-primary px-5 py-2.5 text-xs font-bold flex items-center gap-2 cursor-pointer shadow-md hover:scale-[1.02] transition-transform shrink-0">
+                  <Upload className="h-4 w-4" />
+                  {fileUploading ? (
+                    <>
+                      <div className="animate-spin rounded-full h-3.5 w-3.5 border-2 border-white/20 border-t-white" />
+                      {uploadProgress ? `Uploading: ${uploadProgress.current}/${uploadProgress.total}` : 'Uploading...'}
+                    </>
+                  ) : (
+                    t('uploadMultipleFilesBtn')
+                  )}
+                  <input type="file" multiple onChange={handleMultipleFileUpload} disabled={fileUploading} className="hidden" />
+                </label>
+              )}
             </div>
 
             {/* Quick Upload Drop Area */}
-            <label className="block border-2 border-dashed border-border hover:border-primary/50 bg-surface/30 p-6 rounded-2xl text-center cursor-pointer transition-all">
-              <Upload className="h-8 w-8 text-primary mx-auto mb-2 opacity-80" />
-              <p className="text-xs font-bold text-heading">{t('dragDropMultipleFiles')}</p>
-              <p className="text-[10px] text-muted mt-1">{t('supportedFileTypes')}</p>
-              <input type="file" multiple onChange={handleMultipleFileUpload} disabled={fileUploading} className="hidden" />
-            </label>
+            {!isViewer && (
+              <label className="block border-2 border-dashed border-border hover:border-primary/50 bg-surface/30 p-6 rounded-2xl text-center cursor-pointer transition-all">
+                <Upload className="h-8 w-8 text-primary mx-auto mb-2 opacity-80" />
+                <p className="text-xs font-bold text-heading">{t('dragDropMultipleFiles')}</p>
+                <p className="text-[10px] text-muted mt-1">{t('supportedFileTypes')}</p>
+                <input type="file" multiple onChange={handleMultipleFileUpload} disabled={fileUploading} className="hidden" />
+              </label>
+            )}
 
             {/* File List Grid */}
             {projectFiles.length === 0 ? (
@@ -1487,14 +1524,16 @@ export default function ProjectKanbanPage() {
                             >
                               <Download className="h-4 w-4" />
                             </a>
-                            <button
-                              type="button"
-                              onClick={() => handleDeleteProjectFile(file.id, file.name)}
-                              className="p-2 rounded-xl bg-surface border border-border text-muted hover:text-rose-400 hover:border-rose-500/30 transition-colors"
-                              title="Xóa tệp tin"
-                            >
-                              <Trash className="h-4 w-4" />
-                            </button>
+                            {!isViewer && (
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteProjectFile(file.id, file.name)}
+                                className="p-2 rounded-xl bg-surface border border-border text-muted hover:text-rose-400 hover:border-rose-500/30 transition-colors"
+                                title="Xóa tệp tin"
+                              >
+                                <Trash className="h-4 w-4" />
+                              </button>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -1526,15 +1565,17 @@ export default function ProjectKanbanPage() {
                   </span>
                 </div>
                 
-                <button
-                  onClick={() => {
-                    setModalStatus(col.id);
-                    setShowTaskModal(true);
-                  }}
-                  className="ui-btn-ghost p-1.5"
-                >
-                  <Plus className="h-4 w-4" />
-                </button>
+                {!isViewer && (
+                  <button
+                    onClick={() => {
+                      setModalStatus(col.id);
+                      setShowTaskModal(true);
+                    }}
+                    className="ui-btn-ghost p-1.5"
+                  >
+                    <Plus className="h-4 w-4" />
+                  </button>
+                )}
               </div>
 
               {/* Task list in column */}
@@ -1548,12 +1589,14 @@ export default function ProjectKanbanPage() {
                   return (
                     <div
                       key={task.id}
-                      draggable
+                      draggable={!isViewer}
                       onDragStart={(e) => handleDragStart(e, task.id)}
                       onDragOver={handleDragOver}
                       onDrop={(e) => handleDropOnCard(e, col.id, task.id)}
                       onClick={() => setSelectedTask(task)}
-                      className="glass hover:border-primary/30 p-4 rounded-xl cursor-grab active:cursor-grabbing transition-all border border-border hover:scale-[1.01] flex flex-col justify-between min-h-[120px]"
+                      className={`glass hover:border-primary/30 p-4 rounded-xl transition-all border border-border hover:scale-[1.01] flex flex-col justify-between min-h-[120px] ${
+                        isViewer ? 'cursor-pointer' : 'cursor-grab active:cursor-grabbing'
+                      }`}
                     >
                       <div>
                         <h4 className="font-bold text-sm text-title line-clamp-2">
@@ -1646,13 +1689,15 @@ export default function ProjectKanbanPage() {
               </span>
             </div>
             <div className="flex items-center gap-2 shrink-0">
-              <button
-                onClick={() => handleDeleteTask(selectedTask.id)}
-                className="p-2 text-secondary hover:text-error hover:bg-error-muted rounded-lg transition-colors"
-                title="Xóa công việc"
-              >
-                <Trash className="h-4 w-4" />
-              </button>
+              {!isViewer && (
+                <button
+                  onClick={() => handleDeleteTask(selectedTask.id)}
+                  className="p-2 text-secondary hover:text-error hover:bg-error-muted rounded-lg transition-colors"
+                  title="Xóa công việc"
+                >
+                  <Trash className="h-4 w-4" />
+                </button>
+              )}
               <button onClick={() => setSelectedTask(null)} className="ui-btn-ghost p-2">
                 <X className="h-4 w-4" />
               </button>
@@ -1693,9 +1738,10 @@ export default function ProjectKanbanPage() {
                   <input
                     type="text"
                     value={editTitle}
+                    disabled={isViewer}
                     onChange={(e) => setEditTitle(e.target.value)}
                     onBlur={() => handleUpdateTaskDetails()}
-                    className="ui-input px-4 py-2 text-sm"
+                    className="ui-input px-4 py-2 text-sm disabled:opacity-75 disabled:cursor-not-allowed"
                   />
                 </div>
 
@@ -1703,10 +1749,11 @@ export default function ProjectKanbanPage() {
                   <label className="ui-label">Mô tả công việc</label>
                   <textarea
                     value={editDesc}
+                    disabled={isViewer}
                     onChange={(e) => setEditDesc(e.target.value)}
                     onBlur={() => handleUpdateTaskDetails()}
                     rows={3}
-                    className="ui-input px-4 py-2.5 text-sm resize-none"
+                    className="ui-input px-4 py-2.5 text-sm resize-none disabled:opacity-75 disabled:cursor-not-allowed"
                   />
                 </div>
 
@@ -1715,12 +1762,13 @@ export default function ProjectKanbanPage() {
                     <label className="ui-label">Độ ưu tiên</label>
                     <select
                       value={editPriority}
+                      disabled={isViewer}
                       onChange={(e) => {
                         const val = e.target.value;
                         setEditPriority(val);
                         handleUpdateTaskDetails({ priority: val });
                       }}
-                      className="ui-input px-3 py-2 text-xs"
+                      className="ui-input px-3 py-2 text-xs disabled:opacity-75 disabled:cursor-not-allowed"
                     >
                       <option value="LOW">LOW (Thấp)</option>
                       <option value="MEDIUM">MEDIUM (Trung bình)</option>
@@ -1741,12 +1789,13 @@ export default function ProjectKanbanPage() {
                     <label className="ui-label">Người thực hiện</label>
                     <select
                       value={editAssigneeId || ''}
+                      disabled={isViewer}
                       onChange={(e) => {
                         const val = e.target.value || null;
                         setEditAssigneeId(val);
                         handleUpdateTaskDetails({ assigneeId: val });
                       }}
-                      className="ui-input px-3 py-2 text-xs"
+                      className="ui-input px-3 py-2 text-xs disabled:opacity-75 disabled:cursor-not-allowed"
                     >
                       <option value="">Chưa phân công</option>
                       {members.map((m) => (
@@ -1759,12 +1808,13 @@ export default function ProjectKanbanPage() {
                     <input
                       type="datetime-local"
                       value={editDueDate || ''}
+                      disabled={isViewer}
                       onChange={(e) => {
                         const val = e.target.value || null;
                         setEditDueDate(val);
                         handleUpdateTaskDetails({ dueDate: val ? new Date(val).toISOString() : null });
                       }}
-                      className="ui-input px-3 py-2 text-xs"
+                      className="ui-input px-3 py-2 text-xs disabled:opacity-75 disabled:cursor-not-allowed"
                     />
                   </div>
                 </div>
@@ -1795,17 +1845,19 @@ export default function ProjectKanbanPage() {
                 })()}
 
                 {/* AI Generate button */}
-                <div className="flex justify-end">
-                  <button
-                    type="button"
-                    disabled={aiSubtaskLoading}
-                    onClick={handleGenerateAiSubtasks}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 rounded-lg text-[10px] font-bold transition-all disabled:opacity-50"
-                  >
-                    <Sparkles className="h-3.5 w-3.5" />
-                    {aiSubtaskLoading ? 'Đang tạo...' : 'Gợi ý bằng AI ✨'}
-                  </button>
-                </div>
+                {!isViewer && (
+                  <div className="flex justify-end">
+                    <button
+                      type="button"
+                      disabled={aiSubtaskLoading}
+                      onClick={handleGenerateAiSubtasks}
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 rounded-lg text-[10px] font-bold transition-all disabled:opacity-50"
+                    >
+                      <Sparkles className="h-3.5 w-3.5" />
+                      {aiSubtaskLoading ? 'Đang tạo...' : 'Gợi ý bằng AI ✨'}
+                    </button>
+                  </div>
+                )}
 
                 {/* Subtask list with checkboxes */}
                 <div className="space-y-2">
@@ -1826,11 +1878,12 @@ export default function ProjectKanbanPage() {
                     >
                       <button
                         onClick={() => handleToggleSubtask(sub.id)}
+                        disabled={isViewer}
                         className={`w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 transition-all ${
                           sub.status === 'DONE'
                             ? 'bg-emerald-500 border-emerald-500 text-white'
                             : 'border-border hover:border-primary'
-                        }`}
+                        } ${isViewer ? 'cursor-not-allowed opacity-75' : ''}`}
                       >
                         {sub.status === 'DONE' && <Check className="h-3 w-3" />}
                       </button>
@@ -1839,31 +1892,35 @@ export default function ProjectKanbanPage() {
                       }`}>
                         {sub.title}
                       </span>
-                      <button
-                        onClick={() => handleDeleteSubtask(sub.id)}
-                        className="text-muted hover:text-error transition-colors p-1 rounded"
-                        title="Xóa công việc con"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
+                      {!isViewer && (
+                        <button
+                          onClick={() => handleDeleteSubtask(sub.id)}
+                          className="text-muted hover:text-error transition-colors p-1 rounded"
+                          title="Xóa công việc con"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      )}
                     </div>
                   ))}
                 </div>
 
                 {/* Add subtask form */}
-                <form onSubmit={handleAddSubtask} className="flex gap-2 pt-2">
-                  <input
-                    type="text"
-                    required
-                    value={newSubtaskTitle}
-                    onChange={(e) => setNewSubtaskTitle(e.target.value)}
-                    placeholder="Thêm công việc con mới..."
-                    className="ui-input flex-1 px-3 py-2 text-xs"
-                  />
-                  <button type="submit" className="ui-btn-primary px-3 py-2 text-xs">
-                    Thêm
-                  </button>
-                </form>
+                {!isViewer && (
+                  <form onSubmit={handleAddSubtask} className="flex gap-2 pt-2">
+                    <input
+                      type="text"
+                      required
+                      value={newSubtaskTitle}
+                      onChange={(e) => setNewSubtaskTitle(e.target.value)}
+                      placeholder="Thêm công việc con mới..."
+                      className="ui-input flex-1 px-3 py-2 text-xs"
+                    />
+                    <button type="submit" className="ui-btn-primary px-3 py-2 text-xs">
+                      Thêm
+                    </button>
+                  </form>
+                )}
               </>
             )}
 
@@ -1872,11 +1929,13 @@ export default function ProjectKanbanPage() {
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <h4 className="text-xs font-bold text-heading">Tệp đính kèm công việc ({taskFiles.length})</h4>
-                  <label className="ui-btn-primary px-3 py-1.5 text-[11px] font-bold flex items-center gap-1.5 cursor-pointer shrink-0">
-                    <Upload className="h-3.5 w-3.5" />
-                    {taskFileUploading ? 'Đang tải...' : '+ Tải tệp lên'}
-                    <input type="file" multiple onChange={handleUploadTaskFile} disabled={taskFileUploading} className="hidden" />
-                  </label>
+                  {!isViewer && (
+                    <label className="ui-btn-primary px-3 py-1.5 text-[11px] font-bold flex items-center gap-1.5 cursor-pointer shrink-0">
+                      <Upload className="h-3.5 w-3.5" />
+                      {taskFileUploading ? 'Đang tải...' : '+ Tải tệp lên'}
+                      <input type="file" multiple onChange={handleUploadTaskFile} disabled={taskFileUploading} className="hidden" />
+                    </label>
+                  )}
                 </div>
 
                 {taskFiles.length === 0 ? (
@@ -1930,14 +1989,16 @@ export default function ProjectKanbanPage() {
                             >
                               <Download className="h-3.5 w-3.5" />
                             </a>
-                            <button
-                              type="button"
-                              onClick={() => handleDeleteTaskFile(file.id)}
-                              className="p-1.5 rounded-lg bg-card border border-border text-muted hover:text-rose-400 transition-colors"
-                              title="Xóa tệp"
-                            >
-                              <Trash className="h-3.5 w-3.5" />
-                            </button>
+                            {!isViewer && (
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteTaskFile(file.id)}
+                                className="p-1.5 rounded-lg bg-card border border-border text-muted hover:text-rose-400 transition-colors"
+                                title="Xóa tệp"
+                              >
+                                <Trash className="h-3.5 w-3.5" />
+                              </button>
+                            )}
                           </div>
                         </div>
                       );
@@ -2044,20 +2105,26 @@ export default function ProjectKanbanPage() {
           {/* Fixed Footer for Comments Input */}
           {drawerTab === 'comments' && (
             <div className="shrink-0 border-t border-border px-6 py-4 bg-card/95 backdrop-blur-sm z-10">
-              <form onSubmit={(e) => handleAddComment(e, null)} className="flex gap-2">
-                <input
-                  type="text"
-                  required
-                  value={newCommentContent}
-                  onChange={(e) => setNewCommentContent(e.target.value)}
-                  placeholder="Viết bình luận mới..."
-                  className="ui-input flex-1 px-3.5 py-2.5 text-xs bg-surface border border-border"
-                />
-                <button type="submit" className="ui-btn-primary px-4 py-2.5 text-xs font-bold flex items-center gap-1.5 shrink-0">
-                  <Send className="h-3.5 w-3.5" />
-                  Gửi
-                </button>
-              </form>
+              {isViewer ? (
+                <div className="p-3 bg-zinc-900/60 border border-border/80 text-xs text-muted text-center rounded-xl">
+                  {language === 'vi' ? '🔒 Bạn chỉ có quyền Xem (Viewer) dự án này.' : '🔒 You only have View-Only (Viewer) access to this project.'}
+                </div>
+              ) : (
+                <form onSubmit={(e) => handleAddComment(e, null)} className="flex gap-2">
+                  <input
+                    type="text"
+                    required
+                    value={newCommentContent}
+                    onChange={(e) => setNewCommentContent(e.target.value)}
+                    placeholder="Viết bình luận mới..."
+                    className="ui-input flex-1 px-3.5 py-2.5 text-xs bg-surface border border-border"
+                  />
+                  <button type="submit" className="ui-btn-primary px-4 py-2.5 text-xs font-bold flex items-center gap-1.5 shrink-0">
+                    <Send className="h-3.5 w-3.5" />
+                    Gửi
+                  </button>
+                </form>
+              )}
             </div>
           )}
         </div>
@@ -2820,81 +2887,95 @@ export default function ProjectKanbanPage() {
               </div>
 
               {/* Invite Form */}
-              <form onSubmit={handleInviteToProject} className="pt-4 border-t border-border-subtle space-y-4">
-                <h4 className="text-xs font-bold text-muted uppercase tracking-wider">
-                  {language === 'vi' ? 'Mời thành viên mới vào dự án' : 'Invite New Member to Project'}
-                </h4>
-                
-                {projectInviteMessage && (
-                  <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-xs font-semibold text-emerald-400 animate-fadeIn">
-                    {projectInviteMessage}
-                  </div>
-                )}
-                {projectInviteError && (
-                  <div className="p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl text-xs font-semibold text-rose-400 animate-fadeIn">
-                    {projectInviteError}
-                  </div>
-                )}
+              {!isViewer ? (
+                <form onSubmit={handleInviteToProject} className="pt-4 border-t border-border-subtle space-y-4">
+                  <h4 className="text-xs font-bold text-muted uppercase tracking-wider">
+                    {language === 'vi' ? 'Mời thành viên mới vào dự án' : 'Invite New Member to Project'}
+                  </h4>
+                  
+                  {projectInviteMessage && (
+                    <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-xs font-semibold text-emerald-400 animate-fadeIn">
+                      {projectInviteMessage}
+                    </div>
+                  )}
+                  {projectInviteError && (
+                    <div className="p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl text-xs font-semibold text-rose-400 animate-fadeIn">
+                      {projectInviteError}
+                    </div>
+                  )}
 
-                <div className="space-y-3.5">
-                  <div>
-                    <label className="block text-[10px] font-bold text-secondary uppercase tracking-wider mb-1.5">
-                      Email
-                    </label>
-                    <input
-                      type="email"
-                      required
-                      value={projectInviteEmail}
-                      onChange={(e) => setProjectInviteEmail(e.target.value)}
-                      placeholder="email@example.com"
-                      className="ui-input w-full px-3.5 py-2 text-xs"
-                    />
+                  <div className="space-y-3.5">
+                    <div>
+                      <label className="block text-[10px] font-bold text-secondary uppercase tracking-wider mb-1.5">
+                        Email
+                      </label>
+                      <input
+                        type="email"
+                        required
+                        value={projectInviteEmail}
+                        onChange={(e) => setProjectInviteEmail(e.target.value)}
+                        placeholder="email@example.com"
+                        className="ui-input w-full px-3.5 py-2 text-xs"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-bold text-secondary uppercase tracking-wider mb-1.5">
+                        {language === 'vi' ? 'Vai trò dự án' : 'Project Role'}
+                      </label>
+                      <select
+                        value={projectInviteRole}
+                        onChange={(e) => setProjectInviteRole(e.target.value)}
+                        className="ui-select w-full px-3 py-2 text-xs bg-card border border-border text-foreground rounded-xl focus:outline-none"
+                      >
+                        <option value="MEMBER">MEMBER ({language === 'vi' ? 'Thành viên đóng góp' : 'Collaborator'})</option>
+                        <option value="VIEWER">VIEWER ({language === 'vi' ? 'Người quan sát' : 'Observer'})</option>
+                        <option value="ADMIN">ADMIN ({language === 'vi' ? 'Quản trị viên dự án' : 'Project Admin'})</option>
+                      </select>
+                    </div>
                   </div>
 
-                  <div>
-                    <label className="block text-[10px] font-bold text-secondary uppercase tracking-wider mb-1.5">
-                      {language === 'vi' ? 'Vai trò dự án' : 'Project Role'}
-                    </label>
-                    <select
-                      value={projectInviteRole}
-                      onChange={(e) => setProjectInviteRole(e.target.value)}
-                      className="ui-select w-full px-3 py-2 text-xs bg-card border border-border text-foreground rounded-xl focus:outline-none"
+                  <div className="flex gap-2.5 justify-end pt-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowProjectMembersModal(false);
+                        setProjectInviteError('');
+                        setProjectInviteMessage('');
+                      }}
+                      className="ui-btn-secondary px-4 py-2 text-xs font-semibold"
                     >
-                      <option value="MEMBER">MEMBER ({language === 'vi' ? 'Thành viên đóng góp' : 'Collaborator'})</option>
-                      <option value="VIEWER">VIEWER ({language === 'vi' ? 'Người quan sát' : 'Observer'})</option>
-                      <option value="ADMIN">ADMIN ({language === 'vi' ? 'Quản trị viên dự án' : 'Project Admin'})</option>
-                    </select>
+                      {language === 'vi' ? 'Đóng' : 'Close'}
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={projectInviteLoading}
+                      className="ui-btn-primary px-5 py-2 text-xs font-bold flex items-center gap-1.5"
+                    >
+                      {projectInviteLoading ? (
+                        <div className="animate-spin rounded-full h-3 w-3 border-2 border-white/20 border-t-white" />
+                      ) : (
+                        <>
+                          <Plus className="h-4 w-4" />
+                          {language === 'vi' ? 'Gửi lời mời' : 'Send Invitation'}
+                        </>
+                      )}
+                    </button>
                   </div>
-                </div>
-
-                <div className="flex gap-2.5 justify-end pt-2">
+                </form>
+              ) : (
+                <div className="flex justify-end pt-4 border-t border-border-subtle">
                   <button
                     type="button"
                     onClick={() => {
                       setShowProjectMembersModal(false);
-                      setProjectInviteError('');
-                      setProjectInviteMessage('');
                     }}
                     className="ui-btn-secondary px-4 py-2 text-xs font-semibold"
                   >
                     {language === 'vi' ? 'Đóng' : 'Close'}
                   </button>
-                  <button
-                    type="submit"
-                    disabled={projectInviteLoading}
-                    className="ui-btn-primary px-5 py-2 text-xs font-bold flex items-center gap-1.5"
-                  >
-                    {projectInviteLoading ? (
-                      <div className="animate-spin rounded-full h-3 w-3 border-2 border-white/20 border-t-white" />
-                    ) : (
-                      <>
-                        <Plus className="h-4 w-4" />
-                        {language === 'vi' ? 'Gửi lời mời' : 'Send Invitation'}
-                      </>
-                    )}
-                  </button>
                 </div>
-              </form>
+              )}
             </div>
           </div>
         </div>
