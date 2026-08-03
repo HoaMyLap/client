@@ -98,6 +98,14 @@ export const api = {
     deleteFile: (projectId: string, fileId: string) =>
       request(`/projects/${projectId}/files/${fileId}`, { method: 'DELETE' }),
     getMembers: (projectId: string) => request(`/projects/${projectId}/members`),
+    requestDeletion: (projectId: string, reason: string) =>
+      request(`/projects/${projectId}/deletion-request`, { method: 'POST', body: JSON.stringify({ reason }) }),
+    getDeletionRequests: (workspaceId: string) =>
+      request(`/projects/workspace/${workspaceId}/deletion-requests`),
+    approveDeletion: (requestId: string) =>
+      request(`/projects/deletion-requests/${requestId}/approve`, { method: 'POST' }),
+    rejectDeletion: (requestId: string) =>
+      request(`/projects/deletion-requests/${requestId}/reject`, { method: 'POST' }),
   },
   tasks: {
     list: (projectId: string) => request(`/tasks/project/${projectId}`),
@@ -123,12 +131,13 @@ export const api = {
   },
   comments: {
     list: (taskId: string) => request(`/comments/task/${taskId}`),
-    create: (data: { content: string; taskId: string; parentCommentId?: string | null }) =>
+    create: (data: { content: string; taskId: string; parentCommentId?: string | null; replyToUserId?: string | null }) =>
       request('/comments', { method: 'POST', body: JSON.stringify(data) }),
     update: (id: string, content: string) =>
       request(`/comments/${id}`, { method: 'PUT', body: JSON.stringify({ content }) }),
     delete: (id: string) => request(`/comments/${id}`, { method: 'DELETE' }),
     like: (id: string) => request(`/comments/${id}/like`, { method: 'PATCH' }),
+    getLikes: (id: string) => request(`/comments/${id}/likes`),
     setViewing: (taskId: string, viewing: boolean) =>
       request(`/comments/task/${taskId}/viewing?viewing=${viewing}`, { method: 'POST' }),
   },
@@ -152,6 +161,12 @@ export const api = {
       request(`/ai/project/${projectId}/summary?lang=${lang}`),
     smartSearch: (projectId: string, query: string, lang: string = 'vi') =>
       request(`/ai/project/${projectId}/smart-search`, { method: 'POST', body: JSON.stringify({ query, lang }) }),
+  },
+  chat: {
+    getHistory: (targetType: string, targetId: string) =>
+      request(`/chat/${targetType.toLowerCase()}/${targetId}/history`),
+    sendMessage: (targetType: string, targetId: string, content: string) =>
+      request(`/chat/${targetType.toLowerCase()}/${targetId}/send`, { method: 'POST', body: JSON.stringify({ content }) }),
   },
   uploadImage: (formData: FormData) => request('/upload/image', { method: 'POST', body: formData }),
   uploadFile: (formData: FormData) => request('/upload/file', { method: 'POST', body: formData }),

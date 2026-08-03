@@ -97,3 +97,37 @@ export function createWorkspaceStompClient(workspaceId: string, onMessageReceive
   
   return client;
 }
+
+export function createChatStompClient(
+  targetType: string,
+  targetId: string,
+  onMessageReceived: (message: any) => void
+) {
+  const socketUrl = 'http://localhost:8000/ws';
+  
+  const client = new Client({
+    webSocketFactory: () => new SockJS(socketUrl),
+    debug: (str) => {
+      console.log('STOMP CHAT DEBUG:', str);
+    },
+    reconnectDelay: 5000,
+  });
+
+  client.onConnect = (frame) => {
+    console.log('STOMP Chat Connected:', frame);
+    client.subscribe(`/topic/chat/${targetType}/${targetId}`, (message) => {
+      if (message.body) {
+        try {
+          const parsed = JSON.parse(message.body);
+          onMessageReceived(parsed);
+        } catch (e) {
+          console.error('Failed to parse chat message:', e);
+        }
+      }
+    });
+  };
+
+  client.activate();
+  
+  return client;
+}

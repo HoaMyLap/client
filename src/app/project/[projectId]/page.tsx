@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { api } from '@/lib/api';
 import { createStompClient } from '@/lib/socket';
 import Sidebar from '@/components/Sidebar';
+import ChatWidget from '@/components/ChatWidget';
 import { useLanguage } from '@/lib/i18n';
 import { jsonrepair } from 'jsonrepair';
 import * as XLSX from 'xlsx';
@@ -39,9 +40,15 @@ interface Comment {
   userId: string;
   taskId: string;
   parentCommentId?: string | null;
+  replyToUserId?: string | null;
   likedUserIds?: string[];
   createdAt: string;
   updatedAt?: string;
+  authorName?: string;
+  authorAvatarUrl?: string;
+  workspaceRole?: string;
+  projectRole?: string;
+  isTaskAssignee?: boolean;
 }
 
 interface Member {
@@ -72,9 +79,14 @@ export default function ProjectKanbanPage() {
   const [loading, setLoading] = useState(true);
   const [currentUserId, setCurrentUserId] = useState('');
   const [workspaceId, setWorkspaceId] = useState('');
+  const [workspaceName, setWorkspaceName] = useState('');
+  const [activeChat, setActiveChat] = useState<'WORKSPACE' | 'PROJECT' | null>(null);
+  const [isChatExpanded, setIsChatExpanded] = useState(false);
   const [members, setMembers] = useState<Member[]>([]);
   const [project, setProject] = useState<any>(null);
   const [currentUserWorkspaceMember, setCurrentUserWorkspaceMember] = useState<any>(null);
+  const [customRoles, setCustomRoles] = useState<any[]>([]);
+  const [myOverrides, setMyOverrides] = useState<any[]>([]);
   const [highlightCommentId, setHighlightCommentId] = useState<string | null>(null);
   
   // Custom dialog modal states
@@ -246,6 +258,11 @@ export default function ProjectKanbanPage() {
   const [comments, setComments] = useState<Comment[]>([]);
   const [newCommentContent, setNewCommentContent] = useState('');
   const [newSubtaskTitle, setNewSubtaskTitle] = useState('');
+  const [likesModalConfig, setLikesModalConfig] = useState<{
+    isOpen: boolean;
+    commentId: string;
+    users: { id: string; fullname: string; email: string; avatarUrl: string }[];
+  }>({ isOpen: false, commentId: '', users: [] });
 
   // Edit Task State
   const [editTitle, setEditTitle] = useState('');
@@ -630,12 +647,24 @@ export default function ProjectKanbanPage() {
         if (proj.workspaceId) {
           setWorkspaceId(proj.workspaceId);
           try {
-            const wsMembers = await api.workspaces.getMembers(proj.workspaceId);
             const myUid = localStorage.getItem('userId') || '';
+            const [wsList, wsMembers, rolesData, myPermOverrides] = await Promise.all([
+              api.workspaces.list().catch(() => []),
+              api.workspaces.getMembers(proj.workspaceId),
+              api.workspaces.getRoles(proj.workspaceId).catch(() => []),
+              myUid ? api.workspaces.getMemberPermissions(proj.workspaceId, myUid).catch(() => []) : Promise.resolve([]),
+            ]);
+            
             const myWsMem = wsMembers?.find((m: any) => m.userId === myUid);
             setCurrentUserWorkspaceMember(myWsMem || null);
+            setCustomRoles(rolesData || []);
+            setMyOverrides((myPermOverrides as any) || []);
+            const currentWs = (wsList || []).find((w: any) => w.id === proj.workspaceId);
+            if (currentWs) {
+              setWorkspaceName(currentWs.name);
+            }
           } catch (err) {
-            console.error("Failed to load workspace members for role check:", err);
+            console.error("Failed to load workspace roles and permissions:", err);
           }
         }
       }
@@ -808,7 +837,7 @@ export default function ProjectKanbanPage() {
     assigneeId?: string | null;
     dueDate?: string | null;
   } = {}) => {
-    if (!selectedTask || isViewer) return;
+    if (!selectedTask || !canEditTask) return;
     try {
       const updated = await api.tasks.update({
         ...selectedTask,
@@ -825,7 +854,7 @@ export default function ProjectKanbanPage() {
   };
 
   const handleDeleteTask = (taskId: string) => {
-    if (isViewer) return;
+    if (!canDeleteTask) return;
     showCustomConfirm('Bạn có chắc chắn muốn xóa công việc này?', async () => {
       try {
         await api.tasks.delete(taskId);
@@ -839,7 +868,7 @@ export default function ProjectKanbanPage() {
   };
 
   const handleDeleteSubtask = (subtaskId: string) => {
-    if (isViewer) return;
+    if (!canEditTask) return;
     showCustomConfirm('Bạn có chắc chắn muốn xóa công việc con này?', async () => {
       try {
         await api.tasks.delete(subtaskId);
@@ -853,19 +882,25 @@ export default function ProjectKanbanPage() {
     });
   };
 
-  const handleAddComment = async (e: React.FormEvent, parentId: string | null = null) => {
+  const handleAddComment = async (e: React.FormEvent, targetComment: Comment | null = null) => {
     e.preventDefault();
-    if (isViewer) return;
-    const content = parentId ? replyContent : newCommentContent;
+    if (!checkPermission('TASK_COMMENT_CREATE')) return;
+    const content = targetComment ? replyContent : newCommentContent;
     if (!selectedTask || !content.trim()) return;
 
     try {
+      const parentId = targetComment
+        ? (targetComment.parentCommentId || targetComment.id)
+        : null;
+      const replyToUserId = targetComment ? targetComment.userId : null;
+
       const created = await api.comments.create({
         content: content.trim(),
         taskId: selectedTask.id,
         parentCommentId: parentId,
+        replyToUserId: replyToUserId,
       });
-      if (parentId) {
+      if (targetComment) {
         setReplyContent('');
         setReplyParentId(null);
       } else {
@@ -875,13 +910,16 @@ export default function ProjectKanbanPage() {
         if (prev.some((c) => c.id === created.id)) return prev;
         return [...prev, created];
       });
+      if (selectedTask) {
+        loadTaskDetails(selectedTask.id);
+      }
     } catch (err: any) {
       showCustomAlert(err.message || 'Lỗi khi gửi bình luận.');
     }
   };
 
   const handleSaveEditComment = async (commentId: string) => {
-    if (isViewer || !editCommentContent.trim()) return;
+    if (!checkPermission('TASK_COMMENT_CREATE') || !editCommentContent.trim()) return;
     try {
       const updated = await api.comments.update(commentId, editCommentContent.trim());
       setComments((prev) => prev.map((c) => (c.id === commentId ? updated : c)));
@@ -892,7 +930,7 @@ export default function ProjectKanbanPage() {
   };
 
   const handleDeleteComment = (commentId: string) => {
-    if (isViewer) return;
+    if (!checkPermission('TASK_COMMENT_DELETE')) return;
     showCustomConfirm('Bạn có chắc chắn muốn xóa bình luận này?', async () => {
       try {
         await api.comments.delete(commentId);
@@ -913,6 +951,19 @@ export default function ProjectKanbanPage() {
     }
   };
 
+  const handleViewLikes = async (commentId: string) => {
+    try {
+      const users = await api.comments.getLikes(commentId);
+      setLikesModalConfig({
+        isOpen: true,
+        commentId,
+        users: users || [],
+      });
+    } catch (err: any) {
+      showCustomAlert(err.message || 'Lỗi khi lấy danh sách lượt thích.');
+    }
+  };
+
   const handleRequestLeaveProject = () => {
     showCustomConfirm('Bạn có chắc chắn muốn gửi yêu cầu rời khỏi dự án này? Yêu cầu sẽ được gửi tới Admin để phê duyệt.', async () => {
       try {
@@ -926,7 +977,7 @@ export default function ProjectKanbanPage() {
 
   const handleAddSubtask = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (isViewer || !selectedTask || !newSubtaskTitle.trim()) return;
+    if (!canEditTask || !selectedTask || !newSubtaskTitle.trim()) return;
 
     try {
       await api.tasks.create({
@@ -942,7 +993,7 @@ export default function ProjectKanbanPage() {
   };
 
   const handleToggleSubtask = async (subtaskId: string) => {
-    if (isViewer) return;
+    if (!canEditTask) return;
     try {
       const updated = await api.tasks.toggleDone(subtaskId);
       setSubtasks((prev) => prev.map((s) => (s.id === subtaskId ? updated : s)));
@@ -956,7 +1007,7 @@ export default function ProjectKanbanPage() {
   };
 
   const handleGenerateAiSubtasks = async () => {
-    if (!selectedTask || isViewer) return;
+    if (!selectedTask || !canEditTask) return;
     setAiSubtaskLoading(true);
     try {
       const res = await api.tasks.suggestSubtasks(selectedTask.id);
@@ -1021,7 +1072,7 @@ export default function ProjectKanbanPage() {
 
   // --- KÉO THẢ NATIVE HTML5 ---
   const handleDragStart = (e: React.DragEvent, taskId: string) => {
-    if (isViewer) {
+    if (!canEditTask) {
       e.preventDefault();
       return;
     }
@@ -1030,12 +1081,12 @@ export default function ProjectKanbanPage() {
   };
 
   const handleDragOver = (e: React.DragEvent) => {
-    if (isViewer) return;
+    if (!canEditTask) return;
     e.preventDefault();
   };
 
   const handleDropOnColumn = async (e: React.DragEvent, targetStatus: string) => {
-    if (isViewer) return;
+    if (!canEditTask) return;
     e.preventDefault();
     const taskId = draggedTaskId || e.dataTransfer.getData('text/plain');
     if (!taskId) return;
@@ -1064,7 +1115,7 @@ export default function ProjectKanbanPage() {
   };
 
   const handleDropOnCard = async (e: React.DragEvent, targetStatus: string, targetCardId: string) => {
-    if (isViewer) return;
+    if (!canEditTask) return;
     e.preventDefault();
     e.stopPropagation();
     
@@ -1106,6 +1157,38 @@ export default function ProjectKanbanPage() {
     return member ? member.fullname : 'Thành viên';
   };
 
+  const getRoleBadge = (comment: Comment) => {
+    if (comment.isTaskAssignee) {
+      return (
+        <span className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+          Người thực hiện
+        </span>
+      );
+    }
+    if (comment.workspaceRole === 'ADMIN') {
+      return (
+        <span className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20">
+          Admin Workspace
+        </span>
+      );
+    }
+    if (comment.projectRole === 'ADMIN') {
+      return (
+        <span className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20">
+          Admin Dự án
+        </span>
+      );
+    }
+    if (comment.workspaceRole && comment.workspaceRole !== 'MEMBER' && comment.workspaceRole !== 'VIEWER') {
+      return (
+        <span className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-400 border border-purple-500/20">
+          {comment.workspaceRole}
+        </span>
+      );
+    }
+    return null;
+  };
+
   const renderCommentItem = (comment: Comment, isReply = false) => {
     const isOwner = comment.userId === currentUserId;
     const liked = comment.likedUserIds?.includes(currentUserId);
@@ -1119,11 +1202,17 @@ export default function ProjectKanbanPage() {
         className="p-3.5 bg-surface border border-border rounded-xl flex flex-col gap-2 shadow-sm transition-all duration-300"
       >
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center flex-wrap gap-2">
             <div className="w-6 h-6 rounded-full bg-primary/20 text-primary flex items-center justify-center text-[10px] font-bold shrink-0">
               {authorName.charAt(0).toUpperCase()}
             </div>
             <span className="text-xs font-bold text-heading">{authorName}</span>
+            {getRoleBadge(comment)}
+            {comment.replyToUserId && (
+              <span className="text-[10px] text-primary/80 font-bold bg-primary/5 border border-primary/10 px-1.5 py-0.5 rounded-md flex items-center gap-1">
+                Đã trả lời @{getMemberName(comment.replyToUserId)}
+              </span>
+            )}
             <span className="text-[10px] text-muted flex items-center gap-1">
               <Clock className="h-3 w-3" />
               {new Date(comment.createdAt).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' })}
@@ -1131,27 +1220,31 @@ export default function ProjectKanbanPage() {
           </div>
 
           {/* Action icons for owner */}
-          {isOwner && !isViewer && editingCommentId !== comment.id && (
+          {editingCommentId !== comment.id && (
             <div className="flex items-center gap-1">
-              <button
-                type="button"
-                onClick={() => {
-                  setEditingCommentId(comment.id);
-                  setEditCommentContent(comment.content);
-                }}
-                className="text-muted hover:text-primary p-1 rounded transition-colors"
-                title="Chỉnh sửa"
-              >
-                <Edit2 className="h-3.5 w-3.5" />
-              </button>
-              <button
-                type="button"
-                onClick={() => handleDeleteComment(comment.id)}
-                className="text-muted hover:text-error p-1 rounded transition-colors"
-                title="Xóa"
-              >
-                <Trash className="h-3.5 w-3.5" />
-              </button>
+              {isOwner && checkPermission('TASK_COMMENT_CREATE') && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditingCommentId(comment.id);
+                    setEditCommentContent(comment.content);
+                  }}
+                  className="text-muted hover:text-primary p-1 rounded transition-colors"
+                  title="Chỉnh sửa"
+                >
+                  <Edit2 className="h-3.5 w-3.5" />
+                </button>
+              )}
+              {isOwner && checkPermission('TASK_COMMENT_DELETE') && (
+                <button
+                  type="button"
+                  onClick={() => handleDeleteComment(comment.id)}
+                  className="text-muted hover:text-error p-1 rounded transition-colors"
+                  title="Xóa"
+                >
+                  <Trash className="h-3.5 w-3.5" />
+                </button>
+              )}
             </div>
           )}
         </div>
@@ -1188,18 +1281,33 @@ export default function ProjectKanbanPage() {
 
         {/* Action Row */}
         <div className="flex items-center gap-4 pt-1.5 border-t border-border-subtle mt-1 text-[11px] text-muted">
-          <button
-            type="button"
-            onClick={() => handleToggleLikeComment(comment.id)}
-            className={`flex items-center gap-1 font-semibold transition-colors ${
-              liked ? 'text-rose-500' : 'hover:text-foreground'
-            }`}
-          >
-            <Heart className={`h-3.5 w-3.5 ${liked ? 'fill-rose-500 text-rose-500' : ''}`} />
-            <span>{likesCount > 0 ? likesCount : 'Thích'}</span>
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => handleToggleLikeComment(comment.id)}
+              className={`flex items-center gap-1 font-semibold transition-colors ${
+                liked ? 'text-rose-500' : 'hover:text-foreground'
+              }`}
+            >
+              <Heart className={`h-3.5 w-3.5 ${liked ? 'fill-rose-500 text-rose-500' : ''}`} />
+              <span>{liked ? 'Đã thích' : 'Thích'}</span>
+            </button>
+            {likesCount > 0 && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleViewLikes(comment.id);
+                }}
+                className="hover:underline hover:text-foreground font-semibold px-1.5 py-0.5 bg-surface-hover rounded"
+                title="Xem những người đã thích"
+              >
+                ({likesCount})
+              </button>
+            )}
+          </div>
 
-          {!isReply && !isViewer && (
+          {checkPermission('TASK_COMMENT_CREATE') && (
             <button
               type="button"
               onClick={() => {
@@ -1216,7 +1324,7 @@ export default function ProjectKanbanPage() {
 
         {/* Inline Reply Form */}
         {replyParentId === comment.id && (
-          <form onSubmit={(e) => handleAddComment(e, comment.id)} className="flex gap-2 pt-2 mt-1">
+          <form onSubmit={(e) => handleAddComment(e, comment)} className="flex gap-2 pt-2 mt-1">
             <input
               type="text"
               required
@@ -1243,6 +1351,30 @@ export default function ProjectKanbanPage() {
     (currentUserWorkspaceMember?.role === 'VIEWER' && !projectRole) ||
     (!projectRole && currentUserWorkspaceMember?.role !== 'ADMIN' && currentUserWorkspaceMember?.role !== 'MEMBER')
   );
+
+  const checkPermission = (permKey: string): boolean => {
+    const override = myOverrides.find((o) => o.permission === permKey);
+    if (override !== undefined) {
+      return override.allowed;
+    }
+    if (isWorkspaceAdmin) return true;
+    const myRole = currentUserWorkspaceMember?.customRoleName; 
+    const customRole = customRoles.find(r => r.name === myRole);
+    if (customRole) {
+      return customRole.permissions.includes(permKey);
+    }
+    const sysRole = currentUserWorkspaceMember?.role;
+    if (sysRole === 'ADMIN') return true;
+    if (sysRole === 'MEMBER') {
+      return ['PROJECT_VIEW', 'TASK_CREATE', 'TASK_UPDATE', 'TASK_DELETE', 'TASK_COMMENT_CREATE', 'TASK_COMMENT_DELETE'].includes(permKey);
+    }
+    return ['PROJECT_VIEW', 'TASK_VIEW'].includes(permKey);
+  };
+
+  const canEditTask = !isViewer && checkPermission('TASK_UPDATE');
+  const canCreateTask = !isViewer && checkPermission('TASK_CREATE');
+  const canDeleteTask = !isViewer && checkPermission('TASK_DELETE');
+  const canInviteToProject = isWorkspaceAdmin || projectRole === 'ADMIN' || checkPermission('PROJECT_UPDATE');
 
   const columns = [
     { id: 'TODO', title: language === 'vi' ? 'Cần làm (Todo)' : 'To Do', color: 'border-violet-500/40 text-violet-400' },
@@ -1404,7 +1536,7 @@ export default function ProjectKanbanPage() {
                 </p>
               </div>
 
-              {!isViewer && (
+              {!isViewer && checkPermission('PROJECT_UPDATE') && (
                 <label className="ui-btn-primary px-5 py-2.5 text-xs font-bold flex items-center gap-2 cursor-pointer shadow-md hover:scale-[1.02] transition-transform shrink-0">
                   <Upload className="h-4 w-4" />
                   {fileUploading ? (
@@ -1421,7 +1553,7 @@ export default function ProjectKanbanPage() {
             </div>
 
             {/* Quick Upload Drop Area */}
-            {!isViewer && (
+            {!isViewer && checkPermission('PROJECT_UPDATE') && (
               <label className="block border-2 border-dashed border-border hover:border-primary/50 bg-surface/30 p-6 rounded-2xl text-center cursor-pointer transition-all">
                 <Upload className="h-8 w-8 text-primary mx-auto mb-2 opacity-80" />
                 <p className="text-xs font-bold text-heading">{t('dragDropMultipleFiles')}</p>
@@ -1525,7 +1657,7 @@ export default function ProjectKanbanPage() {
                             >
                               <Download className="h-4 w-4" />
                             </a>
-                            {!isViewer && (
+                            {!isViewer && checkPermission('PROJECT_UPDATE') && (
                               <button
                                 type="button"
                                 onClick={() => handleDeleteProjectFile(file.id, file.name)}
@@ -1566,7 +1698,7 @@ export default function ProjectKanbanPage() {
                   </span>
                 </div>
                 
-                {!isViewer && (
+                {canCreateTask && (
                   <button
                     onClick={() => {
                       setModalStatus(col.id);
@@ -1590,13 +1722,13 @@ export default function ProjectKanbanPage() {
                   return (
                     <div
                       key={task.id}
-                      draggable={!isViewer}
+                      draggable={canEditTask}
                       onDragStart={(e) => handleDragStart(e, task.id)}
                       onDragOver={handleDragOver}
                       onDrop={(e) => handleDropOnCard(e, col.id, task.id)}
                       onClick={() => setSelectedTask(task)}
                       className={`glass hover:border-primary/30 p-4 rounded-xl transition-all border border-border hover:scale-[1.01] flex flex-col justify-between min-h-[120px] ${
-                        isViewer ? 'cursor-pointer' : 'cursor-grab active:cursor-grabbing'
+                        !canEditTask ? 'cursor-pointer' : 'cursor-grab active:cursor-grabbing'
                       }`}
                     >
                       <div>
@@ -1690,7 +1822,7 @@ export default function ProjectKanbanPage() {
               </span>
             </div>
             <div className="flex items-center gap-2 shrink-0">
-              {!isViewer && (
+              {canDeleteTask && (
                 <button
                   onClick={() => handleDeleteTask(selectedTask.id)}
                   className="p-2 text-secondary hover:text-error hover:bg-error-muted rounded-lg transition-colors"
@@ -1739,7 +1871,7 @@ export default function ProjectKanbanPage() {
                   <input
                     type="text"
                     value={editTitle}
-                    disabled={isViewer}
+                    disabled={!canEditTask}
                     onChange={(e) => setEditTitle(e.target.value)}
                     onBlur={() => handleUpdateTaskDetails()}
                     className="ui-input px-4 py-2 text-sm disabled:opacity-75 disabled:cursor-not-allowed"
@@ -1750,7 +1882,7 @@ export default function ProjectKanbanPage() {
                   <label className="ui-label">Mô tả công việc</label>
                   <textarea
                     value={editDesc}
-                    disabled={isViewer}
+                    disabled={!canEditTask}
                     onChange={(e) => setEditDesc(e.target.value)}
                     onBlur={() => handleUpdateTaskDetails()}
                     rows={3}
@@ -1763,7 +1895,7 @@ export default function ProjectKanbanPage() {
                     <label className="ui-label">Độ ưu tiên</label>
                     <select
                       value={editPriority}
-                      disabled={isViewer}
+                      disabled={!canEditTask}
                       onChange={(e) => {
                         const val = e.target.value;
                         setEditPriority(val);
@@ -1790,7 +1922,7 @@ export default function ProjectKanbanPage() {
                     <label className="ui-label">Người thực hiện</label>
                     <select
                       value={editAssigneeId || ''}
-                      disabled={isViewer}
+                      disabled={!canEditTask}
                       onChange={(e) => {
                         const val = e.target.value || null;
                         setEditAssigneeId(val);
@@ -1809,7 +1941,7 @@ export default function ProjectKanbanPage() {
                     <input
                       type="datetime-local"
                       value={editDueDate || ''}
-                      disabled={isViewer}
+                      disabled={!canEditTask}
                       onChange={(e) => {
                         const val = e.target.value || null;
                         setEditDueDate(val);
@@ -1846,7 +1978,7 @@ export default function ProjectKanbanPage() {
                 })()}
 
                 {/* AI Generate button */}
-                {!isViewer && (
+                {canEditTask && (
                   <div className="flex justify-end">
                     <button
                       type="button"
@@ -1879,12 +2011,12 @@ export default function ProjectKanbanPage() {
                     >
                       <button
                         onClick={() => handleToggleSubtask(sub.id)}
-                        disabled={isViewer}
+                        disabled={!canEditTask}
                         className={`w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 transition-all ${
                           sub.status === 'DONE'
                             ? 'bg-emerald-500 border-emerald-500 text-white'
                             : 'border-border hover:border-primary'
-                        } ${isViewer ? 'cursor-not-allowed opacity-75' : ''}`}
+                        } ${!canEditTask ? 'cursor-not-allowed opacity-75' : ''}`}
                       >
                         {sub.status === 'DONE' && <Check className="h-3 w-3" />}
                       </button>
@@ -1893,7 +2025,7 @@ export default function ProjectKanbanPage() {
                       }`}>
                         {sub.title}
                       </span>
-                      {!isViewer && (
+                      {canEditTask && (
                         <button
                           onClick={() => handleDeleteSubtask(sub.id)}
                           className="text-muted hover:text-error transition-colors p-1 rounded"
@@ -1907,7 +2039,7 @@ export default function ProjectKanbanPage() {
                 </div>
 
                 {/* Add subtask form */}
-                {!isViewer && (
+                {canEditTask && (
                   <form onSubmit={handleAddSubtask} className="flex gap-2 pt-2">
                     <input
                       type="text"
@@ -1930,7 +2062,7 @@ export default function ProjectKanbanPage() {
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <h4 className="text-xs font-bold text-heading">Tệp đính kèm công việc ({taskFiles.length})</h4>
-                  {!isViewer && (
+                  {canEditTask && (
                     <label className="ui-btn-primary px-3 py-1.5 text-[11px] font-bold flex items-center gap-1.5 cursor-pointer shrink-0">
                       <Upload className="h-3.5 w-3.5" />
                       {taskFileUploading ? 'Đang tải...' : '+ Tải tệp lên'}
@@ -1990,7 +2122,7 @@ export default function ProjectKanbanPage() {
                             >
                               <Download className="h-3.5 w-3.5" />
                             </a>
-                            {!isViewer && (
+                            {canEditTask && (
                               <button
                                 type="button"
                                 onClick={() => handleDeleteTaskFile(file.id)}
@@ -2106,9 +2238,9 @@ export default function ProjectKanbanPage() {
           {/* Fixed Footer for Comments Input */}
           {drawerTab === 'comments' && (
             <div className="shrink-0 border-t border-border px-6 py-4 bg-card/95 backdrop-blur-sm z-10">
-              {isViewer ? (
+              {!checkPermission('TASK_COMMENT_CREATE') ? (
                 <div className="p-3 bg-zinc-900/60 border border-border/80 text-xs text-muted text-center rounded-xl">
-                  {language === 'vi' ? '🔒 Bạn chỉ có quyền Xem (Viewer) dự án này.' : '🔒 You only have View-Only (Viewer) access to this project.'}
+                  {language === 'vi' ? '🔒 Bạn không có quyền bình luận trong công việc này.' : '🔒 You do not have permission to comment in this task.'}
                 </div>
               ) : (
                 <form onSubmit={(e) => handleAddComment(e, null)} className="flex gap-2">
@@ -2888,7 +3020,7 @@ export default function ProjectKanbanPage() {
               </div>
 
               {/* Invite Form */}
-              {!isViewer ? (
+              {canInviteToProject ? (
                 <form onSubmit={handleInviteToProject} className="pt-4 border-t border-border-subtle space-y-4">
                   <h4 className="text-xs font-bold text-muted uppercase tracking-wider">
                     {language === 'vi' ? 'Mời thành viên mới vào dự án' : 'Invite New Member to Project'}
@@ -3077,6 +3209,72 @@ export default function ProjectKanbanPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Likes Modal */}
+      {likesModalConfig.isOpen && (
+        <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-black/40 dark:bg-black/75 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="bg-card/90 border border-border shadow-[0_20px_50px_rgba(0,0,0,0.15)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.7)] backdrop-blur-xl w-full max-w-sm rounded-3xl overflow-hidden p-6 space-y-4 text-foreground flex flex-col">
+            <div className="flex items-center justify-between border-b border-border/80 pb-3">
+              <h3 className="text-sm font-extrabold text-zinc-100 tracking-wide font-display flex items-center gap-2">
+                <Heart className="h-4 w-4 text-rose-500 fill-rose-500" />
+                Lượt thích ({likesModalConfig.users.length})
+              </h3>
+              <button
+                type="button"
+                onClick={() => setLikesModalConfig({ isOpen: false, commentId: '', users: [] })}
+                className="text-muted hover:text-foreground transition-colors p-1"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="max-h-[300px] overflow-y-auto flex flex-col gap-2 pr-1 scrollbar-thin">
+              {likesModalConfig.users.length === 0 ? (
+                <div className="text-center text-xs text-muted py-6">Chưa có ai thích bình luận này.</div>
+              ) : (
+                likesModalConfig.users.map((u) => (
+                  <div key={u.id} className="flex items-center gap-3 p-2 rounded-xl hover:bg-surface/60 border border-transparent hover:border-border/50 transition-all">
+                    <div className="w-8 h-8 rounded-full bg-primary/20 text-primary flex items-center justify-center text-xs font-bold shrink-0">
+                      {u.fullname.charAt(0).toUpperCase()}
+                    </div>
+                    <div className="flex flex-col min-w-0">
+                      <span className="text-xs font-bold text-heading truncate">{u.fullname}</span>
+                      <span className="text-[10px] text-muted truncate">{u.email}</span>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {projectId && project && (
+        <ChatWidget
+          targetType="PROJECT"
+          targetId={projectId}
+          targetName={project.name}
+          isViewer={isViewer}
+          positionClass="bottom-6 right-6"
+          isOpen={activeChat === 'PROJECT'}
+          onToggle={() => setActiveChat(activeChat === 'PROJECT' ? null : 'PROJECT')}
+          isExpanded={isChatExpanded}
+          onToggleExpand={() => setIsChatExpanded(!isChatExpanded)}
+        />
+      )}
+
+      {workspaceId && workspaceName && (
+        <ChatWidget
+          targetType="WORKSPACE"
+          targetId={workspaceId}
+          targetName={workspaceName}
+          isViewer={currentUserWorkspaceMember?.role === 'VIEWER'}
+          positionClass="bottom-6 right-[88px]"
+          isOpen={activeChat === 'WORKSPACE'}
+          onToggle={() => setActiveChat(activeChat === 'WORKSPACE' ? null : 'WORKSPACE')}
+          isExpanded={isChatExpanded}
+          onToggleExpand={() => setIsChatExpanded(!isChatExpanded)}
+        />
       )}
       </div>
     </div>

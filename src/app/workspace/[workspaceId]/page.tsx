@@ -5,6 +5,7 @@ import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import { api } from '@/lib/api';
 import Sidebar from '@/components/Sidebar';
+import ChatWidget from '@/components/ChatWidget';
 import { useLanguage } from '@/lib/i18n';
 import { createWorkspaceStompClient } from '@/lib/socket';
 import { Client } from '@stomp/stompjs';
@@ -12,7 +13,7 @@ import * as XLSX from 'xlsx';
 import { 
   ArrowLeft, Plus, Folder, Users, Trash, PlusCircle, 
   Pencil, Shield, User, X, CheckCircle2, Activity, BarChart3, Sparkles, Layers,
-  FileSpreadsheet, Upload, Download, Bell
+  FileSpreadsheet, Upload, Download, Bell, AlertTriangle
 } from 'lucide-react';
 
 interface Project {
@@ -68,6 +69,7 @@ export default function WorkspaceDetailPage() {
 
   const [projects, setProjects] = useState<Project[]>([]);
   const [members, setMembers] = useState<WorkspaceMember[]>([]);
+  const [workspaceName, setWorkspaceName] = useState<string>('');
   const [loading, setLoading] = useState(true);
 
   // New Project Modal State
@@ -121,6 +123,17 @@ export default function WorkspaceDetailPage() {
   const [overridePermissions, setOverridePermissions] = useState<Array<{ permission: string; allowed: boolean; inherited?: boolean }>>([]);
   const [overrideLoading, setOverrideLoading] = useState(false);
   const [myOverrides, setMyOverrides] = useState<Array<{ permission: string; allowed: boolean }>>([]);
+  
+  // Deletion Request Modal state
+  const [showDeletionRequestModal, setShowDeletionRequestModal] = useState(false);
+  const [deletionRequestProjectId, setDeletionRequestProjectId] = useState<string | null>(null);
+  const [deletionRequestReason, setDeletionRequestReason] = useState('');
+  const [deletionRequestLoading, setDeletionRequestLoading] = useState(false);
+
+  // Approvals Modal state
+  const [showApprovalsModal, setShowApprovalsModal] = useState(false);
+  const [pendingRequests, setPendingRequests] = useState<any[]>([]);
+  const [approvalsLoading, setApprovalsLoading] = useState(false);
   
   // Custom dialog modal states
   const [dialogConfig, setDialogConfig] = useState<{
@@ -198,7 +211,8 @@ export default function WorkspaceDetailPage() {
       setLoading(true);
       setPageError('');
       const myId = typeof window !== 'undefined' ? localStorage.getItem('userId') || '' : '';
-      const [projData, memberData, rolesData, myPermOverrides] = await Promise.all([
+      const [wsList, projData, memberData, rolesData, myPermOverrides] = await Promise.all([
+        api.workspaces.list().catch(() => []),
         api.projects.list(workspaceId),
         api.workspaces.getMembers(workspaceId),
         api.workspaces.getRoles(workspaceId).catch(() => []),
@@ -208,6 +222,11 @@ export default function WorkspaceDetailPage() {
       setMembers(memberData || []);
       setCustomRoles(rolesData || []);
       setMyOverrides((myPermOverrides as any) || []);
+
+      const currentWs = (wsList || []).find((w: any) => w.id === workspaceId);
+      if (currentWs) {
+        setWorkspaceName(currentWs.name);
+      }
     } catch (err: any) {
       console.error(err);
       setPageError(err.message || 'Bạn không có quyền truy cập Workspace này hoặc đã rời khỏi Workspace.');
@@ -273,12 +292,82 @@ export default function WorkspaceDetailPage() {
   const handleDeleteProject = (e: React.MouseEvent, projectId: string) => {
     e.preventDefault();
     e.stopPropagation();
-    showCustomConfirm('Bạn có chắc chắn muốn xóa dự án này? Toàn bộ thẻ công việc sẽ bị xóa theo.', async () => {
+    const myId = typeof window !== 'undefined' ? localStorage.getItem('userId') || '' : '';
+    const myWorkspaceMember = members.find((m) => m.userId === myId);
+    const isWorkspaceAdmin = myWorkspaceMember?.role === 'ADMIN';
+
+    if (isWorkspaceAdmin) {
+      showCustomConfirm('Bạn có chắc chắn muốn xóa dự án này? Toàn bộ thẻ công việc sẽ bị xóa theo.', async () => {
+        try {
+          await api.projects.delete(projectId);
+          loadData();
+        } catch (err: any) {
+          showCustomAlert(err.message || 'Lỗi khi xóa dự án.');
+        }
+      });
+    } else {
+      setDeletionRequestProjectId(projectId);
+      setDeletionRequestReason('');
+      setShowDeletionRequestModal(true);
+    }
+  };
+
+  const handleSubmitDeletionRequest = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!deletionRequestProjectId || !deletionRequestReason.trim()) return;
+
+    setDeletionRequestLoading(true);
+    try {
+      await api.projects.requestDeletion(deletionRequestProjectId, deletionRequestReason.trim());
+      setShowDeletionRequestModal(false);
+      setDeletionRequestProjectId(null);
+      setDeletionRequestReason('');
+      showCustomAlert('Đã gửi yêu cầu xóa dự án tới Admin Workspace để phê duyệt.');
+      loadData();
+    } catch (err: any) {
+      showCustomAlert(err.message || 'Lỗi khi gửi yêu cầu xóa dự án.');
+    } finally {
+      setDeletionRequestLoading(false);
+    }
+  };
+
+  const loadPendingRequests = async () => {
+    try {
+      const data = await api.projects.getDeletionRequests(workspaceId);
+      setPendingRequests(data || []);
+    } catch (err) {
+      console.error('Failed to load pending deletion requests:', err);
+    }
+  };
+
+  const handleApproveDeletion = async (requestId: string) => {
+    showCustomConfirm('Bạn có chắc chắn muốn CHẤP THUẬN xóa dự án này? Thao tác này sẽ xóa vĩnh viễn dự án và không thể khôi phục.', async () => {
+      setApprovalsLoading(true);
       try {
-        await api.projects.delete(projectId);
+        await api.projects.approveDeletion(requestId);
+        showCustomAlert('Đã phê duyệt và xóa dự án thành công.');
+        await loadPendingRequests();
         loadData();
       } catch (err: any) {
-        showCustomAlert(err.message || 'Lỗi khi xóa dự án (chỉ Admin của Workspace mới được xóa).');
+        showCustomAlert(err.message || 'Lỗi khi phê duyệt xóa dự án.');
+      } finally {
+        setApprovalsLoading(false);
+      }
+    });
+  };
+
+  const handleRejectDeletion = async (requestId: string) => {
+    showCustomConfirm('Bạn có chắc chắn muốn TỪ CHỐI yêu cầu xóa dự án này?', async () => {
+      setApprovalsLoading(true);
+      try {
+        await api.projects.rejectDeletion(requestId);
+        showCustomAlert('Đã từ chối yêu cầu xóa dự án.');
+        await loadPendingRequests();
+        loadData();
+      } catch (err: any) {
+        showCustomAlert(err.message || 'Lỗi khi từ chối yêu cầu.');
+      } finally {
+        setApprovalsLoading(false);
       }
     });
   };
@@ -544,6 +633,12 @@ export default function WorkspaceDetailPage() {
   const currentUserMember = members.find((m) => m.userId === currentUserId);
   const isAdmin = currentUserMember?.role === 'ADMIN';
 
+  useEffect(() => {
+    if (workspaceId && isAdmin) {
+      loadPendingRequests();
+    }
+  }, [workspaceId, isAdmin, members]);
+
   const checkPermission = (permKey: string): boolean => {
     // 1. Direct overrides take precedence
     const override = myOverrides.find((o) => o.permission === permKey);
@@ -770,9 +865,13 @@ export default function WorkspaceDetailPage() {
                           <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border shrink-0 ${
                             proj.status === 'COMPLETED' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' :
                             proj.status === 'ARCHIVED' ? 'bg-zinc-800 text-zinc-400 border-zinc-700' :
+                            proj.status === 'DELETION_PENDING' ? 'bg-rose-500/10 text-rose-400 border-rose-500/20 animate-pulse' :
                             'bg-primary/10 text-primary border-primary/20'
                           }`}>
-                            {proj.status === 'COMPLETED' ? t('done') : proj.status === 'ARCHIVED' ? 'Archived' : t('inProgress')}
+                            {proj.status === 'COMPLETED' ? t('done') :
+                             proj.status === 'ARCHIVED' ? 'Archived' :
+                             proj.status === 'DELETION_PENDING' ? 'Chờ duyệt xóa ⚠️' :
+                             t('inProgress')}
                           </span>
                         </div>
                         <p className="text-secondary text-xs mt-2 line-clamp-2 leading-relaxed">
@@ -783,7 +882,7 @@ export default function WorkspaceDetailPage() {
                       <div className="flex items-center justify-between text-[11px] text-muted mt-4 pt-3 border-t border-border-subtle">
                         <span>Tạo ngày: {new Date(proj.createdAt).toLocaleDateString('vi-VN')}</span>
                         <div className="flex items-center gap-1.5">
-                          {checkPermission('PROJECT_UPDATE') && (
+                          {checkPermission('PROJECT_UPDATE') && proj.status !== 'DELETION_PENDING' && (
                             <button
                               onClick={(e) => handleOpenEditProject(e, proj)}
                               className="p-1.5 rounded-lg text-secondary hover:text-primary hover:bg-primary/10 transition-colors"
@@ -792,7 +891,7 @@ export default function WorkspaceDetailPage() {
                               <Pencil className="h-3.5 w-3.5" />
                             </button>
                           )}
-                          {checkPermission('PROJECT_DELETE') && (
+                          {checkPermission('PROJECT_DELETE') && proj.status !== 'DELETION_PENDING' && (
                             <button
                               onClick={(e) => handleDeleteProject(e, proj.id)}
                               className="p-1.5 rounded-lg text-muted hover:text-error hover:bg-error-muted transition-colors"
@@ -812,6 +911,32 @@ export default function WorkspaceDetailPage() {
 
           {/* Right Column: Member Management */}
           <div className="space-y-6">
+            {isAdmin && pendingRequests.length > 0 && (
+              <div className="glass p-6 rounded-2xl border-rose-500/20 bg-rose-500/5 relative overflow-hidden group shadow-lg">
+                <div className="absolute top-0 right-0 w-24 h-24 bg-rose-500/10 rounded-full blur-2xl -mr-8 -mt-8 transition-transform group-hover:scale-125 duration-700" />
+                <div className="relative z-10 flex items-start gap-4">
+                  <div className="p-3 rounded-2xl bg-rose-500/10 text-rose-400 border border-rose-500/20 shrink-0">
+                    <AlertTriangle className="h-5 w-5 animate-bounce" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-sm font-extrabold text-rose-200 tracking-wide font-display">
+                      Yêu cầu phê duyệt ({pendingRequests.length})
+                    </h3>
+                    <p className="text-[11px] text-rose-300/80 mt-1 leading-relaxed">
+                      Có {pendingRequests.length} dự án đang yêu cầu phê duyệt xóa từ Admin Dự án.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setShowApprovalsModal(true)}
+                      className="mt-3.5 px-4 py-2 w-full text-xs font-bold bg-rose-600 hover:bg-rose-700 text-white rounded-xl transition-all shadow-md shadow-rose-900/30 flex items-center justify-center gap-1.5 border-0 cursor-pointer"
+                    >
+                      Xem danh sách chờ duyệt
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div className="glass p-6 rounded-2xl border border-border">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-base font-bold font-display flex items-center gap-2 text-heading">
@@ -881,44 +1006,56 @@ export default function WorkspaceDetailPage() {
                       </div>
 
                       <div className="flex items-center gap-1.5 shrink-0">
-                        <select
-                          value={m.roleId || m.role}
-                          disabled={!checkPermission('WORKSPACE_ROLE_MANAGE')}
-                          onChange={(e) => handleChangeMemberRoleWithCustom(m.userId, e.target.value)}
-                          className="bg-zinc-900 border border-zinc-800 text-[10px] font-bold text-primary rounded-lg px-2 py-1 focus:outline-none disabled:opacity-75 disabled:cursor-not-allowed"
-                        >
-                          <optgroup label="Hệ thống (Default)">
-                            <option value="ADMIN">ADMIN</option>
-                            <option value="MEMBER">MEMBER</option>
-                            <option value="VIEWER">VIEWER</option>
-                          </optgroup>
-                          {customRoles.length > 0 && (
-                            <optgroup label="Tùy chỉnh (Custom Roles)">
-                              {customRoles.map((cr) => (
-                                <option key={cr.id} value={cr.id}>{cr.name}</option>
-                              ))}
+                        {checkPermission('WORKSPACE_ROLE_MANAGE') ? (
+                          <select
+                            value={m.roleId || m.role}
+                            onChange={(e) => handleChangeMemberRoleWithCustom(m.userId, e.target.value)}
+                            className="bg-zinc-900 border border-zinc-800 text-[10px] font-bold text-primary rounded-lg px-2 py-1 focus:outline-none cursor-pointer"
+                          >
+                            <optgroup label="Hệ thống (Default)">
+                              <option value="ADMIN">ADMIN</option>
+                              <option value="MEMBER">MEMBER</option>
+                              <option value="VIEWER">VIEWER</option>
                             </optgroup>
-                          )}
-                        </select>
+                            {customRoles.length > 0 && (
+                              <optgroup label="Tùy chỉnh (Custom Roles)">
+                                {customRoles.map((cr) => (
+                                  <option key={cr.id} value={cr.id}>{cr.name}</option>
+                                ))}
+                              </optgroup>
+                            )}
+                          </select>
+                        ) : (
+                          <span className="text-[10px] font-bold text-zinc-400 uppercase bg-zinc-850 border border-zinc-700/50 px-2.5 py-1 rounded-lg">
+                            {(() => {
+                              if (m.roleId) {
+                                const cr = customRoles.find((r) => r.id === m.roleId);
+                                if (cr) return cr.name;
+                              }
+                              return m.role;
+                            })()}
+                          </span>
+                        )}
                         
                         {checkPermission('WORKSPACE_ROLE_MANAGE') && (
                           <button
                             onClick={() => handleOpenOverrideModal(m)}
-                            className="p-1 rounded text-muted hover:text-primary hover:bg-primary-muted transition-colors cursor-pointer"
+                            className="p-1 rounded text-muted hover:text-primary hover:bg-primary-muted transition-colors cursor-pointer border-0 bg-transparent"
                             title="Cấu hình quyền chi tiết cho thành viên"
                           >
                             <Shield className="h-3.5 w-3.5" />
                           </button>
                         )}
                         
-                        <button
-                          onClick={() => handleRemoveMember(m.userId, m.fullname)}
-                          disabled={!checkPermission('WORKSPACE_MEMBER_REMOVE')}
-                          className="p-1 rounded text-muted hover:text-error hover:bg-error-muted transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                          title="Xóa thành viên khỏi workspace"
-                        >
-                          <Trash className="h-3.5 w-3.5" />
-                        </button>
+                        {checkPermission('WORKSPACE_MEMBER_REMOVE') && (
+                          <button
+                            onClick={() => handleRemoveMember(m.userId, m.fullname)}
+                            className="p-1 rounded text-muted hover:text-error hover:bg-error-muted transition-colors cursor-pointer border-0 bg-transparent"
+                            title="Xóa thành viên khỏi workspace"
+                          >
+                            <Trash className="h-3.5 w-3.5" />
+                          </button>
+                        )}
                       </div>
                     </div>
                   ))}
@@ -966,6 +1103,41 @@ export default function WorkspaceDetailPage() {
                   </button>
                   <button type="submit" disabled={projLoading} className="ui-btn-primary px-5 py-2 text-sm">
                     {projLoading ? 'Đang tạo...' : 'Tạo'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Deletion Request Modal */}
+        {showDeletionRequestModal && (
+          <div className="ui-modal-overlay">
+            <div className="w-full max-w-md glass p-8 rounded-2xl relative">
+              <h3 className="text-xl font-bold mb-4 font-display text-heading">Yêu Cầu Xóa Dự Án</h3>
+              <p className="text-xs text-muted mb-6">
+                Bạn đang gửi yêu cầu xóa dự án này lên Admin Workspace. Dự án sẽ chuyển sang trạng thái chờ duyệt và chỉ bị xóa khi được phê duyệt.
+              </p>
+
+              <form onSubmit={handleSubmitDeletionRequest} className="space-y-4">
+                <div>
+                  <label className="ui-label tracking-wider">Lý do yêu cầu xóa *</label>
+                  <textarea
+                    required
+                    value={deletionRequestReason}
+                    onChange={(e) => setDeletionRequestReason(e.target.value)}
+                    placeholder="Mô tả lý do bạn muốn xóa dự án này để Admin Workspace phê duyệt..."
+                    rows={4}
+                    className="ui-input px-4 py-2.5 text-sm resize-none"
+                  />
+                </div>
+
+                <div className="flex gap-3 justify-end mt-6">
+                  <button type="button" onClick={() => { setShowDeletionRequestModal(false); setDeletionRequestProjectId(null); }} className="ui-btn-secondary px-4 py-2 text-sm">
+                    Hủy
+                  </button>
+                  <button type="submit" disabled={deletionRequestLoading} className="ui-btn-primary px-5 py-2 text-sm bg-rose-600 hover:bg-rose-700 text-white border-transparent">
+                    {deletionRequestLoading ? 'Đang gửi...' : 'Gửi yêu cầu'}
                   </button>
                 </div>
               </form>
@@ -1657,6 +1829,111 @@ export default function WorkspaceDetailPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Workspace Deletion Approvals Modal */}
+      {showApprovalsModal && (
+        <div className="fixed inset-0 z-[260] flex items-center justify-center bg-black/40 dark:bg-black/75 backdrop-blur-md p-4 animate-fadeIn no-print">
+          <div className="bg-card/95 border border-border shadow-2xl backdrop-blur-xl w-full max-w-xl rounded-3xl overflow-hidden flex flex-col max-h-[80vh] animate-in fade-in zoom-in-95 duration-200 text-foreground">
+            {/* Header */}
+            <div className="flex items-center justify-between p-6 border-b border-border/80">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-2xl bg-rose-500/10 text-rose-400 border border-rose-500/20">
+                  <AlertTriangle className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-extrabold text-zinc-100 tracking-wide font-display">
+                    Danh Sách Yêu Cầu Xóa Dự Án
+                  </h3>
+                  <p className="text-[11px] text-muted mt-0.5">
+                    Phê duyệt hoặc từ chối các yêu cầu xóa dự án từ các Admin Dự án.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowApprovalsModal(false)}
+                className="text-zinc-400 hover:text-zinc-100 p-2 rounded-full hover:bg-hover transition-colors border-0 bg-transparent cursor-pointer"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* List */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-4 scrollbar-thin">
+              {pendingRequests.length === 0 ? (
+                <div className="text-center py-12 text-sm text-muted">
+                  Không có yêu cầu phê duyệt nào đang chờ xử lý.
+                </div>
+              ) : (
+                pendingRequests.map((req) => {
+                  const projName = projects.find(p => p.id === req.projectId)?.name || 'Dự án';
+                  const reqName = members.find(m => m.userId === req.requesterId)?.fullname || 'Admin Dự án';
+                  return (
+                    <div key={req.id} className="p-5 rounded-2xl bg-surface/50 border border-border flex flex-col gap-3.5 relative overflow-hidden">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <h4 className="text-xs font-black uppercase tracking-wider text-rose-400">
+                            Yêu cầu xóa: {projName}
+                          </h4>
+                          <span className="text-[10px] text-muted mt-0.5 block">
+                            Người gửi: <strong className="text-zinc-200">{reqName}</strong> • {new Date(req.createdAt).toLocaleString('vi-VN')}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="bg-surface/80 border border-border-subtle p-3 rounded-xl">
+                        <span className="text-[10px] uppercase font-bold text-muted block mb-1">Lý do xóa:</span>
+                        <p className="text-xs text-body leading-relaxed whitespace-pre-wrap">
+                          {req.reason || 'Không cung cấp lý do.'}
+                        </p>
+                      </div>
+
+                      <div className="flex justify-end gap-2.5 pt-1">
+                        <button
+                          type="button"
+                          disabled={approvalsLoading}
+                          onClick={() => handleRejectDeletion(req.id)}
+                          className="px-4 py-2 rounded-xl text-xs font-bold border border-border hover:bg-hover text-zinc-300 transition-all cursor-pointer"
+                        >
+                          Từ chối
+                        </button>
+                        <button
+                          type="button"
+                          disabled={approvalsLoading}
+                          onClick={() => handleApproveDeletion(req.id)}
+                          className="px-4 py-2 rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-700 text-white rounded-xl transition-all shadow-md shadow-rose-955/30 flex items-center gap-1 border-0 cursor-pointer"
+                        >
+                          Phê duyệt xóa
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="p-6 border-t border-border/80 flex justify-end bg-surface/20">
+              <button
+                type="button"
+                onClick={() => setShowApprovalsModal(false)}
+                className="px-5 py-2.5 rounded-xl border border-border hover:bg-hover text-zinc-300 text-xs font-bold transition-all border-0 bg-transparent cursor-pointer"
+              >
+                Đóng
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {workspaceId && workspaceName && (
+        <ChatWidget
+          targetType="WORKSPACE"
+          targetId={workspaceId}
+          targetName={workspaceName}
+          isViewer={currentUserMember?.role === 'VIEWER'}
+        />
       )}
       </div>
     </div>
