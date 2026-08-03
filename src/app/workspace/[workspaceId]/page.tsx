@@ -120,6 +120,7 @@ export default function WorkspaceDetailPage() {
   const [overrideUser, setOverrideUser] = useState<WorkspaceMember | null>(null);
   const [overridePermissions, setOverridePermissions] = useState<Array<{ permission: string; allowed: boolean; inherited?: boolean }>>([]);
   const [overrideLoading, setOverrideLoading] = useState(false);
+  const [myOverrides, setMyOverrides] = useState<Array<{ permission: string; allowed: boolean }>>([]);
   
   // Custom dialog modal states
   const [dialogConfig, setDialogConfig] = useState<{
@@ -196,14 +197,17 @@ export default function WorkspaceDetailPage() {
     try {
       setLoading(true);
       setPageError('');
-      const [projData, memberData, rolesData] = await Promise.all([
+      const myId = typeof window !== 'undefined' ? localStorage.getItem('userId') || '' : '';
+      const [projData, memberData, rolesData, myPermOverrides] = await Promise.all([
         api.projects.list(workspaceId),
         api.workspaces.getMembers(workspaceId),
         api.workspaces.getRoles(workspaceId).catch(() => []),
+        myId ? api.workspaces.getMemberPermissions(workspaceId, myId).catch(() => []) : Promise.resolve([]),
       ]);
       setProjects(projData || []);
       setMembers(memberData || []);
       setCustomRoles(rolesData || []);
+      setMyOverrides((myPermOverrides as any) || []);
     } catch (err: any) {
       console.error(err);
       setPageError(err.message || 'Bạn không có quyền truy cập Workspace này hoặc đã rời khỏi Workspace.');
@@ -540,6 +544,51 @@ export default function WorkspaceDetailPage() {
   const currentUserMember = members.find((m) => m.userId === currentUserId);
   const isAdmin = currentUserMember?.role === 'ADMIN';
 
+  const checkPermission = (permKey: string): boolean => {
+    // 1. Direct overrides take precedence
+    const override = myOverrides.find((o) => o.permission === permKey);
+    if (override !== undefined) {
+      return override.allowed;
+    }
+
+    // 2. Look up member role
+    if (!currentUserMember) return false;
+
+    // 3. Workspace Admin bypass
+    if (currentUserMember.role === 'ADMIN') return true;
+
+    // 4. Custom role look up
+    if (currentUserMember.roleId) {
+      const customRole = customRoles.find((r) => r.id === currentUserMember.roleId);
+      if (customRole) {
+        return customRole.permissions?.includes(permKey) || false;
+      }
+    }
+
+    // 5. Default roles fallback mapping
+    if (currentUserMember.role === 'MEMBER') {
+      const adminPermissions = [
+        'WORKSPACE_UPDATE',
+        'WORKSPACE_DELETE',
+        'WORKSPACE_ROLE_MANAGE',
+        'WORKSPACE_MEMBER_REMOVE',
+        'WORKSPACE_MEMBER_INVITE'
+      ];
+      return !adminPermissions.includes(permKey);
+    }
+
+    if (currentUserMember.role === 'VIEWER') {
+      const viewerPermissions = [
+        'WORKSPACE_VIEW',
+        'PROJECT_VIEW',
+        'TASK_VIEW'
+      ];
+      return viewerPermissions.includes(permKey);
+    }
+
+    return false;
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen w-full flex items-center justify-center bg-background">
@@ -605,14 +654,16 @@ export default function WorkspaceDetailPage() {
 
               {/* Action Buttons */}
               <div className="flex items-center gap-3 shrink-0">
-                <button
-                  onClick={() => setShowProjModal(true)}
-                  className="ui-btn-primary px-4 py-2.5 text-xs font-bold flex items-center gap-2 shadow-md hover:scale-[1.02] transition-transform"
-                >
-                  <Plus className="h-4 w-4" />
-                  {t('createProject')}
-                </button>
-                {isAdmin && (
+                {checkPermission('PROJECT_CREATE') && (
+                  <button
+                    onClick={() => setShowProjModal(true)}
+                    className="ui-btn-primary px-4 py-2.5 text-xs font-bold flex items-center gap-2 shadow-md hover:scale-[1.02] transition-transform"
+                  >
+                    <Plus className="h-4 w-4" />
+                    {t('createProject')}
+                  </button>
+                )}
+                {checkPermission('WORKSPACE_MEMBER_INVITE') && (
                   <button
                     onClick={() => setShowInviteModal(true)}
                     className="ui-btn-secondary px-4 py-2.5 text-xs font-bold flex items-center gap-2 border-primary/30 text-primary hover:bg-primary/10"
@@ -685,10 +736,12 @@ export default function WorkspaceDetailPage() {
                 </p>
               </div>
 
-              <button onClick={() => setShowProjModal(true)} className="ui-btn-ghost text-xs font-semibold text-primary flex items-center gap-1 hover:underline">
-                <Plus className="h-3.5 w-3.5" />
-                {t('create')}
-              </button>
+              {checkPermission('PROJECT_CREATE') && (
+                <button onClick={() => setShowProjModal(true)} className="ui-btn-ghost text-xs font-semibold text-primary flex items-center gap-1 hover:underline">
+                  <Plus className="h-3.5 w-3.5" />
+                  {t('create')}
+                </button>
+              )}
             </div>
 
             {projects.length === 0 ? (
@@ -698,9 +751,11 @@ export default function WorkspaceDetailPage() {
                 <p className="text-secondary text-sm mb-6">
                   {t('noProjectYetDesc')}
                 </p>
-                <button onClick={() => setShowProjModal(true)} className="ui-btn-primary px-5 py-2.5 text-sm">
-                  {t('createNewProjectBtn')}
-                </button>
+                {checkPermission('PROJECT_CREATE') && (
+                  <button onClick={() => setShowProjModal(true)} className="ui-btn-primary px-5 py-2.5 text-sm">
+                    {t('createNewProjectBtn')}
+                  </button>
+                )}
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -728,20 +783,24 @@ export default function WorkspaceDetailPage() {
                       <div className="flex items-center justify-between text-[11px] text-muted mt-4 pt-3 border-t border-border-subtle">
                         <span>Tạo ngày: {new Date(proj.createdAt).toLocaleDateString('vi-VN')}</span>
                         <div className="flex items-center gap-1.5">
-                          <button
-                            onClick={(e) => handleOpenEditProject(e, proj)}
-                            className="p-1.5 rounded-lg text-secondary hover:text-primary hover:bg-primary/10 transition-colors"
-                            title="Sửa thông tin dự án"
-                          >
-                            <Pencil className="h-3.5 w-3.5" />
-                          </button>
-                          <button
-                            onClick={(e) => handleDeleteProject(e, proj.id)}
-                            className="p-1.5 rounded-lg text-muted hover:text-error hover:bg-error-muted transition-colors"
-                            title="Xóa dự án"
-                          >
-                            <Trash className="h-3.5 w-3.5" />
-                          </button>
+                          {checkPermission('PROJECT_UPDATE') && (
+                            <button
+                              onClick={(e) => handleOpenEditProject(e, proj)}
+                              className="p-1.5 rounded-lg text-secondary hover:text-primary hover:bg-primary/10 transition-colors"
+                              title="Sửa thông tin dự án"
+                            >
+                              <Pencil className="h-3.5 w-3.5" />
+                            </button>
+                          )}
+                          {checkPermission('PROJECT_DELETE') && (
+                            <button
+                              onClick={(e) => handleDeleteProject(e, proj.id)}
+                              className="p-1.5 rounded-lg text-muted hover:text-error hover:bg-error-muted transition-colors"
+                              title="Xóa dự án"
+                            >
+                              <Trash className="h-3.5 w-3.5" />
+                            </button>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -769,8 +828,8 @@ export default function WorkspaceDetailPage() {
                 </button>
               </div>
 
-              {/* Only Admin can see the Invite Member button */}
-              {isAdmin ? (
+              {/* Only members with WORKSPACE_MEMBER_INVITE permission can see the Invite Member button */}
+              {checkPermission('WORKSPACE_MEMBER_INVITE') ? (
                 <button
                   type="button"
                   onClick={() => {
@@ -784,7 +843,7 @@ export default function WorkspaceDetailPage() {
                 </button>
               ) : (
                 <div className="p-3.5 rounded-xl bg-surface border border-border text-xs text-secondary text-center mb-6">
-                  {language === 'vi' ? '🔒 Chỉ Admin mới có quyền mời thành viên mới.' : '🔒 Only Admins can invite new members.'}
+                  {language === 'vi' ? '🔒 Bạn không có quyền mời thành viên mới.' : '🔒 You do not have permission to invite new members.'}
                 </div>
               )}
 
@@ -794,7 +853,7 @@ export default function WorkspaceDetailPage() {
                   <h4 className="text-xs font-bold text-heading uppercase tracking-wider">
                     {language === 'vi' ? 'Danh sách thành viên hiện tại' : 'Current Members List'}
                   </h4>
-                  {isAdmin && (
+                  {checkPermission('WORKSPACE_ROLE_MANAGE') && (
                     <button
                       onClick={() => setShowRoleMgrModal(true)}
                       className="text-[10px] font-bold text-primary hover:underline flex items-center gap-1 cursor-pointer bg-transparent border-0"
@@ -824,7 +883,7 @@ export default function WorkspaceDetailPage() {
                       <div className="flex items-center gap-1.5 shrink-0">
                         <select
                           value={m.roleId || m.role}
-                          disabled={!isAdmin}
+                          disabled={!checkPermission('WORKSPACE_ROLE_MANAGE')}
                           onChange={(e) => handleChangeMemberRoleWithCustom(m.userId, e.target.value)}
                           className="bg-zinc-900 border border-zinc-800 text-[10px] font-bold text-primary rounded-lg px-2 py-1 focus:outline-none disabled:opacity-75 disabled:cursor-not-allowed"
                         >
@@ -842,7 +901,7 @@ export default function WorkspaceDetailPage() {
                           )}
                         </select>
                         
-                        {isAdmin && (
+                        {checkPermission('WORKSPACE_ROLE_MANAGE') && (
                           <button
                             onClick={() => handleOpenOverrideModal(m)}
                             className="p-1 rounded text-muted hover:text-primary hover:bg-primary-muted transition-colors cursor-pointer"
@@ -854,7 +913,7 @@ export default function WorkspaceDetailPage() {
                         
                         <button
                           onClick={() => handleRemoveMember(m.userId, m.fullname)}
-                          disabled={!isAdmin}
+                          disabled={!checkPermission('WORKSPACE_MEMBER_REMOVE')}
                           className="p-1 rounded text-muted hover:text-error hover:bg-error-muted transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                           title="Xóa thành viên khỏi workspace"
                         >
