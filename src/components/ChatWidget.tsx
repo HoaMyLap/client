@@ -110,6 +110,21 @@ export default function ChatWidget({
     localStorage.setItem('chat_sound_enabled', String(newVal));
   };
 
+  const formatMessageTime = (createdAtStr: string) => {
+    if (!createdAtStr) return '';
+    try {
+      let dateStr = createdAtStr;
+      if (!dateStr.endsWith('Z') && !dateStr.includes('+') && !dateStr.includes('-')) {
+        dateStr = dateStr + 'Z';
+      }
+      const d = new Date(dateStr);
+      return d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+    } catch (e) {
+      console.error('Failed to parse date:', e);
+      return '';
+    }
+  };
+
   const activeIsOpen = isOpen !== undefined ? isOpen : internalIsOpen;
   const activeIsExpanded = isExpanded !== undefined ? isExpanded : internalIsExpanded;
 
@@ -332,7 +347,7 @@ export default function ChatWidget({
                       </div>
                       <span className={`text-[8px] px-1.5 flex items-center gap-0.5 mt-0.5 text-zinc-500 dark:text-zinc-500 ${isMe ? 'justify-end' : ''}`}>
                         <Clock className="h-2 w-2" />
-                        {new Date(msg.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
+                        {formatMessageTime(msg.createdAt)}
                       </span>
                     </div>
                   </div>
