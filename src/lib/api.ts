@@ -92,11 +92,18 @@ export const api = {
     update: (projectId: string, data: any) =>
       request(`/projects/${projectId}`, { method: 'PUT', body: JSON.stringify(data) }),
     delete: (projectId: string) => request(`/projects/${projectId}`, { method: 'DELETE' }),
-    getFiles: (projectId: string) => request(`/projects/${projectId}/files`),
+    getFiles: (projectId: string, folderId?: string | null) =>
+      request(`/projects/${projectId}/files${folderId ? `?folderId=${folderId}` : ''}`),
     addFile: (projectId: string, data: any) =>
       request(`/projects/${projectId}/files`, { method: 'POST', body: JSON.stringify(data) }),
     deleteFile: (projectId: string, fileId: string) =>
       request(`/projects/${projectId}/files/${fileId}`, { method: 'DELETE' }),
+    getFolders: (projectId: string, parentId?: string | null) =>
+      request(`/projects/${projectId}/folders${parentId ? `?parentId=${parentId}` : ''}`),
+    createFolder: (projectId: string, data: { name: string; parentId?: string | null }) =>
+      request(`/projects/${projectId}/folders`, { method: 'POST', body: JSON.stringify(data) }),
+    deleteFolder: (projectId: string, folderId: string) =>
+      request(`/projects/${projectId}/folders/${folderId}`, { method: 'DELETE' }),
     getMembers: (projectId: string) => request(`/projects/${projectId}/members`),
     requestDeletion: (projectId: string, reason: string) =>
       request(`/projects/${projectId}/deletion-request`, { method: 'POST', body: JSON.stringify({ reason }) }),

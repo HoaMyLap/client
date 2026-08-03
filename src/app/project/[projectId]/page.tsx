@@ -14,7 +14,7 @@ import {
   ArrowLeft, Plus, MessageSquare, Calendar, 
   Trash, Send, CheckSquare, X, Clock, AlertCircle, User, Sparkles, FileText, Search,
   Printer, TrendingUp, Activity, CheckCircle2, Users, AlertTriangle, Briefcase, Lightbulb,
-  History, ListChecks, ChevronRight, Check, Heart, Edit2, CornerDownRight, FileSpreadsheet, Upload, Download, FolderArchive, File,
+  History, ListChecks, ChevronRight, Check, Heart, Edit2, CornerDownRight, FileSpreadsheet, Upload, Download, FolderArchive, File, Folder, FolderPlus,
   Eye, Paperclip, Image as ImageIcon, Bell
 } from 'lucide-react';
 import { Client } from '@stomp/stompjs';
@@ -148,7 +148,13 @@ export default function ProjectKanbanPage() {
 
   // Project Files tab state
   const [projectTab, setProjectTab] = useState<'KANBAN' | 'FILES'>('KANBAN');
-  const [projectFiles, setProjectFiles] = useState<Array<{ id: string; name: string; url: string; size: number; type: string; uploadedAt: string }>>([]);
+  const [projectFiles, setProjectFiles] = useState<Array<{ id: string; name: string; url: string; size: number; type: string; uploadedAt: string; folderId?: string }>>([]);
+  const [projectFolders, setProjectFolders] = useState<Array<{ id: string; name: string; projectId: string; parentId: string | null; createdBy: string; createdAt: string }>>([]);
+  const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
+  const [folderPath, setFolderPath] = useState<Array<{ id: string; name: string }>>([]); // Breadcrumbs path
+  const [showCreateFolderDialog, setShowCreateFolderDialog] = useState(false);
+  const [newFolderName, setNewFolderName] = useState('');
+  const [creatingFolder, setCreatingFolder] = useState(false);
   const [fileUploading, setFileUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<{ current: number; total: number } | null>(null);
   const [previewImage, setPreviewImage] = useState<{ url: string; name: string } | null>(null);
@@ -181,17 +187,78 @@ export default function ProjectKanbanPage() {
   };
 
   // Load project files from Backend API
-  const loadProjectFiles = async () => {
+  const loadProjectFiles = async (folderId: string | null = currentFolderId) => {
     if (!projectId) return;
     try {
       // Clean up old localStorage cache if exists
       localStorage.removeItem(`homix_project_files_${projectId}`);
-      const files = await api.projects.getFiles(projectId);
+      const [files, folders] = await Promise.all([
+        api.projects.getFiles(projectId, folderId),
+        api.projects.getFolders(projectId, folderId)
+      ]);
       setProjectFiles(files || []);
+      setProjectFolders(folders || []);
     } catch (e) {
       console.error("Lỗi khi tải danh sách file từ backend:", e);
     }
   };
+
+  // Folder helper operations
+  const handleOpenFolder = (folderId: string, folderName: string) => {
+    setCurrentFolderId(folderId);
+    setFolderPath((prev) => [...prev, { id: folderId, name: folderName }]);
+  };
+
+  const handleNavigateBreadcrumb = (folderId: string | null, index: number) => {
+    setCurrentFolderId(folderId);
+    if (folderId === null) {
+      setFolderPath([]);
+    } else {
+      setFolderPath((prev) => prev.slice(0, index + 1));
+    }
+  };
+
+  const handleCreateFolder = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newFolderName.trim() || !projectId || isViewer) return;
+    try {
+      setCreatingFolder(true);
+      await api.projects.createFolder(projectId, {
+        name: newFolderName.trim(),
+        parentId: currentFolderId
+      });
+      setNewFolderName('');
+      setShowCreateFolderDialog(false);
+      await loadProjectFiles(currentFolderId);
+    } catch (err: any) {
+      console.error("Lỗi khi tạo thư mục:", err);
+      showCustomAlert("Lỗi khi tạo thư mục. Vui lòng thử lại.");
+    } finally {
+      setCreatingFolder(false);
+    }
+  };
+
+  const handleDeleteFolder = (folderId: string, folderName: string) => {
+    if (!projectId || isViewer) return;
+    showCustomConfirm(
+      `Bạn có chắc chắn muốn xóa thư mục "${folderName}"? Hành động này sẽ xóa vĩnh viễn toàn bộ thư mục con và tệp tin bên trong thư mục này.`,
+      async () => {
+        try {
+          await api.projects.deleteFolder(projectId, folderId);
+          await loadProjectFiles(currentFolderId);
+        } catch (err: any) {
+          console.error("Lỗi khi xóa thư mục:", err);
+          showCustomAlert("Không thể xóa thư mục. Vui lòng thử lại sau.");
+        }
+      }
+    );
+  };
+
+  useEffect(() => {
+    if (projectId && projectTab === 'FILES') {
+      loadProjectFiles(currentFolderId);
+    }
+  }, [currentFolderId, projectTab, projectId]);
 
   const handleMultipleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -214,6 +281,7 @@ export default function ProjectKanbanPage() {
           url: res.url,
           size: res.size || file.size,
           type: res.type || file.type,
+          folderId: currentFolderId || null
         });
 
         setUploadProgress({ current: i + 1, total: fileList.length });
@@ -222,7 +290,7 @@ export default function ProjectKanbanPage() {
       }
     }
 
-    await loadProjectFiles();
+    await loadProjectFiles(currentFolderId);
     setFileUploading(false);
     setUploadProgress(null);
     e.target.value = ''; // Reset input to allow adding more files anytime
@@ -233,7 +301,7 @@ export default function ProjectKanbanPage() {
     showCustomConfirm(`Bạn có chắc muốn xóa tệp "${fileName}" khỏi dự án?`, async () => {
       try {
         await api.projects.deleteFile(projectId, fileId);
-        await loadProjectFiles();
+        await loadProjectFiles(currentFolderId);
       } catch (err: any) {
         showCustomAlert(err.message || "Không thể xóa tệp tin khỏi dự án.");
       }
@@ -1536,20 +1604,53 @@ export default function ProjectKanbanPage() {
                 </p>
               </div>
 
-              {!isViewer && checkPermission('PROJECT_UPDATE') && (
-                <label className="ui-btn-primary px-5 py-2.5 text-xs font-bold flex items-center gap-2 cursor-pointer shadow-md hover:scale-[1.02] transition-transform shrink-0">
-                  <Upload className="h-4 w-4" />
-                  {fileUploading ? (
-                    <>
-                      <div className="animate-spin rounded-full h-3.5 w-3.5 border-2 border-white/20 border-t-white" />
-                      {uploadProgress ? `Uploading: ${uploadProgress.current}/${uploadProgress.total}` : 'Uploading...'}
-                    </>
-                  ) : (
-                    t('uploadMultipleFilesBtn')
-                  )}
-                  <input type="file" multiple onChange={handleMultipleFileUpload} disabled={fileUploading} className="hidden" />
-                </label>
-              )}
+              <div className="flex items-center gap-3 shrink-0">
+                {!isViewer && checkPermission('PROJECT_UPDATE') && (
+                  <button
+                    onClick={() => setShowCreateFolderDialog(true)}
+                    className="ui-btn-secondary px-4 py-2.5 text-xs font-bold flex items-center gap-2 cursor-pointer shadow-md hover:scale-[1.02] transition-transform"
+                  >
+                    <FolderPlus className="h-4 w-4 text-primary" />
+                    Tạo thư mục
+                  </button>
+                )}
+
+                {!isViewer && checkPermission('PROJECT_UPDATE') && (
+                  <label className="ui-btn-primary px-5 py-2.5 text-xs font-bold flex items-center gap-2 cursor-pointer shadow-md hover:scale-[1.02] transition-transform">
+                    <Upload className="h-4 w-4" />
+                    {fileUploading ? (
+                      <>
+                        <div className="animate-spin rounded-full h-3.5 w-3.5 border-2 border-white/20 border-t-white" />
+                        {uploadProgress ? `Uploading: ${uploadProgress.current}/${uploadProgress.total}` : 'Uploading...'}
+                      </>
+                    ) : (
+                      t('uploadMultipleFilesBtn')
+                    )}
+                    <input type="file" multiple onChange={handleMultipleFileUpload} disabled={fileUploading} className="hidden" />
+                  </label>
+                )}
+              </div>
+            </div>
+
+            {/* Breadcrumbs Navigation */}
+            <div className="flex items-center gap-1.5 text-xs text-secondary font-semibold bg-surface/40 p-3.5 rounded-2xl border border-border/60">
+              <span 
+                onClick={() => handleNavigateBreadcrumb(null, -1)}
+                className="hover:text-primary cursor-pointer transition-colors flex items-center gap-1"
+              >
+                <FolderArchive className="h-3.5 w-3.5" /> Gốc (Root)
+              </span>
+              {folderPath.map((folder, index) => (
+                <React.Fragment key={folder.id}>
+                  <ChevronRight className="h-3 w-3 text-muted shrink-0" />
+                  <span
+                    onClick={() => handleNavigateBreadcrumb(folder.id, index)}
+                    className={`hover:text-primary cursor-pointer transition-colors max-w-[150px] truncate ${index === folderPath.length - 1 ? 'text-foreground font-black' : ''}`}
+                  >
+                    {folder.name}
+                  </span>
+                </React.Fragment>
+              ))}
             </div>
 
             {/* Quick Upload Drop Area */}
@@ -1562,120 +1663,230 @@ export default function ProjectKanbanPage() {
               </label>
             )}
 
-            {/* File List Grid */}
-            {projectFiles.length === 0 ? (
+            {/* Empty State */}
+            {projectFiles.length === 0 && projectFolders.length === 0 ? (
               <div className="p-12 text-center border border-border rounded-2xl">
                 <File className="h-10 w-10 text-muted mx-auto mb-3" />
-                <h4 className="text-sm font-bold text-heading">{t('noFilesUploadedYet')}</h4>
-                <p className="text-xs text-secondary mt-1 mb-4">{t('uploadFirstFilesPrompt')}</p>
+                <h4 className="text-sm font-bold text-heading">Thư mục trống</h4>
+                <p className="text-xs text-secondary mt-1">Chưa có thư mục hoặc tệp tin nào được tải lên tại đây.</p>
               </div>
             ) : (
-              <div>
-                <div className="flex items-center justify-between mb-3 text-xs font-bold text-heading">
-                  <span>{t('savedFilesListTitle')} ({projectFiles.length}):</span>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                  {projectFiles.map((file) => {
-                    const isImg = isImageFile(file.type, file.name);
-                    const badgeStyle = getFileBadgeStyle(file.name, file.type);
-
-                    return (
-                      <div
-                        key={file.id}
-                        className="bg-surface/80 border border-border hover:border-primary/50 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all group flex flex-col justify-between"
-                      >
-                        {/* Image Preview Container or File Header */}
-                        {isImg ? (
-                          <div
-                            className="relative h-44 w-full bg-black/40 overflow-hidden cursor-pointer flex items-center justify-center border-b border-border/50 group/img"
-                            onClick={() => setPreviewImage({ url: file.url, name: file.name })}
+              <div className="space-y-6">
+                {/* Folders List */}
+                {projectFolders.length > 0 && (
+                  <div>
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-muted mb-3 flex items-center gap-1.5">
+                      Thư mục ({projectFolders.length})
+                    </h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                      {projectFolders.map((folder) => (
+                        <div
+                          key={folder.id}
+                          onDoubleClick={() => handleOpenFolder(folder.id, folder.name)}
+                          className="bg-amber-500/5 hover:bg-amber-500/10 border border-amber-500/20 hover:border-amber-500/40 rounded-2xl p-4 shadow-sm hover:shadow-md transition-all group flex items-center justify-between cursor-pointer"
+                        >
+                          <div 
+                            className="flex items-center gap-3 min-w-0 flex-1"
+                            onClick={() => handleOpenFolder(folder.id, folder.name)}
                           >
-                            <img
-                              src={file.url}
-                              alt={file.name}
-                              className="w-full h-full object-cover transition-transform duration-300 group-hover/img:scale-105"
-                              onError={(e) => {
-                                (e.target as HTMLElement).style.display = 'none';
-                              }}
-                            />
-                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                              <span className="px-3 py-1.5 rounded-xl bg-black/70 text-white text-xs font-bold flex items-center gap-1.5 backdrop-blur-sm border border-white/20">
-                                <Eye className="h-4 w-4" /> Xem ảnh phóng to
-                              </span>
-                            </div>
-                            <span className="absolute top-2.5 right-2.5 px-2 py-0.5 rounded-md bg-violet-600/90 text-white text-[10px] font-bold shadow-md">
-                              IMAGE
-                            </span>
-                          </div>
-                        ) : (
-                          <div className="p-4 border-b border-border/40 bg-card/40 flex items-center gap-3">
-                            <div className={`p-3 rounded-2xl border ${badgeStyle.bg} ${badgeStyle.color} shrink-0`}>
-                              <FileText className="h-6 w-6" />
+                            <div className="p-3 rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400 shrink-0">
+                              <Folder className="h-6 w-6" />
                             </div>
                             <div className="min-w-0 flex-1">
-                              <span className={`inline-block text-[10px] font-bold px-2 py-0.5 rounded border ${badgeStyle.bg} ${badgeStyle.color} mb-1`}>
-                                {badgeStyle.label}
-                              </span>
-                              <h4 className="text-xs font-bold text-heading truncate" title={file.name}>
-                                {file.name}
+                              <h4 className="text-xs font-black text-heading truncate" title={folder.name}>
+                                {folder.name}
                               </h4>
+                              <p className="text-[10px] text-muted mt-0.5">Thư mục tài liệu</p>
                             </div>
                           </div>
-                        )}
-
-                        {/* File Details & Actions Footer */}
-                        <div className="p-4 flex items-center justify-between gap-2">
-                          <div className="min-w-0 flex-1">
-                            {isImg && (
-                              <h4 className="text-xs font-bold text-heading truncate mb-0.5" title={file.name}>
-                                {file.name}
-                              </h4>
-                            )}
-                            <p className="text-[10px] text-muted">
-                              {formatFileSize(file.size)} · {new Date(file.uploadedAt).toLocaleDateString('vi-VN')}
-                            </p>
-                          </div>
-
-                          <div className="flex items-center gap-1.5 shrink-0">
-                            {isImg && (
-                              <button
-                                type="button"
-                                onClick={() => setPreviewImage({ url: file.url, name: file.name })}
-                                className="p-2 rounded-xl bg-surface border border-border text-secondary hover:text-primary transition-colors"
-                                title="Xem ảnh phóng to"
-                              >
-                                <Eye className="h-4 w-4" />
-                              </button>
-                            )}
-                            <a
-                              href={file.url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              download
-                              className="p-2 rounded-xl bg-surface border border-border text-secondary hover:text-primary transition-colors"
-                              title="Tải về tệp tin"
+                          
+                          {!isViewer && checkPermission('PROJECT_UPDATE') && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteFolder(folder.id, folder.name);
+                              }}
+                              className="p-2 rounded-xl bg-surface border border-border text-muted hover:text-rose-400 hover:border-rose-500/30 transition-colors"
+                              title="Xóa thư mục"
                             >
-                              <Download className="h-4 w-4" />
-                            </a>
-                            {!isViewer && checkPermission('PROJECT_UPDATE') && (
-                              <button
-                                type="button"
-                                onClick={() => handleDeleteProjectFile(file.id, file.name)}
-                                className="p-2 rounded-xl bg-surface border border-border text-muted hover:text-rose-400 hover:border-rose-500/30 transition-colors"
-                                title="Xóa tệp tin"
-                              >
-                                <Trash className="h-4 w-4" />
-                              </button>
-                            )}
-                          </div>
+                              <Trash className="h-4 w-4" />
+                            </button>
+                          )}
                         </div>
-                      </div>
-                    );
-                  })}
-                </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Files List */}
+                {projectFiles.length > 0 && (
+                  <div>
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-muted mb-3 flex items-center gap-1.5">
+                      Tệp tin ({projectFiles.length})
+                    </h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                      {projectFiles.map((file) => {
+                        const isImg = isImageFile(file.type, file.name);
+                        const badgeStyle = getFileBadgeStyle(file.name, file.type);
+
+                        return (
+                          <div
+                            key={file.id}
+                            className="bg-surface/80 border border-border hover:border-primary/50 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all group flex flex-col justify-between"
+                          >
+                            {/* Image Preview Container or File Header */}
+                            {isImg ? (
+                              <div
+                                className="relative h-44 w-full bg-black/40 overflow-hidden cursor-pointer flex items-center justify-center border-b border-border/50 group/img"
+                                onClick={() => setPreviewImage({ url: file.url, name: file.name })}
+                              >
+                                <img
+                                  src={file.url}
+                                  alt={file.name}
+                                  className="w-full h-full object-cover transition-transform duration-300 group-hover/img:scale-105"
+                                  onError={(e) => {
+                                    (e.target as HTMLElement).style.display = 'none';
+                                  }}
+                                />
+                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                                  <span className="px-3 py-1.5 rounded-xl bg-black/70 text-white text-xs font-bold flex items-center gap-1.5 backdrop-blur-sm border border-white/20">
+                                    <Eye className="h-4 w-4" /> Xem ảnh phóng to
+                                  </span>
+                                </div>
+                                <span className="absolute top-2.5 right-2.5 px-2 py-0.5 rounded-md bg-violet-600/90 text-white text-[10px] font-bold shadow-md">
+                                  IMAGE
+                                </span>
+                              </div>
+                            ) : (
+                              <div className="p-4 border-b border-border/40 bg-card/40 flex items-center gap-3">
+                                <div className={`p-3 rounded-2xl border ${badgeStyle.bg} ${badgeStyle.color} shrink-0`}>
+                                  <FileText className="h-6 w-6" />
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                  <span className={`inline-block text-[10px] font-bold px-2 py-0.5 rounded border ${badgeStyle.bg} ${badgeStyle.color} mb-1`}>
+                                    {badgeStyle.label}
+                                  </span>
+                                  <h4 className="text-xs font-bold text-heading truncate" title={file.name}>
+                                    {file.name}
+                                  </h4>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* File Details & Actions Footer */}
+                            <div className="p-4 flex items-center justify-between gap-2">
+                              <div className="min-w-0 flex-1">
+                                {isImg && (
+                                  <h4 className="text-xs font-bold text-heading truncate mb-0.5" title={file.name}>
+                                    {file.name}
+                                  </h4>
+                                )}
+                                <p className="text-[10px] text-muted">
+                                  {formatFileSize(file.size)} · {new Date(file.uploadedAt).toLocaleDateString('vi-VN')}
+                                </p>
+                              </div>
+
+                              <div className="flex items-center gap-1.5 shrink-0">
+                                {isImg && (
+                                  <button
+                                    type="button"
+                                    onClick={() => setPreviewImage({ url: file.url, name: file.name })}
+                                    className="p-2 rounded-xl bg-surface border border-border text-secondary hover:text-primary transition-colors"
+                                    title="Xem ảnh phóng to"
+                                  >
+                                    <Eye className="h-4 w-4" />
+                                  </button>
+                                )}
+                                <a
+                                  href={file.url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  download
+                                  className="p-2 rounded-xl bg-surface border border-border text-secondary hover:text-primary transition-colors"
+                                  title="Tải về tệp tin"
+                                >
+                                  <Download className="h-4 w-4" />
+                                </a>
+                                {!isViewer && checkPermission('PROJECT_UPDATE') && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeleteProjectFile(file.id, file.name)}
+                                    className="p-2 rounded-xl bg-surface border border-border text-muted hover:text-rose-400 hover:border-rose-500/30 transition-colors"
+                                    title="Xóa tệp tin"
+                                  >
+                                    <Trash className="h-4 w-4" />
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
+
+          {/* Create Folder Dialog Overlay */}
+          {showCreateFolderDialog && (
+            <div className="fixed inset-0 bg-black/60 z-[999] flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-200">
+              <div className="bg-surface border border-border w-full max-w-md rounded-3xl shadow-2xl p-6 space-y-4 animate-in zoom-in-95 duration-200">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-bold text-heading flex items-center gap-2">
+                    <FolderPlus className="h-5 w-5 text-primary" />
+                    Tạo thư mục mới
+                  </h3>
+                  <button 
+                    onClick={() => {
+                      setShowCreateFolderDialog(false);
+                      setNewFolderName('');
+                    }}
+                    className="p-1 rounded-full hover:bg-muted text-muted hover:text-foreground transition-all border-0 bg-transparent cursor-pointer"
+                  >
+                    <X className="h-5 w-5" />
+                  </button>
+                </div>
+                
+                <form onSubmit={handleCreateFolder} className="space-y-4">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-muted block">Tên thư mục</label>
+                    <input
+                      type="text"
+                      required
+                      value={newFolderName}
+                      onChange={(e) => setNewFolderName(e.target.value)}
+                      placeholder="Nhập tên thư mục..."
+                      className="ui-input w-full px-4 py-2.5 text-xs bg-[#fdfdfd] dark:bg-[#1a1626] border border-[#cbd3e3] dark:border-[#353043] rounded-xl focus:outline-none text-zinc-900 dark:text-zinc-100"
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-end gap-3 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowCreateFolderDialog(false);
+                        setNewFolderName('');
+                      }}
+                      className="ui-btn-secondary px-4 py-2.5 text-xs font-bold cursor-pointer"
+                      disabled={creatingFolder}
+                    >
+                      Hủy bỏ
+                    </button>
+                    <button
+                      type="submit"
+                      className="ui-btn-primary px-5 py-2.5 text-xs font-bold cursor-pointer"
+                      disabled={creatingFolder}
+                    >
+                      {creatingFolder ? 'Đang tạo...' : 'Tạo thư mục'}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
         </main>
       ) : (
         /* Kanban Board Container */
