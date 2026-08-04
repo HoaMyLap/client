@@ -15,7 +15,7 @@ import {
   Trash, Send, CheckSquare, X, Clock, AlertCircle, User, Sparkles, FileText, Search,
   Printer, TrendingUp, Activity, CheckCircle2, Users, AlertTriangle, Briefcase, Lightbulb,
   History, ListChecks, ChevronRight, Check, Heart, Edit2, CornerDownRight, FileSpreadsheet, Upload, Download, FolderArchive, File, Folder, FolderPlus,
-  Eye, Paperclip, Image as ImageIcon, Bell
+  Eye, Paperclip, Image as ImageIcon, Bell, FolderOpen
 } from 'lucide-react';
 import { Client } from '@stomp/stompjs';
 
@@ -350,6 +350,14 @@ export default function ProjectKanbanPage() {
   const [replyContent, setReplyContent] = useState('');
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
   const [editCommentContent, setEditCommentContent] = useState('');
+  
+  // Comment Attachment States
+  const [commentShowAttachMenu, setCommentShowAttachMenu] = useState(false);
+  const [commentShowFileSelectorModal, setCommentShowFileSelectorModal] = useState(false);
+  const [commentSearchQuery, setCommentSearchQuery] = useState('');
+  const [commentIsUploadingFile, setCommentIsUploadingFile] = useState(false);
+  const [commentAccessibleDocs, setCommentAccessibleDocs] = useState<any[]>([]);
+  const [commentIsLoadingDocs, setCommentIsLoadingDocs] = useState(false);
 
   // AI Loading & Modal States
   const [aiSubtaskLoading, setAiSubtaskLoading] = useState(false);
@@ -997,6 +1005,145 @@ export default function ProjectKanbanPage() {
     }
   };
 
+  const fetchCommentAccessibleDocs = async () => {
+    if (!workspaceId) return;
+    setCommentIsLoadingDocs(true);
+    try {
+      const docs = await api.workspaces.getAllAccessibleDocuments(workspaceId);
+      setCommentAccessibleDocs(docs);
+    } catch (err) {
+      console.error('Failed to fetch accessible documents for comment:', err);
+    } finally {
+      setCommentIsLoadingDocs(false);
+    }
+  };
+
+  useEffect(() => {
+    if (commentShowFileSelectorModal) {
+      fetchCommentAccessibleDocs();
+    }
+  }, [commentShowFileSelectorModal]);
+
+  const handleSelectDocToComment = async (doc: any) => {
+    if (!selectedTask) return;
+    const isImg = doc.type && doc.type.startsWith('image/');
+    const payload = {
+      text: '',
+      attachmentType: isImg ? 'image' : 'file',
+      fileName: doc.name,
+      fileUrl: doc.url,
+      fileSize: doc.size,
+      fileType: doc.type
+    };
+    try {
+      const created = await api.comments.create({
+        content: JSON.stringify(payload),
+        taskId: selectedTask.id,
+        parentCommentId: null,
+        replyToUserId: null,
+      });
+      setComments((prev) => {
+        if (prev.some((c) => c.id === created.id)) return prev;
+        return [...prev, created];
+      });
+      loadTaskDetails(selectedTask.id);
+      setCommentShowFileSelectorModal(false);
+      setCommentShowAttachMenu(false);
+    } catch (err: any) {
+      showCustomAlert(err.message || 'Lỗi khi gửi đính kèm bình luận.');
+    }
+  };
+
+  const handleDirectUploadComment = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !selectedTask) return;
+    setCommentIsUploadingFile(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const uploadRes = await api.uploadFile(formData);
+      
+      const isImg = file.type && file.type.startsWith('image/');
+      const payload = {
+        text: '',
+        attachmentType: isImg ? 'image' : 'file',
+        fileName: file.name,
+        fileUrl: uploadRes.url,
+        size: file.size,
+        fileSize: file.size,
+        fileType: file.type || 'application/octet-stream'
+      };
+      const created = await api.comments.create({
+        content: JSON.stringify(payload),
+        taskId: selectedTask.id,
+        parentCommentId: null,
+        replyToUserId: null,
+      });
+      setComments((prev) => {
+        if (prev.some((c) => c.id === created.id)) return prev;
+        return [...prev, created];
+      });
+      loadTaskDetails(selectedTask.id);
+    } catch (err: any) {
+      showCustomAlert(err.message || 'Lỗi khi tải tệp lên thảo luận.');
+    } finally {
+      setCommentIsUploadingFile(false);
+      e.target.value = '';
+      setCommentShowAttachMenu(false);
+    }
+  };
+
+  const renderCommentContent = (content: string) => {
+    if (content && content.startsWith('{') && content.endsWith('}')) {
+      try {
+        const payload = JSON.parse(content);
+        if (payload.attachmentType === 'image') {
+          return (
+            <div className="space-y-2 p-1 max-w-[320px]">
+              {payload.text && <p className="mb-2">{payload.text}</p>}
+              <a href={payload.fileUrl} target="_blank" rel="noopener noreferrer" className="block overflow-hidden rounded-lg border border-border">
+                <img src={payload.fileUrl} alt={payload.fileName} className="max-w-full max-h-[220px] object-cover hover:scale-[1.02] transition-transform rounded-lg" />
+              </a>
+              <div className="flex items-center justify-between text-[9px] text-zinc-500 pt-1 border-t border-border-subtle/40 mt-1">
+                <span className="truncate max-w-[180px]">{payload.fileName}</span>
+                <span>({(payload.fileSize / 1024).toFixed(1)} KB)</span>
+              </div>
+            </div>
+          );
+        } else if (payload.attachmentType === 'file') {
+          return (
+            <div className="flex flex-col gap-2 p-2 bg-black/5 dark:bg-white/5 rounded-xl border border-border-subtle/50 max-w-[320px]">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <FileText className="h-8 w-8 text-primary shrink-0" />
+                <div className="min-w-0 flex-1">
+                  <p className="font-bold text-xs truncate text-heading" title={payload.fileName}>
+                    {payload.fileName}
+                  </p>
+                  <p className="text-[9px] text-muted">
+                    {(payload.fileSize / 1024).toFixed(1)} KB
+                  </p>
+                </div>
+              </div>
+              <div className="flex gap-1.5 border-t border-border-subtle/55 pt-2 mt-1">
+                <a
+                  href={payload.fileUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex-1 py-1 text-[10px] font-black text-center rounded-lg flex items-center justify-center gap-1 border-0 cursor-pointer text-white bg-primary hover:bg-primary/90 hover:scale-102 transition-all no-underline"
+                >
+                  <Download className="h-3 w-3" /> Tải xuống
+                </a>
+              </div>
+            </div>
+          );
+        }
+      } catch (e) {
+        // Fallback to text
+      }
+    }
+    return <span className="whitespace-pre-wrap">{content}</span>;
+  };
+
   const handleDeleteComment = (commentId: string) => {
     if (!checkPermission('TASK_COMMENT_DELETE')) return;
     showCustomConfirm('Bạn có chắc chắn muốn xóa bình luận này?', async () => {
@@ -1344,7 +1491,7 @@ export default function ProjectKanbanPage() {
             </div>
           </div>
         ) : (
-          <p className="text-body text-xs leading-relaxed whitespace-pre-wrap">{comment.content}</p>
+          <div className="text-body text-xs leading-relaxed">{renderCommentContent(comment.content)}</div>
         )}
 
         {/* Action Row */}
@@ -2454,7 +2601,41 @@ export default function ProjectKanbanPage() {
                   {language === 'vi' ? '🔒 Bạn không có quyền bình luận trong công việc này.' : '🔒 You do not have permission to comment in this task.'}
                 </div>
               ) : (
-                <form onSubmit={(e) => handleAddComment(e, null)} className="flex gap-2">
+                <form onSubmit={(e) => handleAddComment(e, null)} className="flex gap-2 items-center relative w-full">
+                  {/* Attach Button */}
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setCommentShowAttachMenu(!commentShowAttachMenu)}
+                      className="h-9 w-9 rounded-xl bg-zinc-200 hover:bg-zinc-350 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-650 dark:text-zinc-300 flex items-center justify-center shrink-0 border-0 cursor-pointer transition-all"
+                      title="Đính kèm tài liệu/hình ảnh"
+                    >
+                      <Paperclip className="h-4 w-4" />
+                    </button>
+                    {commentShowAttachMenu && (
+                      <div className="absolute bottom-11 left-0 z-50 w-44 bg-white dark:bg-[#1a1626] border border-[#e1dbe9] dark:border-[#221c2e] rounded-xl shadow-xl p-1.5 flex flex-col gap-1 text-[11px] text-zinc-700 dark:text-zinc-200">
+                        <label className="flex items-center gap-2 px-2.5 py-1.5 hover:bg-primary/5 rounded-lg cursor-pointer font-bold w-full">
+                          <Upload className="h-3.5 w-3.5 text-primary" />
+                          {commentIsUploadingFile ? 'Đang tải...' : 'Tải lên từ máy'}
+                          <input
+                            type="file"
+                            className="hidden"
+                            onChange={handleDirectUploadComment}
+                            disabled={commentIsUploadingFile}
+                          />
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => setCommentShowFileSelectorModal(true)}
+                          className="flex items-center gap-2 px-2.5 py-1.5 hover:bg-primary/5 rounded-lg border-0 bg-transparent text-left cursor-pointer font-bold text-zinc-700 dark:text-zinc-200 w-full"
+                        >
+                          <FolderOpen className="h-3.5 w-3.5 text-indigo-400" />
+                          Chọn từ kho tài liệu
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
                   <input
                     type="text"
                     required
@@ -2463,10 +2644,98 @@ export default function ProjectKanbanPage() {
                     placeholder="Viết bình luận mới..."
                     className="ui-input flex-1 px-3.5 py-2.5 text-xs bg-surface border border-border"
                   />
-                  <button type="submit" className="ui-btn-primary px-4 py-2.5 text-xs font-bold flex items-center gap-1.5 shrink-0">
+                  <button type="submit" className="ui-btn-primary px-4 py-2.5 text-xs font-bold flex items-center gap-1.5 shrink-0 border-0 rounded-xl cursor-pointer text-white bg-primary">
                     <Send className="h-3.5 w-3.5" />
                     Gửi
                   </button>
+
+                  {/* File Selector Modal for Comments */}
+                  {commentShowFileSelectorModal && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+                      <div className="bg-[#f4f2f7] dark:bg-[#0e0c14] border border-[#e1dbe9] dark:border-[#221c2e] w-full max-w-md rounded-2xl p-5 shadow-2xl space-y-4">
+                        <div className="flex items-center justify-between">
+                          <h3 className="text-sm font-black text-heading">Chọn tài liệu đính kèm thảo luận</h3>
+                          <button
+                            type="button"
+                            onClick={() => setCommentShowFileSelectorModal(false)}
+                            className="p-1 rounded hover:bg-muted text-muted hover:text-foreground border-0 bg-transparent cursor-pointer"
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        </div>
+
+                        {/* Search box */}
+                        <div className="relative">
+                          <input
+                            type="text"
+                            value={commentSearchQuery}
+                            onChange={(e) => setCommentSearchQuery(e.target.value)}
+                            placeholder="Tìm kiếm tài liệu..."
+                            className="ui-input w-full pl-9 pr-3.5 py-1.5 text-xs bg-white dark:bg-[#1a1626] border border-[#cbd3e3] dark:border-[#353043] rounded-xl focus:outline-none"
+                          />
+                          <Search className="absolute left-3.5 top-2.5 h-3.5 w-3.5 text-muted" />
+                        </div>
+
+                        {/* Docs list */}
+                        <div className="max-h-60 overflow-y-auto space-y-2 pr-1.5 scrollbar-thin">
+                          {commentIsLoadingDocs ? (
+                            <div className="flex flex-col items-center justify-center py-8 text-zinc-500 text-xs gap-2">
+                              <div className="animate-spin rounded-full h-5 w-5 border-2 border-primary/20 border-t-primary" />
+                              Đang tải tài liệu...
+                            </div>
+                          ) : commentAccessibleDocs.length === 0 ? (
+                            <div className="text-center py-8 text-zinc-400 text-xs">
+                              Không tìm thấy tài liệu nào trong kho lưu trữ.
+                            </div>
+                          ) : (
+                            commentAccessibleDocs
+                              .filter((d) => d.name.toLowerCase().includes(commentSearchQuery.toLowerCase()))
+                              .map((doc) => {
+                                const isImg = doc.type && doc.type.startsWith('image/');
+                                return (
+                                  <div
+                                    key={doc.id}
+                                    onClick={() => handleSelectDocToComment(doc)}
+                                    className="p-3 bg-white dark:bg-[#1a1626] border border-[#e1dbe9]/80 dark:border-[#221c2e]/85 rounded-xl hover:border-primary/50 cursor-pointer flex items-center justify-between group transition-all active:scale-[0.99]"
+                                  >
+                                    <div className="flex items-center gap-2.5 min-w-0">
+                                      {isImg ? (
+                                        <ImageIcon className="h-7 w-7 text-indigo-400 shrink-0" />
+                                      ) : (
+                                        <FileText className="h-7 w-7 text-blue-400 shrink-0" />
+                                      )}
+                                      <div className="min-w-0">
+                                        <h5 className="text-[11px] font-bold text-heading truncate" title={doc.name}>
+                                          {doc.name}
+                                        </h5>
+                                        <div className="flex items-center gap-1.5 text-[9px] text-zinc-500 mt-0.5">
+                                          <span>{(doc.size / 1024).toFixed(1)} KB</span>
+                                          <span>•</span>
+                                          <span className="truncate max-w-[150px] italic">{doc.source}</span>
+                                        </div>
+                                      </div>
+                                    </div>
+                                    <span className="text-[9px] font-bold text-primary group-hover:underline opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                                      Đính kèm
+                                    </span>
+                                  </div>
+                                );
+                              })
+                          )}
+                        </div>
+                        
+                        <div className="flex justify-end pt-2">
+                          <button
+                            type="button"
+                            onClick={() => setCommentShowFileSelectorModal(false)}
+                            className="ui-btn-secondary px-4 py-2 text-xs font-bold rounded-xl border border-border cursor-pointer bg-transparent"
+                          >
+                            Đóng
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </form>
               )}
             </div>
@@ -3465,6 +3734,7 @@ export default function ProjectKanbanPage() {
           targetType="PROJECT"
           targetId={projectId}
           targetName={project.name}
+          workspaceId={workspaceId || ''}
           isViewer={isViewer}
           positionClass="bottom-6 right-6"
           isOpen={activeChat === 'PROJECT'}
@@ -3479,6 +3749,7 @@ export default function ProjectKanbanPage() {
           targetType="WORKSPACE"
           targetId={workspaceId}
           targetName={workspaceName}
+          workspaceId={workspaceId}
           isViewer={currentUserWorkspaceMember?.role === 'VIEWER'}
           positionClass="bottom-6 right-[88px]"
           isOpen={activeChat === 'WORKSPACE'}

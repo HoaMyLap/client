@@ -84,6 +84,20 @@ export const api = {
         method: 'POST',
         body: JSON.stringify(permissions),
       }),
+    getFolders: (workspaceId: string, parentId?: string | null) =>
+      request(`/workspaces/${workspaceId}/folders${parentId ? `?parentId=${parentId}` : ''}`),
+    createFolder: (workspaceId: string, data: { name: string; parentId?: string | null }) =>
+      request(`/workspaces/${workspaceId}/folders`, { method: 'POST', body: JSON.stringify(data) }),
+    deleteFolder: (workspaceId: string, folderId: string) =>
+      request(`/workspaces/${workspaceId}/folders/${folderId}`, { method: 'DELETE' }),
+    getFiles: (workspaceId: string, folderId?: string | null) =>
+      request(`/workspaces/${workspaceId}/files${folderId ? `?folderId=${folderId}` : ''}`),
+    addFile: (workspaceId: string, data: any) =>
+      request(`/workspaces/${workspaceId}/files`, { method: 'POST', body: JSON.stringify(data) }),
+    deleteFile: (workspaceId: string, fileId: string) =>
+      request(`/workspaces/${workspaceId}/files/${fileId}`, { method: 'DELETE' }),
+    getAllAccessibleDocuments: (workspaceId: string) =>
+      request(`/workspaces/${workspaceId}/all-accessible-documents`),
   },
   projects: {
     list: (workspaceId: string) => request(`/projects/workspace/${workspaceId}`),

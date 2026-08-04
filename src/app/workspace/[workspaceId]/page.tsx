@@ -13,7 +13,7 @@ import * as XLSX from 'xlsx';
 import { 
   ArrowLeft, Plus, Folder, Users, Trash, PlusCircle, 
   Pencil, Shield, User, X, CheckCircle2, Activity, BarChart3, Sparkles, Layers,
-  FileSpreadsheet, Upload, Download, Bell, AlertTriangle
+  FileSpreadsheet, Upload, Download, Bell, AlertTriangle, FolderOpen, FileText, Image as ImageIcon
 } from 'lucide-react';
 
 interface Project {
@@ -106,6 +106,18 @@ export default function WorkspaceDetailPage() {
   const excelFileInputRef = useRef<HTMLInputElement | null>(null);
 
   const [pageError, setPageError] = useState('');
+
+  // Workspace Document Explorer states
+  const [workspaceActiveTab, setWorkspaceActiveTab] = useState<'projects' | 'documents'>('projects');
+  const [docCurrentPath, setDocCurrentPath] = useState<Array<{ id: string; name: string; type: string; projectId?: string }>>([
+    { id: 'root', name: 'Kho tài liệu', type: 'root' }
+  ]);
+  const [docFolders, setDocFolders] = useState<any[]>([]);
+  const [docFiles, setDocFiles] = useState<any[]>([]);
+  const [isLoadingDocs, setIsLoadingDocs] = useState(false);
+  const [showCreateDocFolderModal, setShowCreateDocFolderModal] = useState(false);
+  const [newDocFolderName, setNewDocFolderName] = useState('');
+  const [isUploadingDoc, setIsUploadingDoc] = useState(false);
 
   // Custom Roles & Permissions state
   const [customRoles, setCustomRoles] = useState<CustomRole[]>([]);
@@ -205,6 +217,143 @@ export default function WorkspaceDetailPage() {
     }
     loadData();
   }, [workspaceId]);
+
+  const fetchWorkspaceDocuments = async () => {
+    const currentView = docCurrentPath[docCurrentPath.length - 1];
+    setIsLoadingDocs(true);
+    try {
+      if (currentView.id === 'root') {
+        setDocFolders([
+          { id: 'workspace_sys', name: 'Tài liệu Workspace', type: 'system_workspace' },
+          { id: 'project_sys', name: 'Tài liệu Dự án', type: 'system_project' },
+          { id: 'unclassified_sys', name: 'Tài liệu khác (Không phân loại)', type: 'system_unclassified' }
+        ]);
+        setDocFiles([]);
+      } else if (currentView.type === 'system_workspace' || currentView.type === 'workspace_folder') {
+        const parentId = currentView.type === 'workspace_folder' ? currentView.id : null;
+        const folders = await api.workspaces.getFolders(workspaceId, parentId);
+        const files = await api.workspaces.getFiles(workspaceId, parentId);
+        setDocFolders(folders.map((f: any) => ({ ...f, type: 'workspace_folder' })));
+        setDocFiles(files);
+      } else if (currentView.type === 'system_project') {
+        const myProjectFolders = projects.map((p: any) => ({
+          id: p.id,
+          name: `Dự án: ${p.name}`,
+          type: 'project_root',
+          projectId: p.id
+        }));
+        setDocFolders(myProjectFolders);
+        setDocFiles([]);
+      } else if (currentView.type === 'project_root' || currentView.type === 'project_folder') {
+        const projectId = currentView.projectId || currentView.id;
+        const folderId = currentView.type === 'project_folder' ? currentView.id : null;
+        const folders = await api.projects.getFolders(projectId, folderId);
+        const files = await api.projects.getFiles(projectId, folderId);
+        setDocFolders(folders.map((f: any) => ({ ...f, type: 'project_folder', projectId })));
+        setDocFiles(files);
+      } else if (currentView.type === 'system_unclassified') {
+        const allDocs = await api.workspaces.getAllAccessibleDocuments(workspaceId);
+        const taskFilesOnly = allDocs.filter((d: any) => d.source && d.source.includes('Công việc'));
+        setDocFolders([]);
+        setDocFiles(taskFilesOnly);
+      }
+    } catch (err) {
+      console.error('Failed to load workspace documents:', err);
+    } finally {
+      setIsLoadingDocs(false);
+    }
+  };
+
+  useEffect(() => {
+    if (workspaceActiveTab === 'documents') {
+      fetchWorkspaceDocuments();
+    }
+  }, [docCurrentPath, workspaceActiveTab]);
+
+  const handleOpenFolder = (folder: any) => {
+    setDocCurrentPath((prev) => [
+      ...prev,
+      { id: folder.id, name: folder.name, type: folder.type, projectId: folder.projectId }
+    ]);
+  };
+
+  const handleNavigateBreadcrumb = (index: number) => {
+    setDocCurrentPath((prev) => prev.slice(0, index + 1));
+  };
+
+  const handleCreateDocFolder = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newDocFolderName.trim()) return;
+    const currentView = docCurrentPath[docCurrentPath.length - 1];
+    const parentId = currentView.type === 'workspace_folder' ? currentView.id : null;
+    try {
+      await api.workspaces.createFolder(workspaceId, {
+        name: newDocFolderName.trim(),
+        parentId
+      });
+      setNewDocFolderName('');
+      setShowCreateDocFolderModal(false);
+      fetchWorkspaceDocuments();
+      showCustomAlert('Đã tạo thư mục thành công!');
+    } catch (err: any) {
+      showCustomAlert(err.message || 'Lỗi khi tạo thư mục');
+    }
+  };
+
+  const handleUploadDocFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    setIsUploadingDoc(true);
+    const currentView = docCurrentPath[docCurrentPath.length - 1];
+    const folderId = currentView.type === 'workspace_folder' ? currentView.id : null;
+    
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const uploadRes = await api.uploadFile(formData);
+      
+      await api.workspaces.addFile(workspaceId, {
+        name: file.name,
+        url: uploadRes.url,
+        size: file.size,
+        type: file.type || 'application/octet-stream',
+        folderId
+      });
+      
+      fetchWorkspaceDocuments();
+      showCustomAlert('Tải lên tệp thành công!');
+    } catch (err: any) {
+      showCustomAlert(err.message || 'Lỗi khi tải lên tệp');
+    } finally {
+      setIsUploadingDoc(false);
+      e.target.value = '';
+    }
+  };
+
+  const handleDeleteDocFolder = (folderId: string) => {
+    showCustomConfirm('Bạn có chắc chắn muốn xóa thư mục này và TOÀN BỘ nội dung đệ quy bên trong?', async () => {
+      try {
+        await api.workspaces.deleteFolder(workspaceId, folderId);
+        fetchWorkspaceDocuments();
+        showCustomAlert('Đã xóa thư mục thành công!');
+      } catch (err: any) {
+        showCustomAlert(err.message || 'Lỗi khi xóa thư mục');
+      }
+    });
+  };
+
+  const handleDeleteDocFile = (fileId: string) => {
+    showCustomConfirm('Bạn có chắc chắn muốn xóa tệp tin này khỏi kho lưu trữ?', async () => {
+      try {
+        await api.workspaces.deleteFile(workspaceId, fileId);
+        fetchWorkspaceDocuments();
+        showCustomAlert('Đã xóa tệp tin thành công!');
+      } catch (err: any) {
+        showCustomAlert(err.message || 'Lỗi khi xóa tệp tin');
+      }
+    });
+  };
 
   const loadData = async () => {
     try {
@@ -820,91 +969,323 @@ export default function WorkspaceDetailPage() {
         <main className="max-w-6xl mx-auto px-6 mt-8 grid grid-cols-1 lg:grid-cols-3 gap-8 relative z-10 w-full">
           {/* Left Column: Projects list */}
           <div className="lg:col-span-2 space-y-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-xl font-bold tracking-tight font-display text-heading flex items-center gap-2">
-                  <Folder className="h-5 w-5 text-primary" />
-                  {t('projectsListTitle')} ({projects.length})
-                </h2>
-                <p className="text-secondary text-xs mt-0.5">
-                  {t('selectProjectToTrack')}
-                </p>
-              </div>
-
-              {checkPermission('PROJECT_CREATE') && (
-                <button onClick={() => setShowProjModal(true)} className="ui-btn-ghost text-xs font-semibold text-primary flex items-center gap-1 hover:underline">
-                  <Plus className="h-3.5 w-3.5" />
-                  {t('create')}
-                </button>
-              )}
+            {/* Tabs for Workspace Left Column */}
+            <div className="flex border-b border-border-subtle/80 gap-6 mb-2">
+              <button
+                type="button"
+                onClick={() => setWorkspaceActiveTab('projects')}
+                className={`pb-3 text-sm font-extrabold border-b-2 transition-all flex items-center gap-2 border-0 bg-transparent cursor-pointer ${
+                  workspaceActiveTab === 'projects'
+                    ? 'border-primary text-primary'
+                    : 'border-transparent text-secondary hover:text-foreground'
+                }`}
+              >
+                <Folder className="h-4.5 w-4.5" />
+                Dự án ({projects.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setWorkspaceActiveTab('documents')}
+                className={`pb-3 text-sm font-extrabold border-b-2 transition-all flex items-center gap-2 border-0 bg-transparent cursor-pointer ${
+                  workspaceActiveTab === 'documents'
+                    ? 'border-primary text-primary'
+                    : 'border-transparent text-secondary hover:text-foreground'
+                }`}
+              >
+                <FolderOpen className="h-4.5 w-4.5" />
+                Kho tài liệu & Thư mục
+              </button>
             </div>
 
-            {projects.length === 0 ? (
-              <div className="glass rounded-2xl p-12 text-center border border-border">
-                <Folder className="h-12 w-12 text-muted mx-auto mb-4" />
-                <h3 className="text-lg font-semibold mb-2 text-heading">{t('noProjectYetTitle')}</h3>
-                <p className="text-secondary text-sm mb-6">
-                  {t('noProjectYetDesc')}
-                </p>
-                {checkPermission('PROJECT_CREATE') && (
-                  <button onClick={() => setShowProjModal(true)} className="ui-btn-primary px-5 py-2.5 text-sm">
-                    {t('createNewProjectBtn')}
-                  </button>
-                )}
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {projects.map((proj) => (
-                  <Link key={proj.id} href={`/project/${proj.id}`}>
-                    <div className="glass hover:border-primary/50 p-5 rounded-2xl transition-all cursor-pointer group hover:scale-[1.01] flex flex-col justify-between min-h-[170px] relative border border-border shadow-sm hover:shadow-md">
-                      <div>
-                        <div className="flex items-start justify-between gap-2">
-                          <h3 className="font-bold text-sm group-hover:text-primary transition-colors text-title">
-                            {proj.name}
-                          </h3>
-                          <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border shrink-0 ${
-                            proj.status === 'COMPLETED' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' :
-                            proj.status === 'ARCHIVED' ? 'bg-zinc-800 text-zinc-400 border-zinc-700' :
-                            proj.status === 'DELETION_PENDING' ? 'bg-rose-500/10 text-rose-400 border-rose-500/20 animate-pulse' :
-                            'bg-primary/10 text-primary border-primary/20'
-                          }`}>
-                            {proj.status === 'COMPLETED' ? t('done') :
-                             proj.status === 'ARCHIVED' ? 'Archived' :
-                             proj.status === 'DELETION_PENDING' ? 'Chờ duyệt xóa ⚠️' :
-                             t('inProgress')}
-                          </span>
-                        </div>
-                        <p className="text-secondary text-xs mt-2 line-clamp-2 leading-relaxed">
-                          {proj.description || 'Không có mô tả chi tiết.'}
-                        </p>
-                      </div>
+            {workspaceActiveTab === 'projects' ? (
+              <>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="text-base font-bold tracking-tight font-display text-heading flex items-center gap-2">
+                      <Folder className="h-5 w-5 text-primary" />
+                      Danh sách dự án ({projects.length})
+                    </h2>
+                    <p className="text-secondary text-xs mt-0.5">
+                      {t('selectProjectToTrack')}
+                    </p>
+                  </div>
 
-                      <div className="flex items-center justify-between text-[11px] text-muted mt-4 pt-3 border-t border-border-subtle">
-                        <span>Tạo ngày: {new Date(proj.createdAt).toLocaleDateString('vi-VN')}</span>
-                        <div className="flex items-center gap-1.5">
-                          {checkPermission('PROJECT_UPDATE') && proj.status !== 'DELETION_PENDING' && (
-                            <button
-                              onClick={(e) => handleOpenEditProject(e, proj)}
-                              className="p-1.5 rounded-lg text-secondary hover:text-primary hover:bg-primary/10 transition-colors"
-                              title="Sửa thông tin dự án"
-                            >
-                              <Pencil className="h-3.5 w-3.5" />
-                            </button>
-                          )}
-                          {checkPermission('PROJECT_DELETE') && proj.status !== 'DELETION_PENDING' && (
-                            <button
-                              onClick={(e) => handleDeleteProject(e, proj.id)}
-                              className="p-1.5 rounded-lg text-muted hover:text-error hover:bg-error-muted transition-colors"
-                              title="Xóa dự án"
-                            >
-                              <Trash className="h-3.5 w-3.5" />
-                            </button>
-                          )}
+                  {checkPermission('PROJECT_CREATE') && (
+                    <button onClick={() => setShowProjModal(true)} className="ui-btn-ghost text-xs font-semibold text-primary flex items-center gap-1 hover:underline border-0 bg-transparent cursor-pointer">
+                      <Plus className="h-3.5 w-3.5" />
+                      {t('create')}
+                    </button>
+                  )}
+                </div>
+
+                {projects.length === 0 ? (
+                  <div className="glass rounded-2xl p-12 text-center border border-border">
+                    <Folder className="h-12 w-12 text-muted mx-auto mb-4" />
+                    <h3 className="text-lg font-semibold mb-2 text-heading">{t('noProjectYetTitle')}</h3>
+                    <p className="text-secondary text-sm mb-6">
+                      {t('noProjectYetDesc')}
+                    </p>
+                    {checkPermission('PROJECT_CREATE') && (
+                      <button onClick={() => setShowProjModal(true)} className="ui-btn-primary px-5 py-2.5 text-sm border-0 cursor-pointer rounded-xl">
+                        {t('createNewProjectBtn')}
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {projects.map((proj) => (
+                      <Link key={proj.id} href={`/project/${proj.id}`}>
+                        <div className="glass hover:border-primary/50 p-5 rounded-2xl transition-all cursor-pointer group hover:scale-[1.01] flex flex-col justify-between min-h-[170px] relative border border-border shadow-sm hover:shadow-md">
+                          <div>
+                            <div className="flex items-start justify-between gap-2">
+                              <h3 className="font-bold text-sm group-hover:text-primary transition-colors text-title">
+                                {proj.name}
+                              </h3>
+                              <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border shrink-0 ${
+                                proj.status === 'COMPLETED' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' :
+                                proj.status === 'ARCHIVED' ? 'bg-zinc-800 text-zinc-400 border-zinc-700' :
+                                proj.status === 'DELETION_PENDING' ? 'bg-rose-500/10 text-rose-400 border-rose-500/20 animate-pulse' :
+                                'bg-primary/10 text-primary border-primary/20'
+                              }`}>
+                                {proj.status === 'COMPLETED' ? t('done') :
+                                 proj.status === 'ARCHIVED' ? 'Archived' :
+                                 proj.status === 'DELETION_PENDING' ? 'Chờ duyệt xóa ⚠️' :
+                                 t('inProgress')}
+                              </span>
+                            </div>
+                            <p className="text-secondary text-xs mt-2 line-clamp-2 leading-relaxed">
+                              {proj.description || 'Không có mô tả chi tiết.'}
+                            </p>
+                          </div>
+
+                          <div className="flex items-center justify-between text-[11px] text-muted mt-4 pt-3 border-t border-border-subtle">
+                            <span>Tạo ngày: {new Date(proj.createdAt).toLocaleDateString('vi-VN')}</span>
+                            <div className="flex items-center gap-1.5">
+                              {checkPermission('PROJECT_UPDATE') && proj.status !== 'DELETION_PENDING' && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleOpenEditProject(e, proj); }}
+                                  className="p-1.5 rounded-lg text-secondary hover:text-primary hover:bg-primary/10 transition-colors border-0 bg-transparent cursor-pointer"
+                                  title="Sửa thông tin dự án"
+                                >
+                                  <Pencil className="h-3.5 w-3.5" />
+                                </button>
+                              )}
+                              {checkPermission('PROJECT_DELETE') && proj.status !== 'DELETION_PENDING' && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleDeleteProject(e, proj.id); }}
+                                  className="p-1.5 rounded-lg text-muted hover:text-error hover:bg-error-muted transition-colors border-0 bg-transparent cursor-pointer"
+                                  title="Xóa dự án"
+                                >
+                                  <Trash className="h-3.5 w-3.5" />
+                                </button>
+                              )}
+                            </div>
+                          </div>
                         </div>
-                      </div>
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </>
+            ) : (
+              // Kho tài liệu & Thư mục explorer
+              <div className="glass p-6 rounded-2xl border border-border space-y-6">
+                {/* Header / Breadcrumbs */}
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border-subtle/50 pb-4">
+                  <div className="flex flex-wrap items-center gap-1.5 text-xs text-zinc-400 font-semibold">
+                    {docCurrentPath.map((item, idx) => (
+                      <React.Fragment key={item.id}>
+                        {idx > 0 && <span className="text-zinc-500">/</span>}
+                        <button
+                          type="button"
+                          onClick={() => handleNavigateBreadcrumb(idx)}
+                          className={`hover:text-primary border-0 bg-transparent cursor-pointer font-bold transition-all ${
+                            idx === docCurrentPath.length - 1 ? 'text-primary underline' : 'text-zinc-400'
+                          }`}
+                        >
+                          {item.name.replace('📁 ', '')}
+                        </button>
+                      </React.Fragment>
+                    ))}
+                  </div>
+
+                  {/* Actions (Only in Workspace files folder view) */}
+                  {(docCurrentPath[docCurrentPath.length - 1].type === 'system_workspace' ||
+                    docCurrentPath[docCurrentPath.length - 1].type === 'workspace_folder') && (
+                    <div className="flex items-center gap-2">
+                      <label className="ui-btn-secondary px-3 py-1.5 text-[11px] font-bold flex items-center gap-1.5 cursor-pointer hover:bg-primary/5 active:scale-95 transition-all rounded-xl border border-border">
+                        <Upload className="h-3.5 w-3.5" />
+                        {isUploadingDoc ? 'Đang tải...' : 'Tải lên tệp'}
+                        <input
+                          type="file"
+                          className="hidden"
+                          onChange={handleUploadDocFile}
+                          disabled={isUploadingDoc}
+                        />
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => setShowCreateDocFolderModal(true)}
+                        className="ui-btn-primary px-3 py-1.5 text-[11px] font-bold flex items-center gap-1 hover:scale-102 active:scale-95 transition-all border-0 rounded-xl cursor-pointer"
+                      >
+                        <Plus className="h-3.5 w-3.5" />
+                        Tạo thư mục
+                      </button>
                     </div>
-                  </Link>
-                ))}
+                  )}
+                </div>
+
+                {isLoadingDocs ? (
+                  <div className="flex flex-col items-center justify-center py-16 text-zinc-500 text-xs gap-2">
+                    <div className="animate-spin rounded-full h-6 w-6 border-2 border-primary/20 border-t-primary" />
+                    Đang tải danh sách tài liệu...
+                  </div>
+                ) : docFolders.length === 0 && docFiles.length === 0 ? (
+                  <div className="text-center py-16 text-zinc-400 dark:text-zinc-500 text-sm">
+                    <FolderOpen className="h-10 w-10 opacity-30 mx-auto mb-3" />
+                    Thư mục này hiện tại trống.
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                    {/* Render Folders */}
+                    {docFolders.map((folder) => (
+                      <div
+                        key={folder.id}
+                        onDoubleClick={() => handleOpenFolder(folder)}
+                        onClick={() => handleOpenFolder(folder)}
+                        className="glass border border-border/85 hover:border-primary/40 p-4 rounded-xl flex items-center justify-between group cursor-pointer hover:shadow-md transition-all active:scale-[0.99]"
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          <Folder className="h-8 w-8 text-amber-500 shrink-0 fill-amber-500/20" />
+                          <div className="min-w-0">
+                            <h4 className="text-xs font-bold text-heading truncate group-hover:text-primary transition-colors">
+                              {folder.name.replace('📁 ', '')}
+                            </h4>
+                            <p className="text-[10px] text-muted truncate mt-0.5">Thư mục</p>
+                          </div>
+                        </div>
+                        {folder.type === 'workspace_folder' && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteDocFolder(folder.id);
+                            }}
+                            className="p-1 rounded hover:bg-rose-500/10 text-muted hover:text-rose-500 transition-all opacity-0 group-hover:opacity-100 border-0 bg-transparent cursor-pointer"
+                          >
+                            <Trash className="h-3.5 w-3.5" />
+                          </button>
+                        )}
+                      </div>
+                    ))}
+
+                    {/* Render Files */}
+                    {docFiles.map((file) => {
+                      const isImg = file.type && file.type.startsWith('image/');
+                      return (
+                        <div
+                          key={file.id}
+                          className="glass border border-border/85 hover:border-primary/40 p-4 rounded-xl flex flex-col justify-between group hover:shadow-md transition-all"
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex items-center gap-3 min-w-0">
+                              {isImg ? (
+                                <ImageIcon className="h-8 w-8 text-indigo-400 shrink-0" />
+                              ) : (
+                                <FileText className="h-8 w-8 text-blue-400 shrink-0" />
+                              )}
+                              <div className="min-w-0">
+                                <h4 className="text-xs font-bold text-heading truncate" title={file.name}>
+                                  {file.name}
+                                </h4>
+                                <span className="text-[9px] text-zinc-500">
+                                  {(file.size / 1024).toFixed(1)} KB
+                                </span>
+                              </div>
+                            </div>
+                            
+                            <div className="flex items-center gap-1 shrink-0">
+                              <a
+                                href={file.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="p-1 rounded hover:bg-primary/10 text-muted hover:text-primary transition-all"
+                                title="Mở tệp/Tải xuống"
+                              >
+                                <Download className="h-3.5 w-3.5" />
+                              </a>
+                              {file.uploaderId && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDeleteDocFile(file.id);
+                                  }}
+                                  className="p-1 rounded hover:bg-rose-500/10 text-muted hover:text-rose-500 transition-all opacity-0 group-hover:opacity-100 border-0 bg-transparent cursor-pointer"
+                                >
+                                  <Trash className="h-3.5 w-3.5" />
+                                </button>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="text-[9px] text-muted border-t border-border-subtle/80 mt-3 pt-2 flex items-center justify-between">
+                            <span>{new Date(file.uploadedAt || file.createdAt).toLocaleDateString('vi-VN')}</span>
+                            {file.source && <span className="text-zinc-500 italic max-w-[120px] truncate">{file.source}</span>}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* Create Folder Modal */}
+                {showCreateDocFolderModal && (
+                  <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+                    <div className="bg-[#f4f2f7] dark:bg-[#0e0c14] border border-[#e1dbe9] dark:border-[#221c2e] w-full max-w-md rounded-2xl p-6 shadow-2xl space-y-4">
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-sm font-bold text-heading">Tạo thư mục mới</h3>
+                        <button
+                          type="button"
+                          onClick={() => setShowCreateDocFolderModal(false)}
+                          className="p-1 rounded hover:bg-muted text-muted hover:text-foreground border-0 bg-transparent cursor-pointer"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                      <form onSubmit={handleCreateDocFolder} className="space-y-4">
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-bold text-muted">Tên thư mục</label>
+                          <input
+                            type="text"
+                            required
+                            value={newDocFolderName}
+                            onChange={(e) => setNewDocFolderName(e.target.value)}
+                            placeholder="Nhập tên thư mục..."
+                            className="ui-input w-full px-3.5 py-2 text-xs bg-white dark:bg-[#1a1626] border border-[#cbd3e3] dark:border-[#353043] rounded-xl focus:outline-none"
+                          />
+                        </div>
+                        <div className="flex justify-end gap-2 pt-2">
+                          <button
+                            type="button"
+                            onClick={() => setShowCreateDocFolderModal(false)}
+                            className="ui-btn-secondary px-4 py-2 text-xs font-bold rounded-xl border border-border cursor-pointer bg-transparent"
+                          >
+                            Hủy
+                          </button>
+                          <button
+                            type="submit"
+                            className="ui-btn-primary px-4 py-2 text-xs font-bold rounded-xl border-0 cursor-pointer text-white bg-primary"
+                          >
+                            Tạo thư mục
+                          </button>
+                        </div>
+                      </form>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -1932,6 +2313,7 @@ export default function WorkspaceDetailPage() {
           targetType="WORKSPACE"
           targetId={workspaceId}
           targetName={workspaceName}
+          workspaceId={workspaceId}
           isViewer={currentUserMember?.role === 'VIEWER'}
         />
       )}
