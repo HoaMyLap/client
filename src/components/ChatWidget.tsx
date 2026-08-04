@@ -237,14 +237,17 @@ export default function ChatWidget({
     localStorage.setItem('chat_sound_enabled', String(newVal));
   };
 
-  const formatMessageTime = (createdAtStr: string) => {
+  const formatMessageTime = (createdAtStr: any) => {
     if (!createdAtStr) return '';
     try {
-      let dateStr = createdAtStr;
-      if (!dateStr.endsWith('Z') && !dateStr.includes('+') && !dateStr.includes('-')) {
-        dateStr = dateStr + 'Z';
+      let d: Date;
+      if (Array.isArray(createdAtStr)) {
+        const [year, month, day, hour, minute, second] = createdAtStr;
+        d = new Date(year, month - 1, day, hour || 0, minute || 0, second || 0);
+      } else {
+        d = new Date(createdAtStr);
       }
-      const d = new Date(dateStr);
+      if (isNaN(d.getTime())) return '';
       return d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
     } catch (e) {
       console.error('Failed to parse date:', e);
