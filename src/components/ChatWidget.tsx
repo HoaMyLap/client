@@ -245,7 +245,15 @@ export default function ChatWidget({
         const [year, month, day, hour, minute, second] = createdAtStr;
         d = new Date(year, month - 1, day, hour || 0, minute || 0, second || 0);
       } else {
-        d = new Date(createdAtStr);
+        const str = String(createdAtStr);
+        if (str.includes('T') && !str.endsWith('Z') && !str.includes('+')) {
+          const [datePart, timePart] = str.split('T');
+          const [year, month, day] = datePart.split('-').map(Number);
+          const timeComponents = timePart.split(':').map((v) => parseInt(v, 10));
+          d = new Date(year, month - 1, day, timeComponents[0] || 0, timeComponents[1] || 0, timeComponents[2] || 0);
+        } else {
+          d = new Date(str);
+        }
       }
       if (isNaN(d.getTime())) return '';
       return d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
