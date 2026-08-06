@@ -23,7 +23,7 @@ export default function ProfilePage() {
   const [subscriptionPlan, setSubscriptionPlan] = useState('FREE');
   const [subscriptionExpiresAt, setSubscriptionExpiresAt] = useState('');
   const [paymentOrders, setPaymentOrders] = useState<any[]>([]);
-  const [showAllOrders, setShowAllOrders] = useState(false);
+  const [visibleOrdersCount, setVisibleOrdersCount] = useState(5);
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -564,7 +564,7 @@ export default function ProfilePage() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-border-subtle text-secondary">
-                      {(showAllOrders ? paymentOrders : paymentOrders.slice(0, 5)).map((order) => (
+                      {paymentOrders.slice(0, visibleOrdersCount).map((order) => (
                         <tr key={order.id} className="hover:bg-surface/50 transition-colors">
                           <td className="py-3 px-3 font-mono font-bold text-primary">{order.transactionId}</td>
                           <td className="py-3 px-3 font-bold text-heading">{order.planType}</td>
@@ -592,19 +592,33 @@ export default function ProfilePage() {
                 </div>
 
                 {paymentOrders.length > 5 && (
-                  <div className="pt-2 text-center border-t border-border-subtle">
-                    <button
-                      type="button"
-                      onClick={() => setShowAllOrders(!showAllOrders)}
-                      className="px-4 py-2 rounded-xl bg-surface border border-border text-xs font-bold text-primary hover:border-primary/40 transition-all inline-flex items-center gap-1.5 cursor-pointer shadow-sm"
-                    >
-                      <ChevronDown className={`h-4 w-4 transition-transform ${showAllOrders ? 'rotate-180' : ''}`} />
-                      <span>
-                        {showAllOrders
-                          ? (language === 'vi' ? 'Thu gọn lại (Hiển thị 5 đơn gần nhất) ▲' : 'Show Less (Top 5 orders) ▲')
-                          : (language === 'vi' ? `Xem thêm (${paymentOrders.length - 5} đơn hàng còn lại) ▼` : `View More (${paymentOrders.length - 5} remaining) ▼`)}
-                      </span>
-                    </button>
+                  <div className="pt-2 text-center border-t border-border-subtle flex flex-wrap items-center justify-center gap-3">
+                    {visibleOrdersCount < paymentOrders.length && (
+                      <button
+                        type="button"
+                        onClick={() => setVisibleOrdersCount((prev) => Math.min(prev + 5, paymentOrders.length))}
+                        className="px-4 py-2 rounded-xl bg-primary/10 border border-primary/30 text-xs font-bold text-primary hover:bg-primary hover:text-white transition-all inline-flex items-center gap-1.5 cursor-pointer shadow-sm"
+                      >
+                        <ChevronDown className="h-4 w-4" />
+                        <span>
+                          {language === 'vi'
+                            ? `Xem thêm 5 đơn nữa (Còn ${paymentOrders.length - visibleOrdersCount} đơn) ▼`
+                            : `Load 5 More (${paymentOrders.length - visibleOrdersCount} remaining) ▼`}
+                        </span>
+                      </button>
+                    )}
+
+                    {visibleOrdersCount > 5 && (
+                      <button
+                        type="button"
+                        onClick={() => setVisibleOrdersCount(5)}
+                        className="px-3.5 py-2 rounded-xl bg-surface border border-border text-xs font-semibold text-secondary hover:text-foreground transition-all inline-flex items-center gap-1.5 cursor-pointer"
+                      >
+                        <span>
+                          {language === 'vi' ? 'Thu gọn về 5 đơn gần nhất ▲' : 'Collapse to 5 orders ▲'}
+                        </span>
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
