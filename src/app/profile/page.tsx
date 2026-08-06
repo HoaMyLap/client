@@ -154,6 +154,25 @@ export default function ProfilePage() {
     }, 1000);
   };
 
+  const handleCancelSubscription = async () => {
+    const confirmMsg = language === 'vi'
+      ? `Bạn có chắc chắn muốn HỦY gói dịch vụ ${subscriptionPlan} hiện tại? Tài khoản của bạn sẽ được chuyển về Gói Miễn Phí (FREE PLAN).`
+      : `Are you sure you want to CANCEL your current ${subscriptionPlan} plan? Your account will be reverted to the Free Plan.`;
+
+    if (window.confirm(confirmMsg)) {
+      try {
+        setLoading(true);
+        await api.payments.cancelSubscription();
+        await loadProfile();
+        setMessage(language === 'vi' ? 'Đã hủy gói dịch vụ thành công! Tài khoản của bạn hiện ở Gói Miễn Phí.' : 'Subscription cancelled successfully! Your account is now on the Free Plan.');
+      } catch (err: any) {
+        setError(err.message || (language === 'vi' ? 'Lỗi khi hủy gói dịch vụ.' : 'Failed to cancel subscription.'));
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
+
   // Helper date formatters
   const formatDate = (dateStr: string) => {
     if (!dateStr) return language === 'vi' ? 'Chưa kích hoạt' : 'Not Activated';
@@ -273,17 +292,37 @@ export default function ProfilePage() {
 
               {/* Expiration Card */}
               {subscriptionPlan !== 'FREE' && (
-                <div className="p-4 rounded-2xl bg-black/40 border border-white/10 space-y-2 text-xs shrink-0 w-full md:w-64 shadow-inner">
-                  <div className="flex justify-between items-center text-muted text-[11px]">
-                    <span>{language === 'vi' ? 'Hạn sử dụng gói:' : 'Plan Expiration:'}</span>
-                    <Clock className="h-3.5 w-3.5 text-amber-400" />
+                <div className="p-4 rounded-2xl bg-black/40 border border-white/10 space-y-3 text-xs shrink-0 w-full md:w-64 shadow-inner">
+                  <div className="space-y-1">
+                    <div className="flex justify-between items-center text-muted text-[11px]">
+                      <span>{language === 'vi' ? 'Hạn sử dụng gói:' : 'Plan Expiration:'}</span>
+                      <Clock className="h-3.5 w-3.5 text-amber-400" />
+                    </div>
+                    <div className="text-lg font-bold font-mono text-heading">
+                      {formatDate(subscriptionExpiresAt)}
+                    </div>
+                    <div className="flex items-center justify-between text-[11px] pt-1 border-t border-white/10">
+                      <span>{language === 'vi' ? 'Thời gian còn lại:' : 'Days Remaining:'}</span>
+                      <strong className="text-emerald-400 font-bold">{daysLeft} {language === 'vi' ? 'ngày' : 'days'}</strong>
+                    </div>
                   </div>
-                  <div className="text-lg font-bold font-mono text-heading">
-                    {formatDate(subscriptionExpiresAt)}
-                  </div>
-                  <div className="flex items-center justify-between text-[11px] pt-1 border-t border-white/10">
-                    <span>{language === 'vi' ? 'Thời gian còn lại:' : 'Days Remaining:'}</span>
-                    <strong className="text-emerald-400 font-bold">{daysLeft} {language === 'vi' ? 'ngày' : 'days'}</strong>
+
+                  <div className="pt-2 border-t border-white/10 flex flex-col gap-2">
+                    <Link
+                      href="/pricing"
+                      className="w-full py-2 px-3 rounded-xl bg-primary hover:bg-primary-dark text-white font-bold text-xs flex items-center justify-center gap-1.5 no-underline transition-colors"
+                    >
+                      <Zap className="h-3.5 w-3.5" />
+                      <span>{language === 'vi' ? 'Đổi gói dịch vụ' : 'Change Plan'}</span>
+                    </Link>
+
+                    <button
+                      type="button"
+                      onClick={handleCancelSubscription}
+                      className="w-full py-1.5 px-3 rounded-xl bg-rose-500/10 text-rose-400 hover:bg-rose-500 hover:text-white border border-rose-500/30 text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                    >
+                      <span>{language === 'vi' ? 'Hủy gói đăng ký' : 'Cancel Subscription'}</span>
+                    </button>
                   </div>
                 </div>
               )}

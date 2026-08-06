@@ -199,6 +199,7 @@ export const api = {
       request('/payments/confirm-payment', { method: 'POST', body: JSON.stringify(data) }),
     getOrderStatus: (orderId: string) => request(`/payments/order-status/${orderId}`),
     getUserOrders: () => request('/payments/user-orders'),
+    cancelSubscription: () => request('/payments/cancel-subscription', { method: 'POST' }),
     capturePaypal: (orderId: string) => request('/payments/paypal/capture', { method: 'POST', body: JSON.stringify({ orderId }) }),
   },
 };
