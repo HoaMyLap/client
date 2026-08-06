@@ -23,7 +23,7 @@ export default function ProfilePage() {
   const [subscriptionPlan, setSubscriptionPlan] = useState('FREE');
   const [subscriptionExpiresAt, setSubscriptionExpiresAt] = useState('');
   const [paymentOrders, setPaymentOrders] = useState<any[]>([]);
-  const [showPaymentHistory, setShowPaymentHistory] = useState(false);
+  const [showAllOrders, setShowAllOrders] = useState(false);
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -520,7 +520,7 @@ export default function ProfilePage() {
             </form>
           </div>
 
-          {/* Section 3: Payment Orders History Table (Collapsible) */}
+          {/* Section 3: Payment Orders History Table (Top 5 items + View More) */}
           <div className="glass p-6 rounded-3xl border border-border shadow-xl space-y-4">
             <div className="flex items-center justify-between border-b border-border-subtle pb-4">
               <div>
@@ -530,80 +530,81 @@ export default function ProfilePage() {
                 </h3>
                 <p className="text-xs text-secondary mt-0.5">
                   {language === 'vi' 
-                    ? 'Danh sách các giao dịch nâng cấp gói dịch vụ trả phí của bạn' 
-                    : 'List of all your package upgrade payment transactions'}
+                    ? 'Hiển thị các giao dịch đơn hàng gần đây của bạn' 
+                    : 'Displaying your recent payment order transactions'}
                 </p>
               </div>
 
-              <div className="flex items-center gap-3">
-                <span className="text-xs text-muted font-bold hidden sm:inline">
-                  {language === 'vi' ? `Tổng cộng: ${paymentOrders.length} đơn hàng` : `Total: ${paymentOrders.length} orders`}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setShowPaymentHistory(!showPaymentHistory)}
-                  className="px-3 py-1.5 rounded-xl bg-surface border border-border text-xs font-bold text-primary hover:border-primary/40 transition-all flex items-center gap-1.5 cursor-pointer"
-                >
-                  <ChevronDown className={`h-4 w-4 transition-transform ${showPaymentHistory ? 'rotate-180' : ''}`} />
-                  <span>
-                    {showPaymentHistory
-                      ? (language === 'vi' ? 'Thu gọn ▲' : 'Collapse ▲')
-                      : (language === 'vi' ? 'Xem lịch sử thanh toán ▼' : 'Expand History ▼')}
-                  </span>
-                </button>
-              </div>
+              <span className="text-xs text-muted font-bold">
+                {language === 'vi' ? `Tổng cộng: ${paymentOrders.length} đơn hàng` : `Total: ${paymentOrders.length} orders`}
+              </span>
             </div>
 
-            {showPaymentHistory && (
-              <div className="pt-2 animate-fadeIn">
-                {paymentOrders.length === 0 ? (
-                  <div className="py-8 text-center text-xs text-muted space-y-2">
-                    <CreditCard className="h-8 w-8 text-muted mx-auto opacity-50" />
-                    <p>{language === 'vi' ? 'Bạn chưa có lịch sử thanh toán nào.' : 'No payment history available.'}</p>
-                    <Link href="/pricing" className="text-primary font-bold hover:underline inline-block">
-                      {language === 'vi' ? 'Nâng cấp gói dịch vụ đầu tiên ➔' : 'Upgrade your first package ➔'}
-                    </Link>
-                  </div>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left text-xs border-collapse">
-                      <thead>
-                        <tr className="border-b border-border-subtle text-muted text-[11px] uppercase tracking-wider">
-                          <th className="py-3 px-3">{language === 'vi' ? 'Mã đơn hàng' : 'Order ID'}</th>
-                          <th className="py-3 px-3">{language === 'vi' ? 'Gói' : 'Plan'}</th>
-                          <th className="py-3 px-3">{language === 'vi' ? 'Chu kỳ' : 'Cycle'}</th>
-                          <th className="py-3 px-3">{language === 'vi' ? 'Phương thức' : 'Method'}</th>
-                          <th className="py-3 px-3">{language === 'vi' ? 'Số tiền' : 'Amount'}</th>
-                          <th className="py-3 px-3">{language === 'vi' ? 'Thời gian' : 'Date'}</th>
-                          <th className="py-3 px-3 text-right">{language === 'vi' ? 'Trạng thái' : 'Status'}</th>
+            {paymentOrders.length === 0 ? (
+              <div className="py-8 text-center text-xs text-muted space-y-2">
+                <CreditCard className="h-8 w-8 text-muted mx-auto opacity-50" />
+                <p>{language === 'vi' ? 'Bạn chưa có lịch sử thanh toán nào.' : 'No payment history available.'}</p>
+                <Link href="/pricing" className="text-primary font-bold hover:underline inline-block">
+                  {language === 'vi' ? 'Nâng cấp gói dịch vụ đầu tiên ➔' : 'Upgrade your first package ➔'}
+                </Link>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs border-collapse">
+                    <thead>
+                      <tr className="border-b border-border-subtle text-muted text-[11px] uppercase tracking-wider">
+                        <th className="py-3 px-3">{language === 'vi' ? 'Mã đơn hàng' : 'Order ID'}</th>
+                        <th className="py-3 px-3">{language === 'vi' ? 'Gói' : 'Plan'}</th>
+                        <th className="py-3 px-3">{language === 'vi' ? 'Chu kỳ' : 'Cycle'}</th>
+                        <th className="py-3 px-3">{language === 'vi' ? 'Phương thức' : 'Method'}</th>
+                        <th className="py-3 px-3">{language === 'vi' ? 'Số tiền' : 'Amount'}</th>
+                        <th className="py-3 px-3">{language === 'vi' ? 'Thời gian' : 'Date'}</th>
+                        <th className="py-3 px-3 text-right">{language === 'vi' ? 'Trạng thái' : 'Status'}</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border-subtle text-secondary">
+                      {(showAllOrders ? paymentOrders : paymentOrders.slice(0, 5)).map((order) => (
+                        <tr key={order.id} className="hover:bg-surface/50 transition-colors">
+                          <td className="py-3 px-3 font-mono font-bold text-primary">{order.transactionId}</td>
+                          <td className="py-3 px-3 font-bold text-heading">{order.planType}</td>
+                          <td className="py-3 px-3 uppercase text-[11px]">{order.billingCycle}</td>
+                          <td className="py-3 px-3 font-semibold">{order.paymentMethod}</td>
+                          <td className="py-3 px-3 font-mono font-bold text-heading">
+                            {Number(order.amount).toLocaleString('vi-VN')} VNĐ
+                          </td>
+                          <td className="py-3 px-3 text-muted">{formatDate(order.createdAt)}</td>
+                          <td className="py-3 px-3 text-right">
+                            <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold inline-flex items-center gap-1 ${
+                              order.status === 'COMPLETED'
+                                ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                                : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                            }`}>
+                              {order.status === 'COMPLETED' 
+                                ? (language === 'vi' ? 'Thành công' : 'Completed') 
+                                : (language === 'vi' ? 'Chờ xác nhận' : 'Pending')}
+                            </span>
+                          </td>
                         </tr>
-                      </thead>
-                      <tbody className="divide-y divide-border-subtle text-secondary">
-                        {paymentOrders.map((order) => (
-                          <tr key={order.id} className="hover:bg-surface/50 transition-colors">
-                            <td className="py-3 px-3 font-mono font-bold text-primary">{order.transactionId}</td>
-                            <td className="py-3 px-3 font-bold text-heading">{order.planType}</td>
-                            <td className="py-3 px-3 uppercase text-[11px]">{order.billingCycle}</td>
-                            <td className="py-3 px-3 font-semibold">{order.paymentMethod}</td>
-                            <td className="py-3 px-3 font-mono font-bold text-heading">
-                              {Number(order.amount).toLocaleString('vi-VN')} VNĐ
-                            </td>
-                            <td className="py-3 px-3 text-muted">{formatDate(order.createdAt)}</td>
-                            <td className="py-3 px-3 text-right">
-                              <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold inline-flex items-center gap-1 ${
-                                order.status === 'COMPLETED'
-                                  ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                                  : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
-                              }`}>
-                                {order.status === 'COMPLETED' 
-                                  ? (language === 'vi' ? 'Thành công' : 'Completed') 
-                                  : (language === 'vi' ? 'Chờ xác nhận' : 'Pending')}
-                              </span>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {paymentOrders.length > 5 && (
+                  <div className="pt-2 text-center border-t border-border-subtle">
+                    <button
+                      type="button"
+                      onClick={() => setShowAllOrders(!showAllOrders)}
+                      className="px-4 py-2 rounded-xl bg-surface border border-border text-xs font-bold text-primary hover:border-primary/40 transition-all inline-flex items-center gap-1.5 cursor-pointer shadow-sm"
+                    >
+                      <ChevronDown className={`h-4 w-4 transition-transform ${showAllOrders ? 'rotate-180' : ''}`} />
+                      <span>
+                        {showAllOrders
+                          ? (language === 'vi' ? 'Thu gọn lại (Hiển thị 5 đơn gần nhất) ▲' : 'Show Less (Top 5 orders) ▲')
+                          : (language === 'vi' ? `Xem thêm (${paymentOrders.length - 5} đơn hàng còn lại) ▼` : `View More (${paymentOrders.length - 5} remaining) ▼`)}
+                      </span>
+                    </button>
                   </div>
                 )}
               </div>
