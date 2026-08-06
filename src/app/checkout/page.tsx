@@ -346,17 +346,27 @@ function CheckoutContent() {
                 </div>
               ) : activeOrder ? (
                 <div className="flex flex-col sm:flex-row items-center gap-6">
-                  {/* QR Image */}
-                  <div className="p-3 bg-white rounded-2xl shadow-lg shrink-0 text-center">
-                    <img 
-                      src={activeOrder.qrCodeUrl || `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${activeOrder.transactionId}`} 
-                      alt="Payment QR Code"
-                      className="w-40 h-40 object-contain mx-auto"
-                    />
-                    <span className="text-[10px] font-bold text-zinc-800 mt-1 block">
-                      Mã QR {paymentMethod}
-                    </span>
-                  </div>
+                  {/* QR Image or PayPal Badge */}
+                  {paymentMethod === 'PAYPAL' ? (
+                    <div className="p-4 bg-gradient-to-br from-indigo-950 to-blue-900 border border-indigo-500/30 rounded-2xl shadow-lg shrink-0 text-center text-white space-y-2 w-44">
+                      <CreditCard className="h-10 w-10 text-amber-400 mx-auto" />
+                      <div className="text-xs font-bold font-display">PayPal Payment</div>
+                      <span className="text-[9px] font-bold text-emerald-400 bg-emerald-500/20 px-2 py-0.5 rounded-full border border-emerald-500/30 block">
+                        Verified Merchant
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="p-3 bg-white rounded-2xl shadow-lg shrink-0 text-center">
+                      <img 
+                        src={activeOrder.qrCodeUrl || `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${activeOrder.transactionId}`} 
+                        alt="Payment QR Code"
+                        className="w-40 h-40 object-contain mx-auto"
+                      />
+                      <span className="text-[10px] font-bold text-zinc-800 mt-1 block">
+                        Mã QR {paymentMethod}
+                      </span>
+                    </div>
+                  )}
 
                   <div className="space-y-2 text-xs text-secondary flex-1 w-full">
                     <div className="flex justify-between py-1 border-b border-border-subtle">
@@ -383,7 +393,7 @@ function CheckoutContent() {
                     </div>
                     <div className="flex justify-between py-1 border-b border-border-subtle">
                       <span>Số tiền thanh toán:</span>
-                      <strong className="text-primary font-mono text-sm">{finalPrice.toLocaleString('vi-VN')} VNĐ</strong>
+                      <strong className="text-primary font-mono text-sm">{finalPrice.toLocaleString('vi-VN')} VNĐ ({planType === 'ENTERPRISE' ? '$19.99 USD' : '$7.99 USD'})</strong>
                     </div>
                     <div className="flex justify-between py-1">
                       <span>Nội dung chuyển khoản:</span>
@@ -394,31 +404,36 @@ function CheckoutContent() {
                         </button>
                       </div>
                     </div>
-
-                    {activeOrder.paymentUrl && (
-                      <div className="pt-2">
-                        <a
-                          href={activeOrder.paymentUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="w-full py-2 px-3 rounded-xl bg-primary/20 text-primary hover:bg-primary/30 font-bold text-[11px] flex items-center justify-center gap-1.5 transition-colors no-underline"
-                        >
-                          <ExternalLink className="h-3.5 w-3.5" />
-                          Mở cổng thanh toán {paymentMethod} trong cửa sổ mới
-                        </a>
-                      </div>
-                    )}
                   </div>
                 </div>
               ) : null}
 
-              {/* PayPal Smart Payment Buttons */}
+              {/* PayPal Smart Payment Buttons & Sandbox Buyer Info */}
               {paymentMethod === 'PAYPAL' && (
-                <div className="p-4 rounded-xl bg-indigo-500/5 border border-indigo-500/20 space-y-3 text-xs mt-4">
-                  <div className="flex items-center justify-between font-bold text-xs text-indigo-400">
-                    <span>Thanh toán trực tiếp bằng nút PayPal / Thẻ quốc tế:</span>
-                    <span className="text-[10px] text-muted font-normal">PayPal SDK Sandbox</span>
+                <div className="p-4 rounded-xl bg-indigo-500/5 border border-indigo-500/20 space-y-4 text-xs mt-4">
+                  <div className="flex items-center justify-between font-bold text-xs text-indigo-400 border-b border-indigo-500/20 pb-2">
+                    <span>Thanh toán trực tiếp bằng nút PayPal chính thức:</span>
+                    <span className="text-[10px] text-emerald-400 font-bold bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+                      PayPal SDK Active
+                    </span>
                   </div>
+
+                  {/* Sandbox Buyer Account Notice */}
+                  <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300 text-[11px] space-y-1.5">
+                    <div className="font-bold flex items-center gap-1.5 text-amber-400">
+                      <Info className="h-3.5 w-3.5" />
+                      Lưu ý khi đăng nhập trên cửa sổ PayPal Sandbox:
+                    </div>
+                    <p className="leading-relaxed">
+                      Trong môi trường thử nghiệm Sandbox, PayPal <strong>không cho phép</strong> đăng nhập bằng email thật hoặc tài khoản Admin nhận tiền. Vui lòng dùng <strong>tài khoản Người mua (Personal Buyer) Sandbox</strong> hoặc bấm nút xác nhận thanh toán ở dưới:
+                    </p>
+                    <div className="font-mono text-[10px] bg-black/30 p-2 rounded-lg space-y-1 text-zinc-200 border border-amber-500/20">
+                      <div>• Email Buyer Test: <strong className="text-amber-400">sb-buyer-homix@personal.example.com</strong></div>
+                      <div>• Mật khẩu Sandbox: <strong className="text-amber-400">Password123!</strong></div>
+                    </div>
+                  </div>
+
+                  {/* PayPal Yellow Button Container */}
                   <div id="paypal-button-container" className="w-full min-h-[120px] relative z-10"></div>
                 </div>
               )}
