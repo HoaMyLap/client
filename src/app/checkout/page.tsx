@@ -20,7 +20,7 @@ function CheckoutContent() {
   const planType = searchParams.get('plan') || 'PRO';
   const billing = searchParams.get('billing') || 'annual';
 
-  const [paymentMethod, setPaymentMethod] = useState<'VNPAY' | 'MOMO' | 'PAYPAL' | 'CREDIT_CARD'>('VNPAY');
+  const [paymentMethod, setPaymentMethod] = useState<'VNPAY' | 'PAYPAL' | 'CREDIT_CARD'>('VNPAY');
   const [voucherCode, setVoucherCode] = useState('');
   const [discount, setDiscount] = useState(0);
   const [appliedVoucher, setAppliedVoucher] = useState('');
@@ -256,7 +256,7 @@ function CheckoutContent() {
                 {language === 'vi' ? '1. Chọn hình thức thanh toán' : '1. Select Payment Method'}
               </label>
 
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 {/* VNPay */}
                 <button
                   type="button"
@@ -270,21 +270,6 @@ function CheckoutContent() {
                   <Globe className="h-6 w-6 text-blue-400" />
                   <div className="text-xs font-bold">VNPay</div>
                   <div className="text-[9px] opacity-70">{language === 'vi' ? 'Quét mã / ATM' : 'QR Scan / Local ATM'}</div>
-                </button>
-
-                {/* MoMo */}
-                <button
-                  type="button"
-                  onClick={() => setPaymentMethod('MOMO')}
-                  className={`p-3.5 rounded-2xl border text-center flex flex-col items-center justify-center gap-2 transition-all cursor-pointer ${
-                    paymentMethod === 'MOMO'
-                      ? 'border-pink-500 bg-pink-500/10 text-pink-400 font-bold shadow-md scale-[1.02]'
-                      : 'border-border bg-surface/50 text-secondary hover:border-pink-500/40'
-                  }`}
-                >
-                  <Smartphone className="h-6 w-6 text-pink-400" />
-                  <div className="text-xs font-bold">Ví MoMo</div>
-                  <div className="text-[9px] opacity-70">{language === 'vi' ? 'Ví MoMo App' : 'MoMo App'}</div>
                 </button>
 
                 {/* PayPal */}
