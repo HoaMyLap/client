@@ -521,6 +521,23 @@ export default function WorkspaceDetailPage() {
     });
   };
 
+  const handleDeleteWorkspace = () => {
+    showCustomConfirm(
+      language === 'vi'
+        ? 'Bạn có chắc chắn muốn XÓA HOÀN TOÀN Không gian làm việc này? Toàn bộ dự án và tệp tin liên quan sẽ bị xóa vĩnh viễn.'
+        : 'Are you sure you want to PERMANENTLY DELETE this Workspace? All projects and files will be deleted permanently.',
+      async () => {
+        try {
+          await api.workspaces.delete(workspaceId);
+          showCustomAlert(language === 'vi' ? 'Đã xóa không gian làm việc thành công.' : 'Workspace deleted successfully.');
+          router.push('/');
+        } catch (err: any) {
+          showCustomAlert(err.message || (language === 'vi' ? 'Không thể xóa không gian làm việc.' : 'Failed to delete workspace.'));
+        }
+      }
+    );
+  };
+
   const handleExcelUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -914,6 +931,16 @@ export default function WorkspaceDetailPage() {
                   >
                     <Users className="h-4 w-4" />
                     {t('addMember')}
+                  </button>
+                )}
+                {isAdmin && (
+                  <button
+                    onClick={handleDeleteWorkspace}
+                    className="px-3.5 py-2.5 text-xs font-bold flex items-center gap-1.5 rounded-xl bg-rose-500/10 text-rose-400 border border-rose-500/20 hover:bg-rose-500 hover:text-white transition-all cursor-pointer"
+                    title={language === 'vi' ? 'Xóa hoàn toàn không gian làm việc (Chỉ Admin)' : 'Delete Workspace (Admin Only)'}
+                  >
+                    <Trash className="h-4 w-4" />
+                    <span>{language === 'vi' ? 'Xóa Workspace' : 'Delete Workspace'}</span>
                   </button>
                 )}
               </div>

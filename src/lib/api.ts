@@ -49,6 +49,7 @@ export const api = {
   workspaces: {
     list: () => request('/workspaces'),
     create: (data: any) => request('/workspaces', { method: 'POST', body: JSON.stringify(data) }),
+    delete: (workspaceId: string) => request(`/workspaces/${workspaceId}`, { method: 'DELETE' }),
     addMember: (workspaceId: string, email: string, role: string) =>
       request(`/workspaces/${workspaceId}/members`, {
         method: 'POST',
