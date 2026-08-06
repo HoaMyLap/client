@@ -292,8 +292,18 @@ function CheckoutContent() {
                     </div>
                     <div className="flex justify-between py-1 border-b border-border-subtle">
                       <span>Đơn vị thụ hưởng:</span>
-                      <strong className="text-heading">CÔNG TY CỔ PHẦN HOMIX ECOSYSTEM</strong>
+                      <strong className="text-heading">
+                        {paymentMethod === 'PAYPAL' ? 'PayPal App: Homix' : 'CÔNG TY CỔ PHẦN HOMIX ECOSYSTEM'}
+                      </strong>
                     </div>
+                    {paymentMethod === 'PAYPAL' && (
+                      <div className="flex justify-between py-1 border-b border-border-subtle">
+                        <span>PayPal Client ID:</span>
+                        <span className="font-mono text-[10px] text-indigo-400 font-bold truncate max-w-[200px]" title="AULIBK_ava0E1QxLYbRUHI-PkmzzAtCkgKUfBa8O-6MRh2ukhB_Rp4n6Zbl86cXNATk-p6pvC2POzZ7Y">
+                          AULIBK_ava0E...pOzZ7Y
+                        </span>
+                      </div>
+                    )}
                     <div className="flex justify-between py-1 border-b border-border-subtle">
                       <span>Hình thức:</span>
                       <strong className="text-heading">{paymentMethod}</strong>
