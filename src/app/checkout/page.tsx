@@ -27,6 +27,7 @@ function CheckoutContent() {
   const [copied, setCopied] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
+  const [paymentError, setPaymentError] = useState<string | null>(null);
   const [showConfigGuide, setShowConfigGuide] = useState(false);
 
   // Active Order State
@@ -39,12 +40,46 @@ function CheckoutContent() {
   const [cardCvc, setCardCvc] = useState('');
   const [cardName, setCardName] = useState('');
 
+  // VNPay / Gateway Return URL Parameters
+  const vnpResponseCode = searchParams.get('vnp_ResponseCode');
+  const vnpTxnRef = searchParams.get('vnp_TxnRef');
+
   // Price calculations
   const basePrice = planType === 'ENTERPRISE' 
     ? (billing === 'annual' ? 399000 : 499000)
     : (billing === 'annual' ? 159000 : 199000);
 
   const finalPrice = Math.max(0, Math.round(basePrice * (1 - discount)));
+
+  // Auto detect Gateway Redirect Return Callback (VNPay)
+  useEffect(() => {
+    const handleGatewayReturn = async () => {
+      if (vnpResponseCode && vnpTxnRef) {
+        setIsProcessing(true);
+        try {
+          if (vnpResponseCode === '00') {
+            const completed = await api.payments.confirmPayment({ transactionId: vnpTxnRef });
+            setActiveOrder(completed);
+            setPaymentSuccess(true);
+            setPaymentError(null);
+          } else {
+            setPaymentError(
+              language === 'vi'
+                ? `Giao dịch VNPay không thành công hoặc bị hủy (Mã lỗi: ${vnpResponseCode}). Vui lòng thử lại.`
+                : `VNPay transaction failed or cancelled (Code: ${vnpResponseCode}).`
+            );
+          }
+        } catch (err: any) {
+          console.error('Lỗi kiểm tra VNPay callback:', err);
+          setPaymentError(err.message || 'Không thể xác minh giao dịch VNPay.');
+        } finally {
+          setIsProcessing(false);
+        }
+      }
+    };
+
+    handleGatewayReturn();
+  }, [vnpResponseCode, vnpTxnRef, language]);
 
   // Auto Create Order on paymentMethod or Voucher change
   useEffect(() => {
@@ -503,38 +538,51 @@ function CheckoutContent() {
               )}
             </div>
 
-            {/* Confirm & Status Alert Button */}
-            <div className="space-y-3">
-              <button
-                type="button"
-                onClick={handleConfirmPayment}
-                disabled={isProcessing || paymentSuccess || !activeOrder}
-                className="w-full ui-btn-primary py-3.5 rounded-2xl text-xs font-bold flex items-center justify-center gap-2 shadow-xl shadow-primary/25 hover:scale-[1.01] transition-all cursor-pointer border-0"
-              >
-                {isProcessing ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-white/20 border-t-white" />
-                    <span>Đang kiểm tra và xác minh giao dịch tự động...</span>
-                  </>
-                ) : paymentSuccess ? (
-                  <>
-                    <CheckCircle2 className="h-5 w-5 text-emerald-400" />
-                    <span>Thanh toán thành công! Đã kích hoạt gói {planType}</span>
-                  </>
-                ) : (
-                  <>
-                    <ShieldCheck className="h-5 w-5" />
-                    <span>Xác nhận đã chuyển khoản ({finalPrice.toLocaleString('vi-VN')} VNĐ)</span>
-                  </>
-                )}
-              </button>
+            {/* Status Notifications & Dynamic Feedback Cards */}
+            <div className="space-y-3 pt-2">
+              {isProcessing && (
+                <div className="p-4 rounded-2xl bg-primary/10 border border-primary/20 text-primary text-xs font-bold text-center flex items-center justify-center gap-2">
+                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-primary/20 border-t-primary" />
+                  <span>Đang kiểm tra và xác minh kết quả thanh toán từ hệ thống...</span>
+                </div>
+              )}
 
               {paymentSuccess && (
-                <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-bold text-center animate-fadeIn space-y-2">
-                  <p>🎉 Chúc mừng bạn! Giao dịch {paymentMethod} đã được hệ thống kiểm tra và tự động nâng cấp thành công.</p>
-                  <Link href="/workspace" className="inline-block px-4 py-1.5 rounded-xl bg-emerald-500 text-white font-bold text-xs no-underline shadow-md">
-                    Truy cập Workspace ngay
-                  </Link>
+                <div className="p-6 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-bold text-center animate-fadeIn space-y-3 shadow-xl">
+                  <div className="flex items-center justify-center gap-2 text-base text-emerald-400 font-display">
+                    <CheckCircle2 className="h-6 w-6" />
+                    <span>THANH TOÁN THÀNH CÔNG!</span>
+                  </div>
+                  <p className="leading-relaxed font-normal text-emerald-300">
+                    Giao dịch qua <strong>{paymentMethod}</strong> đã được hệ thống xác thực thành công. Gói dịch vụ <strong>{planType} ({billing})</strong> của bạn đã được tự động kích hoạt.
+                  </p>
+                  <div className="pt-1">
+                    <Link href="/workspace" className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-white font-bold text-xs no-underline shadow-lg shadow-emerald-500/25 transition-all">
+                      <span>Truy cập Workspace của bạn ngay</span> ➔
+                    </Link>
+                  </div>
+                </div>
+              )}
+
+              {paymentError && (
+                <div className="p-5 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs font-bold text-center animate-fadeIn space-y-2.5 shadow-xl">
+                  <div className="flex items-center justify-center gap-2 text-sm font-display text-rose-400">
+                    <AlertCircle className="h-5 w-5" />
+                    <span>THANH TOÁN THẤT BẠI HOẶC BỊ HỦY</span>
+                  </div>
+                  <p className="font-normal text-rose-300 leading-relaxed">{paymentError}</p>
+                  <div className="pt-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPaymentError(null);
+                        handleCreateOrder();
+                      }}
+                      className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold transition-all border-0 cursor-pointer"
+                    >
+                      Thử lại giao dịch
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
