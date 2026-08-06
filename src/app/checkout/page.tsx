@@ -28,7 +28,6 @@ function CheckoutContent() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
   const [paymentError, setPaymentError] = useState<string | null>(null);
-  const [showConfigGuide, setShowConfigGuide] = useState(false);
 
   // Active Order State
   const [activeOrder, setActiveOrder] = useState<any>(null);
@@ -72,7 +71,7 @@ function CheckoutContent() {
           }
         } catch (err: any) {
           console.error('Lỗi kiểm tra VNPay callback:', err);
-          setPaymentError(err.message || 'Không thể xác minh giao dịch VNPay.');
+          setPaymentError(err.message || (language === 'vi' ? 'Không thể xác minh giao dịch VNPay.' : 'Failed to verify VNPay transaction.'));
         } finally {
           setIsProcessing(false);
         }
@@ -223,27 +222,12 @@ function CheckoutContent() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  // Direct manual / simulate confirm button
-  const handleConfirmPayment = async () => {
-    if (!activeOrder) return;
-    setIsProcessing(true);
-    try {
-      const completedOrder = await api.payments.confirmPayment({ orderId: activeOrder.id });
-      setActiveOrder(completedOrder);
-      setPaymentSuccess(true);
-    } catch (err: any) {
-      alert(err.message || 'Lỗi khi xác minh thanh toán.');
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
   return (
     <main className="max-w-6xl mx-auto px-6 py-10 w-full">
       {/* Back button */}
       <Link href="/pricing" className="inline-flex items-center gap-2 text-xs font-bold text-secondary hover:text-primary mb-6 transition-colors">
         <ArrowLeft className="h-4 w-4" />
-        <span>{t('back')} {t('pricing')}</span>
+        <span>{language === 'vi' ? 'QUAY LẠI BẢNG GIÁ' : 'BACK TO PRICING'}</span>
       </Link>
 
       <div className="flex flex-col lg:flex-row gap-8">
@@ -254,9 +238,11 @@ function CheckoutContent() {
               <div>
                 <h1 className="text-2xl font-bold font-display text-heading flex items-center gap-2">
                   <Lock className="h-5 w-5 text-primary" />
-                  {t('checkoutTitle')}
+                  {language === 'vi' ? 'Thanh toán Gói dịch vụ' : 'Checkout & Upgrade Plan'}
                 </h1>
-                <p className="text-xs text-secondary mt-1">Hệ thống kiểm tra giao dịch tự động 24/7 qua Webhook & IPN</p>
+                <p className="text-xs text-secondary mt-1">
+                  {language === 'vi' ? 'Hệ thống kiểm tra giao dịch tự động 24/7 qua Webhook & IPN' : '24/7 Automated Transaction Verification via Webhook & IPN'}
+                </p>
               </div>
 
               <span className="px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-xs font-bold flex items-center gap-1.5">
@@ -267,7 +253,7 @@ function CheckoutContent() {
             {/* 4 Payment Method Selector Tabs */}
             <div className="space-y-3">
               <label className="text-xs font-bold text-heading uppercase tracking-wider block">
-                1. Chọn hình thức thanh toán
+                {language === 'vi' ? '1. Chọn hình thức thanh toán' : '1. Select Payment Method'}
               </label>
 
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -283,7 +269,7 @@ function CheckoutContent() {
                 >
                   <Globe className="h-6 w-6 text-blue-400" />
                   <div className="text-xs font-bold">VNPay</div>
-                  <div className="text-[9px] opacity-70">Quét mã / ATM</div>
+                  <div className="text-[9px] opacity-70">{language === 'vi' ? 'Quét mã / ATM' : 'QR Scan / Local ATM'}</div>
                 </button>
 
                 {/* MoMo */}
@@ -298,7 +284,7 @@ function CheckoutContent() {
                 >
                   <Smartphone className="h-6 w-6 text-pink-400" />
                   <div className="text-xs font-bold">Ví MoMo</div>
-                  <div className="text-[9px] opacity-70">App MoMo</div>
+                  <div className="text-[9px] opacity-70">{language === 'vi' ? 'Ví MoMo App' : 'MoMo App'}</div>
                 </button>
 
                 {/* PayPal */}
@@ -313,7 +299,7 @@ function CheckoutContent() {
                 >
                   <CreditCard className="h-6 w-6 text-indigo-400" />
                   <div className="text-xs font-bold">PayPal</div>
-                  <div className="text-[9px] opacity-70">USD / Quốc tế</div>
+                  <div className="text-[9px] opacity-70">{language === 'vi' ? 'USD / Quốc tế' : 'USD / International'}</div>
                 </button>
 
                 {/* Credit Card */}
@@ -327,8 +313,8 @@ function CheckoutContent() {
                   }`}
                 >
                   <CreditCard className="h-6 w-6 text-emerald-400" />
-                  <div className="text-xs font-bold">Thẻ Quốc Tế</div>
-                  <div className="text-[9px] opacity-70">Visa/Mastercard</div>
+                  <div className="text-xs font-bold">{language === 'vi' ? 'Thẻ Quốc Tế' : 'Credit Card'}</div>
+                  <div className="text-[9px] opacity-70">Visa / Mastercard</div>
                 </button>
               </div>
             </div>
@@ -337,17 +323,18 @@ function CheckoutContent() {
             <div className="p-6 rounded-2xl bg-surface/60 border border-border space-y-4">
               <div className="flex items-center justify-between border-b border-border-subtle pb-3">
                 <span className="text-xs font-bold text-heading uppercase">
-                  2. Mã QR Thanh toán & Thông tin giao dịch
+                  {language === 'vi' ? '2. Thông tin giao dịch thanh toán' : '2. Payment Transaction Details'}
                 </span>
                 <span className="text-[10px] text-emerald-400 font-bold flex items-center gap-1 animate-pulse">
-                  <RefreshCw className="h-3 w-3 animate-spin" /> Tự động kiểm tra giao dịch mỗi 3 giây
+                  <RefreshCw className="h-3 w-3 animate-spin" />
+                  {language === 'vi' ? 'Tự động kiểm tra giao dịch mỗi 3 giây' : 'Auto check transaction every 3s'}
                 </span>
               </div>
 
               {isCreatingOrder ? (
                 <div className="flex flex-col items-center justify-center py-10 text-xs text-muted gap-2">
                   <div className="animate-spin rounded-full h-6 w-6 border-2 border-primary/20 border-t-primary" />
-                  Đang khởi tạo mã giao dịch tự động...
+                  {language === 'vi' ? 'Đang khởi tạo mã giao dịch tự động...' : 'Initializing transaction order...'}
                 </div>
               ) : activeOrder ? (
                 <div className="flex flex-col sm:flex-row items-center gap-6">
@@ -368,20 +355,20 @@ function CheckoutContent() {
                         className="w-40 h-40 object-contain mx-auto"
                       />
                       <span className="text-[10px] font-bold text-zinc-800 mt-1 block">
-                        Mã QR {paymentMethod}
+                        {paymentMethod} QR Code
                       </span>
                     </div>
                   )}
 
                   <div className="space-y-2 text-xs text-secondary flex-1 w-full">
                     <div className="flex justify-between py-1 border-b border-border-subtle">
-                      <span>Mã giao dịch:</span>
+                      <span>{language === 'vi' ? 'Mã giao dịch:' : 'Transaction ID:'}</span>
                       <strong className="text-primary font-mono">{activeOrder.transactionId}</strong>
                     </div>
                     <div className="flex justify-between py-1 border-b border-border-subtle">
-                      <span>Đơn vị thụ hưởng:</span>
+                      <span>{language === 'vi' ? 'Đơn vị thụ hưởng:' : 'Beneficiary:'}</span>
                       <strong className="text-heading">
-                        {paymentMethod === 'PAYPAL' ? 'PayPal App: Homix' : 'CÔNG TY CỔ PHẦN HOMIX ECOSYSTEM'}
+                        {paymentMethod === 'PAYPAL' ? 'PayPal App: Homix' : 'HOMIX ECOSYSTEM JOINT STOCK COMPANY'}
                       </strong>
                     </div>
                     {paymentMethod === 'PAYPAL' && (
@@ -393,15 +380,15 @@ function CheckoutContent() {
                       </div>
                     )}
                     <div className="flex justify-between py-1 border-b border-border-subtle">
-                      <span>Hình thức:</span>
+                      <span>{language === 'vi' ? 'Hình thức:' : 'Payment Method:'}</span>
                       <strong className="text-heading">{paymentMethod}</strong>
                     </div>
                     <div className="flex justify-between py-1 border-b border-border-subtle">
-                      <span>Số tiền thanh toán:</span>
+                      <span>{language === 'vi' ? 'Số tiền thanh toán:' : 'Payment Amount:'}</span>
                       <strong className="text-primary font-mono text-sm">{finalPrice.toLocaleString('vi-VN')} VNĐ ({planType === 'ENTERPRISE' ? '$19.99 USD' : '$7.99 USD'})</strong>
                     </div>
                     <div className="flex justify-between py-1">
-                      <span>Nội dung chuyển khoản:</span>
+                      <span>{language === 'vi' ? 'Nội dung chuyển khoản:' : 'Transfer Memo:'}</span>
                       <div className="flex items-center gap-1.5 font-mono font-bold text-primary">
                         <span>{activeOrder.transactionId}</span>
                         <button type="button" onClick={() => handleCopy(activeOrder.transactionId)} className="hover:text-heading border-0 bg-transparent cursor-pointer">
@@ -418,7 +405,7 @@ function CheckoutContent() {
                           className="w-full py-2.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-md shadow-blue-500/20 no-underline cursor-pointer"
                         >
                           <ExternalLink className="h-4 w-4" />
-                          Mở cổng thanh toán {paymentMethod} trong cửa sổ mới ➔
+                          {language === 'vi' ? `Mở cổng thanh toán ${paymentMethod} trong cửa sổ mới ➔` : `Open ${paymentMethod} Gateway in New Window ➔`}
                         </a>
                       </div>
                     )}
@@ -430,7 +417,7 @@ function CheckoutContent() {
               {paymentMethod === 'PAYPAL' && (
                 <div className="p-4 rounded-xl bg-indigo-500/5 border border-indigo-500/20 space-y-4 text-xs mt-4">
                   <div className="flex items-center justify-between font-bold text-xs text-indigo-400 border-b border-indigo-500/20 pb-2">
-                    <span>Thanh toán trực tiếp bằng nút PayPal chính thức:</span>
+                    <span>{language === 'vi' ? 'Thanh toán trực tiếp bằng nút PayPal chính thức:' : 'Direct Payment via Official PayPal Buttons:'}</span>
                     <span className="text-[10px] text-emerald-400 font-bold bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
                       PayPal SDK Active
                     </span>
@@ -444,9 +431,13 @@ function CheckoutContent() {
               {/* Credit Card Input Form if CREDIT_CARD is chosen */}
               {paymentMethod === 'CREDIT_CARD' && (
                 <div className="p-4 rounded-xl bg-emerald-500/5 border border-emerald-500/20 space-y-3 text-xs mt-4">
-                  <h5 className="font-bold text-emerald-400 text-xs">Thông tin thẻ Visa / Mastercard / JCB:</h5>
+                  <h5 className="font-bold text-emerald-400 text-xs">
+                    {language === 'vi' ? 'Thông tin thẻ Visa / Mastercard / JCB:' : 'International Card Details (Visa / Mastercard / JCB):'}
+                  </h5>
                   <div>
-                    <label className="ui-label text-[10px] uppercase mb-1">Số thẻ quốc tế</label>
+                    <label className="ui-label text-[10px] uppercase mb-1">
+                      {language === 'vi' ? 'Số thẻ quốc tế' : 'Card Number'}
+                    </label>
                     <input 
                       type="text" 
                       value={cardNumber}
@@ -457,7 +448,9 @@ function CheckoutContent() {
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="ui-label text-[10px] uppercase mb-1">Tên chủ thẻ (Viết hoa không dấu)</label>
+                      <label className="ui-label text-[10px] uppercase mb-1">
+                        {language === 'vi' ? 'Tên chủ thẻ (Viết hoa không dấu)' : 'Cardholder Name (UPPERCASE)'}
+                      </label>
                       <input 
                         type="text" 
                         value={cardName}
@@ -468,7 +461,9 @@ function CheckoutContent() {
                     </div>
                     <div className="grid grid-cols-2 gap-2">
                       <div>
-                        <label className="ui-label text-[10px] uppercase mb-1">Hạn hết</label>
+                        <label className="ui-label text-[10px] uppercase mb-1">
+                          {language === 'vi' ? 'Hạn hết' : 'Expiry Date'}
+                        </label>
                         <input 
                           type="text" 
                           value={cardExpiry}
@@ -498,7 +493,9 @@ function CheckoutContent() {
               {isProcessing && (
                 <div className="p-4 rounded-2xl bg-primary/10 border border-primary/20 text-primary text-xs font-bold text-center flex items-center justify-center gap-2">
                   <div className="animate-spin rounded-full h-4 w-4 border-2 border-primary/20 border-t-primary" />
-                  <span>Đang kiểm tra và xác minh kết quả thanh toán từ hệ thống...</span>
+                  <span>
+                    {language === 'vi' ? 'Đang kiểm tra và xác minh kết quả thanh toán từ hệ thống...' : 'Verifying payment result from gateway system...'}
+                  </span>
                 </div>
               )}
 
@@ -506,14 +503,18 @@ function CheckoutContent() {
                 <div className="p-6 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-bold text-center animate-fadeIn space-y-3 shadow-xl">
                   <div className="flex items-center justify-center gap-2 text-base text-emerald-400 font-display">
                     <CheckCircle2 className="h-6 w-6" />
-                    <span>THANH TOÁN THÀNH CÔNG!</span>
+                    <span>{language === 'vi' ? 'THANH TOÁN THÀNH CÔNG!' : 'PAYMENT SUCCESSFUL!'}</span>
                   </div>
                   <p className="leading-relaxed font-normal text-emerald-300">
-                    Giao dịch qua <strong>{paymentMethod}</strong> đã được hệ thống xác thực thành công. Gói dịch vụ <strong>{planType} ({billing})</strong> của bạn đã được tự động kích hoạt.
+                    {language === 'vi' ? (
+                      <>Giao dịch qua <strong>{paymentMethod}</strong> đã được hệ thống xác thực thành công. Gói dịch vụ <strong>{planType} ({billing})</strong> của bạn đã được tự động kích hoạt.</>
+                    ) : (
+                      <>Payment via <strong>{paymentMethod}</strong> verified successfully. Your <strong>{planType} ({billing})</strong> plan is now active.</>
+                    )}
                   </p>
                   <div className="pt-1">
                     <Link href="/workspace" className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-white font-bold text-xs no-underline shadow-lg shadow-emerald-500/25 transition-all">
-                      <span>Truy cập Workspace của bạn ngay</span> ➔
+                      <span>{language === 'vi' ? 'Truy cập Workspace của bạn ngay' : 'Access Your Workspace Now'}</span> ➔
                     </Link>
                   </div>
                 </div>
@@ -523,7 +524,7 @@ function CheckoutContent() {
                 <div className="p-5 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs font-bold text-center animate-fadeIn space-y-2.5 shadow-xl">
                   <div className="flex items-center justify-center gap-2 text-sm font-display text-rose-400">
                     <AlertCircle className="h-5 w-5" />
-                    <span>THANH TOÁN THẤT BẠI HOẶC BỊ HỦY</span>
+                    <span>{language === 'vi' ? 'THANH TOÁN THẤT BẠI HOẶC BỊ HỦY' : 'PAYMENT FAILED OR CANCELLED'}</span>
                   </div>
                   <p className="font-normal text-rose-300 leading-relaxed">{paymentError}</p>
                   <div className="pt-1">
@@ -535,7 +536,7 @@ function CheckoutContent() {
                       }}
                       className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold transition-all border-0 cursor-pointer"
                     >
-                      Thử lại giao dịch
+                      {language === 'vi' ? 'Thử lại giao dịch' : 'Retry Payment'}
                     </button>
                   </div>
                 </div>
@@ -548,21 +549,21 @@ function CheckoutContent() {
         <div className="w-full lg:w-96 space-y-6 shrink-0">
           <div className="glass p-6 rounded-3xl border border-border shadow-xl space-y-5">
             <h3 className="text-sm font-bold text-heading uppercase tracking-wider border-b border-border-subtle pb-3">
-              {t('orderSummary')}
+              {language === 'vi' ? 'Tóm tắt đơn hàng' : 'Order Summary'}
             </h3>
 
             <div className="space-y-3 text-xs">
               <div className="flex justify-between">
-                <span className="text-secondary">{t('selectedPackage')}</span>
+                <span className="text-secondary">{language === 'vi' ? 'Gói đã chọn' : 'Selected Package'}</span>
                 <strong className="text-primary font-bold">{planType} Package</strong>
               </div>
               <div className="flex justify-between">
-                <span className="text-secondary">{t('billingCycle')}</span>
+                <span className="text-secondary">{language === 'vi' ? 'Chu kỳ thanh toán' : 'Billing Cycle'}</span>
                 <strong className="text-heading uppercase font-bold">{billing}</strong>
               </div>
               {appliedVoucher && (
                 <div className="flex justify-between text-emerald-400 font-semibold">
-                  <span>Ưu đãi Voucher:</span>
+                  <span>{language === 'vi' ? 'Ưu đãi Voucher:' : 'Voucher Discount:'}</span>
                   <span>{appliedVoucher}</span>
                 </div>
               )}
@@ -576,25 +577,27 @@ function CheckoutContent() {
                   type="text"
                   value={voucherCode}
                   onChange={(e) => setVoucherCode(e.target.value)}
-                  placeholder="Mã voucher (ví dụ HOMIX2026)"
+                  placeholder={language === 'vi' ? 'Mã voucher (ví dụ HOMIX2026)' : 'Voucher code (e.g. HOMIX2026)'}
                   className="ui-input pl-9 pr-3 py-2 text-xs uppercase font-mono"
                 />
               </div>
               <button type="submit" className="ui-btn-secondary px-3 py-2 text-xs font-bold shrink-0 border-0 rounded-xl cursor-pointer">
-                {t('applyCode')}
+                {language === 'vi' ? 'Áp dụng' : 'Apply'}
               </button>
             </form>
 
             {/* Total Price Card */}
             <div className="p-4 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-between">
               <div>
-                <div className="text-[10px] text-muted uppercase font-bold">{t('totalAmount')}</div>
+                <div className="text-[10px] text-muted uppercase font-bold">
+                  {language === 'vi' ? 'Tổng tiền thanh toán' : 'Total Amount'}
+                </div>
                 <div className="text-xl font-black font-display text-primary">
                   {finalPrice.toLocaleString('vi-VN')} VNĐ
                 </div>
               </div>
               <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/20">
-                Đã gồm thuế VAT
+                {language === 'vi' ? 'Đã gồm thuế VAT' : 'VAT Inclusive'}
               </span>
             </div>
           </div>
@@ -605,11 +608,16 @@ function CheckoutContent() {
 }
 
 export default function CheckoutPage() {
+  const { language } = useLanguage();
   return (
     <div className="flex min-h-screen bg-background text-foreground font-sans">
       <Sidebar />
       <div className="flex-1 flex flex-col min-w-0 overflow-y-auto">
-        <Suspense fallback={<div className="p-12 text-center text-xs font-bold">Đang tải thông tin thanh toán...</div>}>
+        <Suspense fallback={
+          <div className="p-12 text-center text-xs font-bold">
+            {language === 'vi' ? 'Đang tải thông tin thanh toán...' : 'Loading payment details...'}
+          </div>
+        }>
           <CheckoutContent />
         </Suspense>
       </div>
