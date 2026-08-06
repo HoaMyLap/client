@@ -246,47 +246,6 @@ function CheckoutContent() {
         <span>{t('back')} {t('pricing')}</span>
       </Link>
 
-      {/* Guide Banner for Beneficiary / Merchant Account Configuration */}
-      <div className="mb-8 p-4 rounded-2xl bg-primary/10 border border-primary/20 text-xs text-secondary space-y-2">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 text-heading font-bold">
-            <Info className="h-4 w-4 text-primary" />
-            <span>Hướng dẫn cung cấp thông tin tài khoản thụ hưởng cổng thanh toán</span>
-          </div>
-          <button
-            type="button"
-            onClick={() => setShowConfigGuide(!showConfigGuide)}
-            className="text-[11px] font-bold text-primary hover:underline bg-transparent border-0 cursor-pointer"
-          >
-            {showConfigGuide ? 'Ẩn hướng dẫn ▲' : 'Xem chi tiết hướng dẫn ▼'}
-          </button>
-        </div>
-
-        {showConfigGuide && (
-          <div className="pt-3 border-t border-primary/15 space-y-2.5 text-[11px] leading-relaxed">
-            <p>Để hoàn tất cấu hình tài khoản nhận tiền thực tế cho doanh nghiệp của bạn, vui lòng cung cấp các tham số API từ các cổng thanh toán tương ứng:</p>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
-              <div className="p-2.5 rounded-xl bg-surface border border-border">
-                <strong className="text-primary block font-bold">🇻🇳 VNPay Merchant:</strong>
-                <span>Cung cấp: <code>VNPAY_TMN_CODE</code>, <code>VNPAY_HASH_SECRET</code>, <code>VNPAY_URL</code>.</span>
-              </div>
-              <div className="p-2.5 rounded-xl bg-surface border border-border">
-                <strong className="text-pink-400 block font-bold">📱 Ví MoMo Business:</strong>
-                <span>Cung cấp: <code>MOMO_PARTNER_CODE</code>, <code>MOMO_ACCESS_KEY</code>, <code>MOMO_SECRET_KEY</code>.</span>
-              </div>
-              <div className="p-2.5 rounded-xl bg-surface border border-border">
-                <strong className="text-blue-400 block font-bold">🅿️ PayPal Business:</strong>
-                <span>Cung cấp: <code>PAYPAL_CLIENT_ID</code>, <code>PAYPAL_CLIENT_SECRET</code>, <code>PAYPAL_MODE</code>.</span>
-              </div>
-              <div className="p-2.5 rounded-xl bg-surface border border-border">
-                <strong className="text-emerald-400 block font-bold">💳 VietQR / Ngân Hàng Thụ Hưởng:</strong>
-                <span>Cung cấp: Số tài khoản, Tên chủ tài khoản, Tên Ngân hàng (MB, VCB...).</span>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-
       <div className="flex flex-col lg:flex-row gap-8">
         {/* Left Side: Payment Methods & Process */}
         <div className="flex-1 space-y-6">
@@ -467,7 +426,7 @@ function CheckoutContent() {
                 </div>
               ) : null}
 
-              {/* PayPal Smart Payment Buttons & Sandbox Buyer Info */}
+              {/* PayPal Smart Payment Buttons */}
               {paymentMethod === 'PAYPAL' && (
                 <div className="p-4 rounded-xl bg-indigo-500/5 border border-indigo-500/20 space-y-4 text-xs mt-4">
                   <div className="flex items-center justify-between font-bold text-xs text-indigo-400 border-b border-indigo-500/20 pb-2">
@@ -475,21 +434,6 @@ function CheckoutContent() {
                     <span className="text-[10px] text-emerald-400 font-bold bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
                       PayPal SDK Active
                     </span>
-                  </div>
-
-                  {/* Sandbox Buyer Account Notice */}
-                  <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300 text-[11px] space-y-1.5">
-                    <div className="font-bold flex items-center gap-1.5 text-amber-400">
-                      <Info className="h-3.5 w-3.5" />
-                      Lưu ý khi đăng nhập trên cửa sổ PayPal Sandbox:
-                    </div>
-                    <p className="leading-relaxed">
-                      Trong môi trường thử nghiệm Sandbox, PayPal <strong>không cho phép</strong> đăng nhập bằng email thật hoặc tài khoản Admin nhận tiền. Vui lòng dùng <strong>tài khoản Người mua (Personal Buyer) Sandbox</strong> hoặc bấm nút xác nhận thanh toán ở dưới:
-                    </p>
-                    <div className="font-mono text-[10px] bg-black/30 p-2 rounded-lg space-y-1 text-zinc-200 border border-amber-500/20">
-                      <div>• Email Buyer Test: <strong className="text-amber-400">sb-buyer-homix@personal.example.com</strong></div>
-                      <div>• Mật khẩu Sandbox: <strong className="text-amber-400">Password123!</strong></div>
-                    </div>
                   </div>
 
                   {/* PayPal Yellow Button Container */}
