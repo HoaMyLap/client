@@ -3471,31 +3471,37 @@ export default function ProjectKanbanPage() {
                   {language === 'vi' ? 'Danh sách thành viên' : 'Member List'} ({members.length})
                 </h4>
                 <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
-                  {members.map((m) => (
-                    <div
-                      key={m.userId}
-                      className="flex items-center justify-between p-2.5 rounded-2xl bg-surface/40 border border-border-subtle hover:bg-surface/60 transition-colors"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="h-8 w-8 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center font-bold text-xs text-primary">
-                          {m.fullname ? m.fullname.charAt(0).toUpperCase() : 'U'}
+                  {members
+                    .slice()
+                    .sort((a, b) => {
+                      const roleOrder: Record<string, number> = { ADMIN: 1, MEMBER: 2, VIEWER: 3 };
+                      return (roleOrder[a.role] || 99) - (roleOrder[b.role] || 99);
+                    })
+                    .map((m) => (
+                      <div
+                        key={m.userId}
+                        className="flex items-center justify-between p-2.5 rounded-2xl bg-surface/40 border border-border-subtle hover:bg-surface/60 transition-colors"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="h-8 w-8 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center font-bold text-xs text-primary">
+                            {m.fullname ? m.fullname.charAt(0).toUpperCase() : 'U'}
+                          </div>
+                          <div>
+                            <div className="text-xs font-bold text-zinc-100">{m.fullname}</div>
+                            <div className="text-[10px] text-muted">{m.email}</div>
+                          </div>
                         </div>
-                        <div>
-                          <div className="text-xs font-bold text-zinc-100">{m.fullname}</div>
-                          <div className="text-[10px] text-muted">{m.email}</div>
-                        </div>
+                        <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${
+                          m.role === 'ADMIN' 
+                            ? 'bg-red-500/10 text-red-400 border border-red-500/20' 
+                            : m.role === 'MEMBER' 
+                            ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' 
+                            : 'bg-zinc-500/10 text-zinc-400 border border-zinc-500/20'
+                        }`}>
+                          {m.role}
+                        </span>
                       </div>
-                      <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${
-                        m.role === 'ADMIN' 
-                          ? 'bg-red-500/10 text-red-400 border border-red-500/20' 
-                          : m.role === 'MEMBER' 
-                          ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' 
-                          : 'bg-zinc-500/10 text-zinc-400 border border-zinc-500/20'
-                      }`}>
-                        {m.role}
-                      </span>
-                    </div>
-                  ))}
+                    ))}
                 </div>
               </div>
 
