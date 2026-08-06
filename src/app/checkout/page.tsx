@@ -51,6 +51,79 @@ function CheckoutContent() {
     handleCreateOrder();
   }, [paymentMethod, appliedVoucher]);
 
+  // PayPal Smart Buttons SDK Loader & Renderer
+  useEffect(() => {
+    if (paymentMethod !== 'PAYPAL' || !activeOrder) return;
+
+    const clientId = 'AULIBK_ava0E1QxLYbRUHI-PkmzzAtCkgKUfBa8O-6MRh2ukhB_Rp4n6Zbl86cXNATk-p6pvC2POzZ7Y';
+    const scriptId = 'paypal-js-sdk-script';
+
+    const renderPayPalButtons = () => {
+      if ((window as any).paypal && document.getElementById('paypal-button-container')) {
+        const container = document.getElementById('paypal-button-container');
+        if (container) container.innerHTML = '';
+
+        try {
+          (window as any).paypal.Buttons({
+            style: {
+              layout: 'vertical',
+              color: 'gold',
+              shape: 'rect',
+              label: 'paypal'
+            },
+            createOrder: (data: any, actions: any) => {
+              const usdVal = planType === 'ENTERPRISE' ? '19.99' : '7.99';
+              return actions.order.create({
+                purchase_units: [{
+                  amount: {
+                    currency_code: 'USD',
+                    value: usdVal
+                  },
+                  description: `Homix ${planType} VIP Package (${billing})`
+                }]
+              });
+            },
+            onApprove: async (data: any, actions: any) => {
+              try {
+                await actions.order.capture();
+                if (activeOrder) {
+                  await api.payments.confirmPayment({ orderId: activeOrder.id });
+                }
+                setPaymentSuccess(true);
+              } catch (e) {
+                console.error('PayPal capture error:', e);
+              }
+            },
+            onError: (err: any) => {
+              console.error('PayPal Smart Button error:', err);
+            }
+          }).render('#paypal-button-container');
+        } catch (e) {
+          console.error('Error rendering PayPal buttons:', e);
+        }
+      }
+    };
+
+    if ((window as any).paypal) {
+      setTimeout(renderPayPalButtons, 300);
+      return;
+    }
+
+    const existingScript = document.getElementById(scriptId);
+    if (!existingScript) {
+      const script = document.createElement('script');
+      script.id = scriptId;
+      script.src = `https://www.paypal.com/sdk/js?client-id=${clientId}&currency=USD`;
+      script.async = true;
+      script.onload = () => {
+        setTimeout(renderPayPalButtons, 300);
+      };
+      document.body.appendChild(script);
+    } else {
+      setTimeout(renderPayPalButtons, 300);
+    }
+  }, [paymentMethod, activeOrder, planType, billing]);
+
   // Auto Polling Transaction Verification (Tự động check giao dịch mỗi 3s)
   useEffect(() => {
     if (!activeOrder || activeOrder.status === 'COMPLETED' || paymentSuccess) return;
@@ -338,6 +411,17 @@ function CheckoutContent() {
                   </div>
                 </div>
               ) : null}
+
+              {/* PayPal Smart Payment Buttons */}
+              {paymentMethod === 'PAYPAL' && (
+                <div className="p-4 rounded-xl bg-indigo-500/5 border border-indigo-500/20 space-y-3 text-xs mt-4">
+                  <div className="flex items-center justify-between font-bold text-xs text-indigo-400">
+                    <span>Thanh toán trực tiếp bằng nút PayPal / Thẻ quốc tế:</span>
+                    <span className="text-[10px] text-muted font-normal">PayPal SDK Sandbox</span>
+                  </div>
+                  <div id="paypal-button-container" className="w-full min-h-[120px] relative z-10"></div>
+                </div>
+              )}
 
               {/* Credit Card Input Form if CREDIT_CARD is chosen */}
               {paymentMethod === 'CREDIT_CARD' && (
