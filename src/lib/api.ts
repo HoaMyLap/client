@@ -191,4 +191,13 @@ export const api = {
   },
   uploadImage: (formData: FormData) => request('/upload/image', { method: 'POST', body: formData }),
   uploadFile: (formData: FormData) => request('/upload/file', { method: 'POST', body: formData }),
+  payments: {
+    createOrder: (data: { planType: string; billingCycle: string; paymentMethod: string; voucherCode?: string }) =>
+      request('/payments/create-order', { method: 'POST', body: JSON.stringify(data) }),
+    confirmPayment: (data: { orderId?: string; transactionId?: string }) =>
+      request('/payments/confirm-payment', { method: 'POST', body: JSON.stringify(data) }),
+    getOrderStatus: (orderId: string) => request(`/payments/order-status/${orderId}`),
+    getUserOrders: () => request('/payments/user-orders'),
+    capturePaypal: (orderId: string) => request('/payments/paypal/capture', { method: 'POST', body: JSON.stringify({ orderId }) }),
+  },
 };
