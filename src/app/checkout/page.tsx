@@ -404,6 +404,19 @@ function CheckoutContent() {
                         </button>
                       </div>
                     </div>
+                    {activeOrder.paymentUrl && (
+                      <div className="pt-3 border-t border-border-subtle">
+                        <a
+                          href={activeOrder.paymentUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="w-full py-2.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-md shadow-blue-500/20 no-underline cursor-pointer"
+                        >
+                          <ExternalLink className="h-4 w-4" />
+                          Mở cổng thanh toán {paymentMethod} trong cửa sổ mới ➔
+                        </a>
+                      </div>
+                    )}
                   </div>
                 </div>
               ) : null}
