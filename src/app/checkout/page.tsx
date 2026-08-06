@@ -368,7 +368,7 @@ function CheckoutContent() {
                     <div className="flex justify-between py-1 border-b border-border-subtle">
                       <span>{language === 'vi' ? 'Đơn vị thụ hưởng:' : 'Beneficiary:'}</span>
                       <strong className="text-heading">
-                        {paymentMethod === 'PAYPAL' ? 'PayPal App: Homix' : 'HOMIX ECOSYSTEM JOINT STOCK COMPANY'}
+                        {language === 'vi' ? 'CÔNG TY CỔ PHẦN HOMIX ECOSYSTEM' : 'HOMIX ECOSYSTEM JOINT STOCK COMPANY'}
                       </strong>
                     </div>
                     {paymentMethod === 'PAYPAL' && (
