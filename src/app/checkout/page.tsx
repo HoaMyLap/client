@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, Suspense } from 'react';
+import React, { useState, useEffect, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import Sidebar from '@/components/Sidebar';
@@ -33,6 +33,7 @@ function CheckoutContent() {
   // Active Order State
   const [activeOrder, setActiveOrder] = useState<any>(null);
   const [isCreatingOrder, setIsCreatingOrder] = useState(false);
+  const paypalRenderedRef = useRef(false);
 
   // Card form state
   const [cardNumber, setCardNumber] = useState('');
@@ -88,54 +89,64 @@ function CheckoutContent() {
 
   // PayPal Smart Buttons SDK Loader & Renderer
   useEffect(() => {
-    if (paymentMethod !== 'PAYPAL' || !activeOrder) return;
+    if (paymentMethod !== 'PAYPAL' || !activeOrder) {
+      paypalRenderedRef.current = false;
+      return;
+    }
+
+    if (paypalRenderedRef.current) return;
 
     const clientId = 'AULIBK_ava0E1QxLYbRUHI-PkmzzAtCkgKUfBa8O-6MRh2ukhB_Rp4n6Zbl86cXNATk-p6pvC2POzZ7Y';
     const scriptId = 'paypal-js-sdk-script';
 
     const renderPayPalButtons = () => {
-      if ((window as any).paypal && document.getElementById('paypal-button-container')) {
-        const container = document.getElementById('paypal-button-container');
-        if (container) container.innerHTML = '';
+      const container = document.getElementById('paypal-button-container');
+      if (!(window as any).paypal || !container) return;
 
-        try {
-          (window as any).paypal.Buttons({
-            style: {
-              layout: 'vertical',
-              color: 'gold',
-              shape: 'rect',
-              label: 'paypal'
-            },
-            createOrder: (data: any, actions: any) => {
-              const usdVal = planType === 'ENTERPRISE' ? '19.99' : '7.99';
-              return actions.order.create({
-                purchase_units: [{
-                  amount: {
-                    currency_code: 'USD',
-                    value: usdVal
-                  },
-                  description: `Homix ${planType} VIP Package (${billing})`
-                }]
-              });
-            },
-            onApprove: async (data: any, actions: any) => {
-              try {
-                await actions.order.capture();
-                if (activeOrder) {
-                  await api.payments.confirmPayment({ orderId: activeOrder.id });
-                }
-                setPaymentSuccess(true);
-              } catch (e) {
-                console.error('PayPal capture error:', e);
+      if (container.children.length > 0) {
+        container.innerHTML = '';
+      }
+
+      try {
+        paypalRenderedRef.current = true;
+        (window as any).paypal.Buttons({
+          style: {
+            layout: 'vertical',
+            color: 'gold',
+            shape: 'rect',
+            label: 'paypal'
+          },
+          createOrder: (data: any, actions: any) => {
+            const usdVal = planType === 'ENTERPRISE' ? '19.99' : '7.99';
+            return actions.order.create({
+              purchase_units: [{
+                amount: {
+                  currency_code: 'USD',
+                  value: usdVal
+                },
+                description: `Homix ${planType} VIP Package (${billing})`
+              }]
+            });
+          },
+          onApprove: async (data: any, actions: any) => {
+            try {
+              await actions.order.capture();
+              if (activeOrder) {
+                await api.payments.confirmPayment({ orderId: activeOrder.id });
               }
-            },
-            onError: (err: any) => {
-              console.error('PayPal Smart Button error:', err);
+              setPaymentSuccess(true);
+            } catch (e) {
+              console.error('PayPal capture error:', e);
             }
-          }).render('#paypal-button-container');
-        } catch (e) {
-          console.error('Error rendering PayPal buttons:', e);
-        }
+          },
+          onError: (err: any) => {
+            console.warn('PayPal Smart Button notice:', err);
+          }
+        }).render('#paypal-button-container').catch((err: any) => {
+          console.warn('Handled PayPal render exception:', err);
+        });
+      } catch (e) {
+        console.warn('Error rendering PayPal buttons:', e);
       }
     };
 
