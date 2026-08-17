@@ -57,6 +57,7 @@ export default function Sidebar() {
   const [fullname, setFullname] = useState('');
   const [email, setEmail] = useState('');
   const [userId, setUserId] = useState('');
+  const [systemRole, setSystemRole] = useState('USER');
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showUserDropdown, setShowUserDropdown] = useState(false);
   const [editFullname, setEditFullname] = useState('');
@@ -322,6 +323,7 @@ export default function Sidebar() {
   // Informational Guest pages to add to sidebar
   const infoPages = [
     { name: t('home'), path: '/', icon: <Home className="w-5 h-5 shrink-0" /> },
+    ...(systemRole === 'ADMIN' ? [{ name: language === 'vi' ? 'Admin Hệ Thống' : 'System Admin', path: '/admin', icon: <Shield className="w-5 h-5 shrink-0 text-amber-400" /> }] : []),
     { name: t('features'), path: '/features', icon: <Zap className="w-5 h-5 shrink-0" /> },
     { name: t('pricing'), path: '/pricing', icon: <TrendingUp className="w-5 h-5 shrink-0" /> },
     { name: t('terms'), path: '/terms', icon: <Shield className="w-5 h-5 shrink-0" /> },

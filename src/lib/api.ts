@@ -202,4 +202,13 @@ export const api = {
     cancelSubscription: () => request('/payments/cancel-subscription', { method: 'POST' }),
     capturePaypal: (orderId: string) => request('/payments/paypal/capture', { method: 'POST', body: JSON.stringify({ orderId }) }),
   },
+  admin: {
+    getStats: () => request('/admin/stats'),
+    getUsers: () => request('/admin/users'),
+    updateUserPlan: (userId: string, plan: string, days?: number) =>
+      request(`/admin/users/${userId}/plan`, { method: 'PUT', body: JSON.stringify({ plan, days }) }),
+    updateUserRole: (userId: string, systemRole: string) =>
+      request(`/admin/users/${userId}/role`, { method: 'PUT', body: JSON.stringify({ systemRole }) }),
+    getPayments: () => request('/admin/payments'),
+  },
 };
