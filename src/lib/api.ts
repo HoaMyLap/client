@@ -40,6 +40,7 @@ export const api = {
   auth: {
     register: (data: any) => request('/auth/register', { method: 'POST', body: JSON.stringify(data) }),
     login: (data: any) => request('/auth/login', { method: 'POST', body: JSON.stringify(data) }),
+    google: (credential: string) => request('/auth/google', { method: 'POST', body: JSON.stringify({ credential }) }),
   },
   users: {
     me: () => request('/users/me'),

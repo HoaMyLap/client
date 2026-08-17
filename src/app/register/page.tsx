@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { api } from '@/lib/api';
@@ -17,6 +17,59 @@ export default function RegisterPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+
+  useEffect(() => {
+    // Load Google Identity Services SDK
+    const script = document.createElement('script');
+    script.src = 'https://accounts.google.com/gsi/client';
+    script.async = true;
+    script.defer = true;
+    script.onload = () => {
+      if (window.google) {
+        window.google.accounts.id.initialize({
+          client_id: '698168901753-34k3ie4eobqr5ucnidn7v34o07h4hdis.apps.googleusercontent.com',
+          callback: handleGoogleResponse,
+        });
+
+        const targetDiv = document.getElementById('googleSignUpDiv');
+        if (targetDiv) {
+          window.google.accounts.id.renderButton(targetDiv, {
+            theme: 'outline',
+            size: 'large',
+            width: '100%',
+            text: 'signup_with',
+            shape: 'rectangular',
+          });
+        }
+      }
+    };
+    document.body.appendChild(script);
+
+    return () => {
+      try {
+        document.body.removeChild(script);
+      } catch (e) {}
+    };
+  }, []);
+
+  const handleGoogleResponse = async (googleRes: any) => {
+    if (googleRes && googleRes.credential) {
+      setLoading(true);
+      setError('');
+      try {
+        const response = await api.auth.google(googleRes.credential);
+        localStorage.setItem('token', response.token);
+        localStorage.setItem('email', response.email);
+        localStorage.setItem('fullname', response.fullname);
+        localStorage.setItem('userId', response.userId);
+        router.push('/');
+      } catch (err: any) {
+        setError(err.message || (language === 'vi' ? 'Đăng ký bằng Google thất bại.' : 'Google Sign Up failed.'));
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,7 +91,7 @@ export default function RegisterPage() {
   };
 
   return (
-    <main className="min-h-screen w-full flex items-center justify-center relative bg-background text-foreground overflow-hidden px-4 font-sans">
+    <main className="min-h-screen w-full flex items-center justify-center relative bg-background text-foreground overflow-hidden px-4 font-sans py-12">
       {/* Top Left: Back to Home */}
       <div className="absolute top-6 left-6 z-20">
         <Link href="/" className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-border bg-card/60 text-secondary hover:text-primary transition-all text-xs font-semibold shadow-sm">
@@ -74,8 +127,8 @@ export default function RegisterPage() {
           </p>
         </div>
 
-        {error && <div className="ui-alert-error mb-6">{error}</div>}
-        {success && <div className="ui-alert-success mb-6">{t('registerSuccessRedirect')}</div>}
+        {error && <div className="ui-alert-error mb-6 text-xs">{error}</div>}
+        {success && <div className="ui-alert-success mb-6 text-xs">{t('registerSuccessRedirect')}</div>}
 
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>
@@ -114,10 +167,27 @@ export default function RegisterPage() {
             />
           </div>
 
-          <button type="submit" disabled={loading || success} className="ui-btn-primary w-full py-3.5 mt-2 text-sm font-bold">
+          <button type="submit" disabled={loading || success} className="ui-btn-primary w-full py-3.5 mt-2 text-sm font-bold border-0 cursor-pointer shadow-md">
             {loading ? t('processing') : t('register')}
           </button>
         </form>
+
+        {/* Divider */}
+        <div className="relative my-6">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-border"></div>
+          </div>
+          <div className="relative flex justify-center text-xs uppercase">
+            <span className="bg-card px-3 text-muted font-bold text-[10px]">
+              {language === 'vi' ? 'HOẶC ĐĂNG KÝ VỚI' : 'OR SIGN UP WITH'}
+            </span>
+          </div>
+        </div>
+
+        {/* Google OAuth Button Container */}
+        <div className="w-full flex justify-center min-h-[44px]">
+          <div id="googleSignUpDiv" className="w-full flex justify-center"></div>
+        </div>
 
         <p className="text-center text-sm text-secondary mt-6">
           {t('alreadyHaveAccount')}{' '}
