@@ -360,6 +360,31 @@ export default function Sidebar() {
           />
         </div>
 
+        {/* System Admin Dedicated Switcher Banner */}
+        {systemRole === 'ADMIN' && (
+          <div className="p-3 border-b border-border/80 bg-amber-500/5">
+            <Link
+              href="/admin"
+              className={`w-full flex items-center gap-2.5 p-2.5 rounded-xl bg-gradient-to-r from-amber-500/20 via-amber-600/15 to-indigo-600/20 border border-amber-500/40 text-amber-400 font-bold hover:from-amber-500/30 hover:to-indigo-600/30 transition-all shadow-md no-underline ${
+                isCollapsed ? 'justify-center p-2' : ''
+              }`}
+              title={language === 'vi' ? 'Quay lại Trang Admin Hệ Thống' : 'Return to System Admin Portal'}
+            >
+              <Shield className="w-5 h-5 text-amber-400 shrink-0 animate-pulse" />
+              {!isCollapsed && (
+                <div className="min-w-0 flex-1">
+                  <div className="text-xs font-bold truncate text-amber-400 flex items-center gap-1">
+                    <span>{language === 'vi' ? 'Admin Hệ Thống' : 'System Admin'}</span>
+                  </div>
+                  <div className="text-[10px] text-amber-300/80 font-normal truncate">
+                    {language === 'vi' ? 'Chuyển về Admin ➔' : 'Return to Console ➔'}
+                  </div>
+                </div>
+              )}
+            </Link>
+          </div>
+        )}
+
         {/* Informational Pages Navigation Menu */}
         <div className="p-3 space-y-1">
           {!isCollapsed && (

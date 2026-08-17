@@ -22,6 +22,7 @@ export default function ProfilePage() {
   const [avatarUrl, setAvatarUrl] = useState('');
   const [subscriptionPlan, setSubscriptionPlan] = useState('FREE');
   const [subscriptionExpiresAt, setSubscriptionExpiresAt] = useState('');
+  const [systemRole, setSystemRole] = useState('USER');
   const [paymentOrders, setPaymentOrders] = useState<any[]>([]);
   const [visibleOrdersCount, setVisibleOrdersCount] = useState(5);
 
@@ -58,6 +59,7 @@ export default function ProfilePage() {
       setAvatarUrl(user.avatarUrl || '');
       setSubscriptionPlan(user.subscriptionPlan || 'FREE');
       setSubscriptionExpiresAt(user.subscriptionExpiresAt || '');
+      setSystemRole(user.systemRole || 'USER');
     } catch (err: any) {
       setError(language === 'vi' ? 'Không thể tải thông tin hồ sơ.' : 'Failed to load profile details.');
     } finally {
@@ -239,10 +241,21 @@ export default function ProfilePage() {
               </p>
             </div>
 
-            <Link href="/pricing" className="ui-btn-primary px-4 py-2.5 text-xs font-bold flex items-center gap-2 rounded-xl no-underline shrink-0 shadow-lg shadow-primary/20">
-              <Zap className="h-4 w-4" />
-              {language === 'vi' ? 'Nâng cấp Gói dịch vụ' : 'Upgrade Subscription Plan'}
-            </Link>
+            <div className="flex items-center gap-3 shrink-0">
+              {systemRole === 'ADMIN' && (
+                <Link 
+                  href="/admin" 
+                  className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 via-amber-600 to-amber-500 hover:from-amber-400 hover:to-amber-500 text-black font-bold text-xs flex items-center gap-2 shadow-lg shadow-amber-500/25 border-0 no-underline cursor-pointer transition-all"
+                >
+                  <Shield className="w-4 h-4 text-black animate-pulse" />
+                  <span>{language === 'vi' ? 'Quay về Trang Admin Hệ Thống ➔' : 'Return to Admin Portal ➔'}</span>
+                </Link>
+              )}
+              <Link href="/pricing" className="ui-btn-primary px-4 py-2.5 text-xs font-bold flex items-center gap-2 rounded-xl no-underline shrink-0 shadow-lg shadow-primary/20">
+                <Zap className="h-4 w-4" />
+                {language === 'vi' ? 'Nâng cấp Gói dịch vụ' : 'Upgrade Subscription Plan'}
+              </Link>
+            </div>
           </div>
 
           {error && <div className="ui-alert-error text-xs">{error}</div>}
