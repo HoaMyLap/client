@@ -66,7 +66,13 @@ export default function LoginPage() {
         localStorage.setItem('email', response.email);
         localStorage.setItem('fullname', response.fullname);
         localStorage.setItem('userId', response.userId);
-        router.push('/');
+
+        const userProfile = await api.users.me();
+        if (userProfile && userProfile.systemRole === 'ADMIN') {
+          router.push('/admin');
+        } else {
+          router.push('/');
+        }
       } catch (err: any) {
         setError(err.message || (language === 'vi' ? 'Đăng nhập bằng Google thất bại.' : 'Google Login failed.'));
       } finally {
@@ -86,7 +92,13 @@ export default function LoginPage() {
       localStorage.setItem('email', response.email);
       localStorage.setItem('fullname', response.fullname);
       localStorage.setItem('userId', response.userId);
-      router.push('/');
+
+      const userProfile = await api.users.me();
+      if (userProfile && userProfile.systemRole === 'ADMIN') {
+        router.push('/admin');
+      } else {
+        router.push('/');
+      }
     } catch (err: any) {
       setError(err.message || (language === 'vi' ? 'Đăng nhập thất bại. Vui lòng kiểm tra lại email hoặc mật khẩu.' : 'Login failed. Please check your credentials.'));
     } finally {

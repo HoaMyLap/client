@@ -62,7 +62,13 @@ export default function RegisterPage() {
         localStorage.setItem('email', response.email);
         localStorage.setItem('fullname', response.fullname);
         localStorage.setItem('userId', response.userId);
-        router.push('/');
+
+        const userProfile = await api.users.me();
+        if (userProfile && userProfile.systemRole === 'ADMIN') {
+          router.push('/admin');
+        } else {
+          router.push('/');
+        }
       } catch (err: any) {
         setError(err.message || (language === 'vi' ? 'Đăng ký bằng Google thất bại.' : 'Google Sign Up failed.'));
       } finally {
