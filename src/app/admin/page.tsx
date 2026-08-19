@@ -11,8 +11,9 @@ import {
   Folder, ArrowLeft, Search, Filter, RefreshCw, CheckCircle2, 
   AlertCircle, Sparkles, Edit3, KeyRound, ChevronDown, Check, X,
   TrendingUp, Activity, Server, Database, HardDrive, Cpu, Layers,
-  LogOut, Home, ArrowUpRight, BarChart3, Settings, Bell
+  LogOut, Home, ArrowUpRight, BarChart3, Settings, Bell, Download
 } from 'lucide-react';
+import * as XLSX from 'xlsx';
 
 export default function StandaloneAdminPortal() {
   const router = useRouter();
@@ -136,6 +137,53 @@ export default function StandaloneAdminPortal() {
   const translateRole = (role: string) => {
     if (role === 'ADMIN') return language === 'vi' ? 'ADMIN Hệ Thống' : 'System Admin';
     return language === 'vi' ? 'Người Dùng' : 'Standard User';
+  };
+
+  // Export Excel function for Users
+  const handleExportUsersExcel = () => {
+    try {
+      const dataToExport = filteredUsers.map((u, idx) => ({
+        'STT': idx + 1,
+        'Họ và Tên / Full Name': u.fullname || '—',
+        'Email': u.email || '—',
+        'Gói VIP / Plan': u.subscriptionPlan || 'FREE',
+        'Hạn Sử Dụng / Expiration': formatDate(u.subscriptionExpiresAt),
+        'Vai Trò / System Role': translateRole(u.systemRole),
+        'Ngày Đăng Ký / Joined Date': formatDate(u.createdAt)
+      }));
+
+      const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Users');
+      XLSX.writeFile(workbook, `Homix_Danh_Sach_Nguoi_Dung_${new Date().toISOString().slice(0,10)}.xlsx`);
+    } catch (e) {
+      console.error('Export users Excel error:', e);
+    }
+  };
+
+  // Export Excel function for Payments
+  const handleExportPaymentsExcel = () => {
+    try {
+      const dataToExport = filteredPayments.map((p, idx) => ({
+        'STT': idx + 1,
+        'Mã Giao Dịch / Transaction ID': p.transactionId || '—',
+        'User ID': p.userId || '—',
+        'Gói Nâng Cấp / Plan': p.planType || '—',
+        'Chu Kỳ / Billing Cycle': translateBillingCycle(p.billingCycle),
+        'Cổng Thanh Toán / Gateway': translateMethod(p.paymentMethod),
+        'Số Tiền (VNĐ)': p.amount ? Number(p.amount) : 0,
+        'Số Tiền (USD)': p.amount ? Number(p.amount) / 25000 : 0,
+        'Trạng Thái / Status': translateStatus(p.status),
+        'Thời Gian / Created Date': formatDate(p.createdAt)
+      }));
+
+      const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Payments');
+      XLSX.writeFile(workbook, `Homix_Bao_Cao_Doanh_Thu_${new Date().toISOString().slice(0,10)}.xlsx`);
+    } catch (e) {
+      console.error('Export payments Excel error:', e);
+    }
   };
 
   const handleOpenEditUser = (user: any) => {
@@ -496,12 +544,23 @@ export default function StandaloneAdminPortal() {
                     </p>
                   </div>
 
-                  <button
-                    onClick={() => setActiveSection('PAYMENTS')}
-                    className="text-xs text-link font-bold hover:underline flex items-center gap-1 border-0 bg-transparent cursor-pointer"
-                  >
-                    <span>{language === 'vi' ? 'Xem tất cả đơn hàng ➔' : 'View all transactions ➔'}</span>
-                  </button>
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={handleExportPaymentsExcel}
+                      className="px-3.5 py-1.5 rounded-xl bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500 hover:text-black border border-emerald-500/30 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-sm"
+                      title="Export Excel"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                      <span>{language === 'vi' ? 'Xuất Báo Cáo Excel' : 'Export Excel Report'}</span>
+                    </button>
+
+                    <button
+                      onClick={() => setActiveSection('PAYMENTS')}
+                      className="text-xs text-link font-bold hover:underline flex items-center gap-1 border-0 bg-transparent cursor-pointer"
+                    >
+                      <span>{language === 'vi' ? 'Xem tất cả ➔' : 'View all ➔'}</span>
+                    </button>
+                  </div>
                 </div>
 
                 <div className="overflow-x-auto">
@@ -563,6 +622,15 @@ export default function StandaloneAdminPortal() {
                 </div>
 
                 <div className="flex items-center gap-3 w-full sm:w-auto">
+                  <button
+                    onClick={handleExportUsersExcel}
+                    className="px-3.5 py-2 rounded-xl bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500 hover:text-black border border-emerald-500/30 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-sm shrink-0"
+                    title="Export Excel"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span>{language === 'vi' ? 'Xuất File Excel' : 'Export Excel'}</span>
+                  </button>
+
                   <Filter className="w-4 h-4 text-muted" />
                   <select
                     value={planFilter}
@@ -649,16 +717,27 @@ export default function StandaloneAdminPortal() {
                   {language === 'vi' ? 'Nhật Ký Tất Cả Giao Dịch Thanh Toán' : 'All Payment Transactions Audit Log'}
                 </h3>
 
-                <select
-                  value={paymentFilter}
-                  onChange={(e) => setPaymentFilter(e.target.value)}
-                  className="bg-input-bg border border-border rounded-xl px-3.5 py-2 text-xs text-foreground focus:outline-none"
-                >
-                  <option value="ALL">{language === 'vi' ? 'Tất cả phương thức' : 'All Payment Gateways'}</option>
-                  <option value="VNPAY">{language === 'vi' ? 'Cổng VNPay' : 'VNPay Gateway'}</option>
-                  <option value="PAYPAL">{language === 'vi' ? 'Cổng PayPal' : 'PayPal Gateway'}</option>
-                  <option value="COMPLETED">{language === 'vi' ? 'Trạng thái Thành Công' : 'Completed Status'}</option>
-                </select>
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={handleExportPaymentsExcel}
+                    className="px-3.5 py-2 rounded-xl bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500 hover:text-black border border-emerald-500/30 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-sm shrink-0"
+                    title="Export Excel"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span>{language === 'vi' ? 'Xuất File Excel' : 'Export Excel'}</span>
+                  </button>
+
+                  <select
+                    value={paymentFilter}
+                    onChange={(e) => setPaymentFilter(e.target.value)}
+                    className="bg-input-bg border border-border rounded-xl px-3.5 py-2 text-xs text-foreground focus:outline-none"
+                  >
+                    <option value="ALL">{language === 'vi' ? 'Tất cả phương thức' : 'All Payment Gateways'}</option>
+                    <option value="VNPAY">{language === 'vi' ? 'Cổng VNPay' : 'VNPay Gateway'}</option>
+                    <option value="PAYPAL">{language === 'vi' ? 'Cổng PayPal' : 'PayPal Gateway'}</option>
+                    <option value="COMPLETED">{language === 'vi' ? 'Trạng thái Thành Công' : 'Completed Status'}</option>
+                  </select>
+                </div>
               </div>
 
               <div className="overflow-x-auto">
